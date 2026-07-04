@@ -58,9 +58,25 @@ enum DiplomaticStatus: String, Codable, Equatable, CaseIterable {
     case neutral
     case hostile
     case atWar
+    case truce
+    case militaryAccess
+    case blockaded
 
     var isHostile: Bool {
-        self == .hostile || self == .atWar
+        self == .hostile || self == .atWar || self == .blockaded
+    }
+
+    var allowsAttack: Bool {
+        self == .atWar
+    }
+
+    var allowsTerritoryEntry: Bool {
+        switch self {
+        case .allied, .coBelligerent, .militaryAccess:
+            return true
+        case .neutral, .hostile, .atWar, .truce, .blockaded:
+            return false
+        }
     }
 
     var displayName: String {
@@ -75,6 +91,12 @@ enum DiplomaticStatus: String, Codable, Equatable, CaseIterable {
             return "Hostile"
         case .atWar:
             return "At war"
+        case .truce:
+            return "Truce"
+        case .militaryAccess:
+            return "Military access"
+        case .blockaded:
+            return "Blockaded"
         }
     }
 }
@@ -283,6 +305,8 @@ struct DiplomacyState: Codable, Equatable {
             )
         }
 
+        appendVictorianCountryProfiles(for: factions, countries: &countries, blocs: &blocs)
+
         return DiplomacyState(
             countries: countries,
             blocs: blocs,
@@ -293,7 +317,7 @@ struct DiplomacyState: Codable, Equatable {
 
     static func initial(from factionStrings: [String], turn: Int) -> DiplomacyState {
         let factions = factionStrings.compactMap(Faction.init(rawValue:))
-        return initial(for: factions.isEmpty ? Faction.allCases : factions, turn: turn)
+        return initial(for: factions.isEmpty ? Faction.legacyTurnOrder : factions, turn: turn)
     }
 
     var latestRulerRecord: RulerDecisionRecord? {
@@ -311,6 +335,84 @@ struct DiplomacyState: Codable, Equatable {
     func relation(between lhs: CountryId, and rhs: CountryId) -> DiplomaticRelation? {
         let key = DiplomaticRelation(firstCountryId: lhs, secondCountryId: rhs, status: .neutral).id
         return relations.first { $0.id == key }
+    }
+
+    func relationStatus(between lhs: Faction, and rhs: Faction) -> DiplomaticStatus {
+        guard lhs != rhs else {
+            return lhs.isNeutral ? .neutral : .allied
+        }
+        guard !lhs.isNeutral, !rhs.isNeutral else {
+            return .neutral
+        }
+
+        let lhsCountries = countries(for: lhs)
+        let rhsCountries = countries(for: rhs)
+        guard !lhsCountries.isEmpty, !rhsCountries.isEmpty else {
+            if lhs.isLegacyPower && rhs.isLegacyPower {
+                return .atWar
+            }
+            return .neutral
+        }
+
+        var statuses: [DiplomaticStatus] = []
+        for lhsCountry in lhsCountries {
+            for rhsCountry in rhsCountries {
+                statuses.append(relation(between: lhsCountry.id, and: rhsCountry.id)?.status ?? .neutral)
+            }
+        }
+
+        if statuses.contains(.atWar) {
+            return .atWar
+        }
+        if statuses.contains(.hostile) {
+            return .hostile
+        }
+        if statuses.contains(.blockaded) {
+            return .blockaded
+        }
+        if statuses.contains(.truce) {
+            return .truce
+        }
+        if statuses.contains(.militaryAccess) {
+            return .militaryAccess
+        }
+        if statuses.contains(.coBelligerent) {
+            return .coBelligerent
+        }
+        if statuses.contains(.allied) {
+            return .allied
+        }
+        return .neutral
+    }
+
+    func isHostile(_ lhs: Faction, toward rhs: Faction) -> Bool {
+        relationStatus(between: lhs, and: rhs).isHostile
+    }
+
+    func isFriendly(_ lhs: Faction, toward rhs: Faction) -> Bool {
+        switch relationStatus(between: lhs, and: rhs) {
+        case .allied, .coBelligerent, .militaryAccess:
+            return true
+        case .neutral, .hostile, .atWar, .truce, .blockaded:
+            return false
+        }
+    }
+
+    func canAttack(attacker: Faction, target: Faction) -> Bool {
+        guard attacker != target, !attacker.isNeutral, !target.isNeutral else {
+            return false
+        }
+        return relationStatus(between: attacker, and: target).allowsAttack
+    }
+
+    func canEnterTerritory(faction: Faction, controller: Faction?) -> Bool {
+        guard let controller, controller != faction else {
+            return true
+        }
+        guard !faction.isNeutral, !controller.isNeutral else {
+            return false
+        }
+        return relationStatus(between: faction, and: controller).allowsTerritoryEntry
     }
 
     func hostileCountryIds(to faction: Faction) -> [CountryId] {
@@ -352,7 +454,7 @@ struct DiplomacyState: Codable, Equatable {
             for rhsIndex in countries.indices where rhsIndex > lhsIndex {
                 let lhs = countries[lhsIndex]
                 let rhs = countries[rhsIndex]
-                let status: DiplomaticStatus = lhs.faction == rhs.faction ? .allied : .atWar
+                let status = initialStatus(lhs: lhs.faction, rhs: rhs.faction)
                 relations.append(
                     DiplomaticRelation(
                         firstCountryId: lhs.id,
@@ -365,5 +467,56 @@ struct DiplomacyState: Codable, Equatable {
             }
         }
         return relations
+    }
+
+    private static func initialStatus(lhs: Faction, rhs: Faction) -> DiplomaticStatus {
+        if lhs == rhs {
+            return lhs.isNeutral ? .neutral : .allied
+        }
+        if lhs.isNeutral || rhs.isNeutral {
+            return .neutral
+        }
+        if lhs.isLegacyPower && rhs.isLegacyPower {
+            return .atWar
+        }
+        return .neutral
+    }
+
+    private static func appendVictorianCountryProfiles(
+        for factions: [Faction],
+        countries: inout [CountryProfile],
+        blocs: inout [DiplomaticBloc]
+    ) {
+        let definitions: [(Faction, CountryId, String, DiplomaticBlocId, String, Bool, Int)] = [
+            (.britain, "britain", "British Empire", "victorian_britain", "ruler_britain", true, 76),
+            (.france, "france", "French Second Empire", "victorian_france", "ruler_france", true, 74),
+            (.russia, "russia", "Russian Empire", "victorian_russia", "ruler_russia", true, 72),
+            (.ottoman, "ottoman", "Ottoman Empire", "victorian_ottoman", "ruler_ottoman", true, 68),
+            (.austria, "austria", "Austrian Empire", "victorian_austria", "ruler_austria", false, 66),
+            (.sardinia, "sardinia", "Kingdom of Sardinia", "victorian_sardinia", "ruler_sardinia", false, 64),
+            (.neutral, "neutral_local_powers", "Neutral Local Powers", "victorian_neutral", "ruler_neutral", false, 50)
+        ]
+
+        for (faction, id, name, blocId, rulerAgentId, isPrimary, warSupport) in definitions where factions.contains(faction) {
+            countries.append(
+                CountryProfile(
+                    id: id,
+                    name: name,
+                    faction: faction,
+                    blocId: blocId,
+                    rulerAgentId: rulerAgentId,
+                    isPrimaryBelligerent: isPrimary,
+                    warSupport: warSupport
+                )
+            )
+            blocs.append(
+                DiplomaticBloc(
+                    id: blocId,
+                    name: name,
+                    faction: faction,
+                    memberCountryIds: [id]
+                )
+            )
+        }
     }
 }

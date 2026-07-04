@@ -451,6 +451,20 @@ private extension Faction {
             return "德军"
         case .allies:
             return "盟军"
+        case .britain:
+            return "大英帝国"
+        case .france:
+            return "法兰西"
+        case .russia:
+            return "俄罗斯"
+        case .ottoman:
+            return "奥斯曼"
+        case .austria:
+            return "奥地利"
+        case .sardinia:
+            return "撒丁"
+        case .neutral:
+            return "中立"
         }
     }
 }

@@ -6,6 +6,26 @@
 
 ## 0. 当前项目判断
 
+### 0.0 当前迭代状态与使用方式
+
+更新时间：2026-07-05。本文是 v5.0-v5.9 维多利亚迁移的总控提示词，不是单轮实现提示词，也不代表所有 v5 功能已经完成。后续每一轮都必须先以当前源码、`origin/main` 的真实状态、GitHub Actions 结果包和阶段记录为准，再决定是否更新本文。
+
+当前配套文档状态：
+
+| 文档 | 状态 | 用途 |
+|---|---|---|
+| `md/prompt/v5.0-维多利亚迁移/v5.0_audit_and_contract.md` | 已形成审计合同 | 记录硬编码、二元阵营、旧 phase、旧资源、旧单位、旧 UI 和 v5.1-v5.5 风险边界 |
+| `md/prompt/v5.0-维多利亚迁移/v5.1_powers_turns_diplomacy_prompt.md` | 已形成 Agent B 执行提示词，本地工作树已有基础实现切片 | 用于核对多国家、通用回合、外交关系和敌我判断；尚需 commit / push / CI / Agent C 验收 |
+| `md/plan/plan.md`、`README.md`、`AGENTS.md`、`update_log.md` | 已按维多利亚方向同步过口径，但工作树可能仍有未提交改动 | 当前可记录 v5.1 本地落地状态，但不得写成全量 v5 迁移完成 |
+
+当前执行制度：
+
+- 默认协作流程是 `main` 直推 + GitHub Actions 结果包验收，不再使用长期候选分支、PR 合并流或 `smalldata_test`。
+- 本文中所有 v5.x 的旧式阶段分支名只能理解为阶段标识和提交信息前缀；实际实施必须按 `AGENTS.md` 在 `main` 上小步提交并 push 到 `origin/main`。
+- Agent A 负责把本文拆成当轮可执行的阶段提示词；Agent B 按阶段提示词实现、轻量检查、commit、push；Agent C 下载并核对 `origin/main` 最新 run 的未加密 CI 结果包。
+- 没有 `agenta` / `agentb` / `agentc` 前缀时，按普通 Codex 任务处理；若任务涉及 A/B/C 边界，先说明本轮身份边界，不要混用职责。
+- 每轮文档更新都必须区分“计划/提示词已完成”和“业务代码已实现”。不得把 v5 规划、审计或提示词写成已落地功能。
+
 你接手的是 `WWIIHexV0`，当前代码不是早期空壳，而是一个已经包含 hex 战棋、战略 region、动态战区、前线、部署、经济、外交草案、将领、元帅、统治者预留、macOS 主游戏 target 和 macOS 地图编辑器方向的 Swift + SwiftUI + SpriteKit 工程。
 
 当前真实主链路是：
@@ -39,7 +59,7 @@ MapEditor / JSON 数据
 - `hexToFrontZone` 是部署层动态归属权威。
 - 玩家、AI、聊天命令和 MockAI 都必须落到 `Command` / `ZoneDirective`，再经 `WarCommandExecutor`、`CommandValidator`、`RuleEngine` 执行。
 - Legacy Agent D 管线保留作回归参考，默认战争 AI 主路径不得退回旧管线。
-- 当前 `Faction` 仍只有 `germany/allies`，`Faction.opponent`、`GamePhase.germanAI/alliedPlayer`、`DataLoader` 的 `playerFaction/aiFaction`、`CommandValidator` 的阶段判断仍强绑定二元对立。
+- v5.1 本地切片已把 `Faction` 扩展为 legacy Germany / Allies 加 Britain、France、Russia、Ottoman、Austria、Sardinia、Neutral，并新增通用 `humanAction` / `aiAction` / `diplomacyResolution`、`turnOrder`、`humanControlledFactions` 和 `DiplomacyState.canAttack` / `canEnterTerritory` 入口；但该切片尚未经过 commit / push / GitHub Actions / Agent C 结果包验收，默认数据和大量 UI/测试仍保留 legacy Germany / Allies。
 - 当前单位模型叫 `Division`，兵种仍是 `tank/motorizedInfantry/infantry/artillery`。
 - 当前经济模型仍是 `manpower/industry/supplies`，生产项仍有 `panzerDivision` 等二战语义。
 - 当前默认数据和 UI 仍有阿登、Germany、Allies、Bastogne、Panzer、Division、German AI、Allied Player、Manpower、Industry、Supplies 等玩家可见残留。
@@ -423,6 +443,57 @@ Agent JSON
 - 真实 LLM 不可用时必须有 deterministic fallback。
 - Agent 的“个性”不能绕过规则，只能影响优先级、风险阈值、目标排序、预算倾向和 fallback 策略。
 
+### 3.7 数据与 schema 迁移合同
+
+维多利亚迁移会新增国家、剧本、人物、单位模板、地形标签、外交关系、经济资源和事件。所有数据迁移都必须先保证旧数据可解释、默认新数据可加载、错误可定位，而不是只让某一份 JSON 在本机临时通过。
+
+数据 id 规则：
+
+- 运行时 id 一律用 ASCII、lower snake case 或现有项目已接受的 id 风格，例如 `power_britain`、`region_sevastopol`、`theater_crimea_expedition`、`person_palmerston`。
+- 展示字段可以中文，例如 `displayName`、`localizedName`、`description`、`biography`、`newspaperHeadline`。
+- 同一概念只允许一个权威 id 类型：国家/势力不要同时散落为 `Faction`、`CountryId`、`PowerId`、`BlocId` 多套互不映射的字符串。
+- 旧 `germany` / `allies` / `ardennes` id 可以作为 legacy 数据保留，但新默认剧本不得依赖它们。
+
+schema 演进规则：
+
+- 新字段优先可选或有明确默认值，保证旧阿登数据、旧测试夹具和旧 MapEditor 导出能继续被识别或明确报错。
+- 破坏性字段改名必须分两步：先加新字段和兼容读取，再在后续阶段清理旧字段；不得一轮内删除旧字段再凭猜测修所有调用点。
+- `DataLoader` 对每个默认数据集的特殊校验必须按 `scenarioId` 或数据版本分流，不能让 `guderian`、German supply source、Bastogne 目标等 legacy 校验污染黑海危机。
+- neutral / nil controller 必须保持中立语义，不得 fallback 到 `.allies`、`.germany` 或任意大国。
+- MapEditor 导出字段必须和 `ScenarioDefinition` / `RegionDataSet` 保持同一 schema 口径；如果编辑器暂不支持新字段，阶段文档要记录缺口，不要塞进无关字段。
+
+新增数据文件建议：
+
+```text
+black_sea_crisis_1853_scenario.json
+black_sea_crisis_1853_regions.json
+victorian_powers.json
+victorian_unit_templates.json
+victorian_personas.json
+victorian_terrain_rules.json
+victorian_events.json
+```
+
+数据验收最低要求：
+
+- 改动 JSON 必须跑对应 `jq empty`。
+- 新数据加入 app bundle 或 target membership 时，必须跑 `plutil -lint WWIIHexV0.xcodeproj/project.pbxproj`。
+- 默认剧本切换到黑海危机前，必须保留 legacy 阿登加载入口或清楚写明旧数据只作历史/测试资源。
+- 文档必须写清哪些数据已接入默认主路径，哪些只是候选草案。
+
+### 3.8 运行时迁移优先级
+
+每个阶段都要先保护运行时权威链路，再替换题材语义。推荐优先级：
+
+1. 保住 `HexTile.controller`、`Division.coord`、`hexToTheater`、`hexToFrontZone` 和命令执行链不退化。
+2. 解除二元敌我和固定 phase 绑定，让多国家和中立先能被规则表达。
+3. 新增黑海危机数据和默认入口，旧阿登转为 legacy。
+4. 替换玩家可见单位、经济、生产、外交和 UI 文案。
+5. 扩展铁路、港口、围城、工业预算、外交危机和 Agent 链。
+6. 做发布级 UI、事件、残留清理和文档收口。
+
+如果某轮为了快速替换文案而破坏敌我判断、补给、占领或动态战区推进，应优先退回架构修复，不继续叠加功能。
+
 ---
 
 ## 4. 多 Agent 并发工作流
@@ -663,13 +734,42 @@ rg -n "enum Faction|enum GamePhase|struct Division|enum ComponentType|EconomyRes
 
 没有完成这些检查前，不得声称“多 Agent 工作可合并”。
 
+### 4.4 main 直推和 Agent A/B/C 交接合同
+
+当前 v5 迁移采用 `main` 直推和云端结果包验收。任何阶段提示词、实现记录或验收记录都必须显式写出这个流程，避免继续沿用旧候选分支或 PR 流。
+
+Agent A 每轮必须产出：
+
+- 本轮目标、非目标、文件边界和禁止项。
+- 需要先读的入口文档、阶段文档和相关源码。
+- 实现顺序、风险文件、轻量检查命令、文档同步要求。
+- Agent B 必须提交到 `main` 并 push `origin/main` 的要求。
+- Agent C 必须核对的 workflow、run id、run attempt、artifact 和 manifest 字段。
+
+Agent B 每轮必须执行：
+
+- `git fetch origin`、`git switch main`、`git pull --ff-only origin main`，并确认工作树中无本轮无关改动会被误提交。
+- 只改本轮相关文件；遇到已有未提交改动时，先判断是否相关，不回滚用户或其他 Agent 的工作。
+- 本机只跑 `md/test/test.md` 允许的轻量检查；Swift / Xcode / Probe / Smoke / Full 等重验证交给 GitHub Actions。
+- commit 后直接 `git push origin main`，记录 commit SHA、push 状态和触发的 workflow 信息。
+
+Agent C 每轮必须核对：
+
+- `origin/main` 最新 commit 是否等于 Agent B 报告的 commit。
+- 最新 `WWIIHexV0 CI Results` run 的 `runId`、`runAttempt` 和 artifact 名称。
+- `ci-artifact-manifest.json` 中 `branch=main`、`commitSha`、`runId`、`runAttempt` 是否一致。
+- `ci-failure-summary.md`、`junit.xml`、`xcodebuild.log` 和项目专属结果文件。
+- 验收通过后才更新 `update_log.md` 和必要核心文档；不通过则退回 Agent B 追加修复 commit。
+
 ---
 
 ## 5. 版本路线
 
+本节是 v5.0-v5.9 的阶段路线。阶段名用于提示词、实现记录、commit 摘要和验收描述；实际分支策略以 `AGENTS.md` 为准，固定在 `main` 上推进。若后续阶段拆分更细，优先新增 `md/prompt/v5.0-维多利亚迁移/v5.x_*.md` 阶段提示词，不要直接把过长实现细节塞回本文。
+
 ### v5.0：迁移审计、产品合同和维多利亚术语层
 
-建议分支：`v5.0-victorian-audit-contract`
+阶段标识：`v5.0-victorian-audit-contract`。实际工作流：在 `main` 上提交，不创建长期候选分支。
 
 目标：
 
@@ -715,7 +815,7 @@ rg -n "enum Faction|enum GamePhase|struct Division|enum ComponentType|EconomyRes
 
 ### v5.1：多国家、通用回合、外交关系和敌我判断
 
-建议分支：`v5.1-victorian-powers-turns-diplomacy`
+阶段标识：`v5.1-victorian-powers-turns-diplomacy`。实际工作流：在 `main` 上提交，不创建长期候选分支。
 
 目标：
 
@@ -782,7 +882,7 @@ rg -n "enum Faction|enum GamePhase|struct Division|enum ComponentType|EconomyRes
 
 ### v5.2：黑海危机地图、剧本数据和地图编辑器迁移
 
-建议分支：`v5.2-victorian-black-sea-scenario`
+阶段标识：`v5.2-victorian-black-sea-scenario`。实际工作流：在 `main` 上提交，不创建长期候选分支。
 
 目标：
 
@@ -855,7 +955,7 @@ MapEditor 迁移：
 
 ### v5.3：维多利亚军队、铁路补给、港口远征和围城规则
 
-建议分支：`v5.3-victorian-war-logistics`
+阶段标识：`v5.3-victorian-war-logistics`。实际工作流：在 `main` 上提交，不创建长期候选分支。
 
 目标：
 
@@ -925,7 +1025,7 @@ MapEditor 迁移：
 
 ### v5.4：工业经济、预算、动员和建设命令
 
-建议分支：`v5.4-victorian-industry-budget`
+阶段标识：`v5.4-victorian-industry-budget`。实际工作流：在 `main` 上提交，不创建长期候选分支。
 
 目标：
 
@@ -980,7 +1080,7 @@ warSupport      战争支持
 
 ### v5.5：外交危机、战争目标、列强干预和舆论压力
 
-建议分支：`v5.5-victorian-diplomatic-play`
+阶段标识：`v5.5-victorian-diplomatic-play`。实际工作流：在 `main` 上提交，不创建长期候选分支。
 
 目标：
 
@@ -1040,7 +1140,7 @@ Agent 设计：
 
 ### v5.6：维多利亚 Agent 指挥链和结构化 JSON 合同
 
-建议分支：`v5.6-victorian-agent-chain`
+阶段标识：`v5.6-victorian-agent-chain`。实际工作流：在 `main` 上提交，不创建长期候选分支。
 
 目标：
 
@@ -1093,7 +1193,7 @@ Agent 人设建议：
 
 ### v5.7：发布级 UI、地图视觉、报纸战报和可访问性
 
-建议分支：`v5.7-victorian-ui-polish`
+阶段标识：`v5.7-victorian-ui-polish`。实际工作流：在 `main` 上提交，不创建长期候选分支。
 
 目标：
 
@@ -1153,7 +1253,7 @@ Bottom Strip:
 
 ### v5.8：内容扩展、事件、历史人物和多剧本框架
 
-建议分支：`v5.8-victorian-content-events`
+阶段标识：`v5.8-victorian-content-events`。实际工作流：在 `main` 上提交，不创建长期候选分支。
 
 目标：
 
@@ -1194,7 +1294,7 @@ Bottom Strip:
 
 ### v5.9：发布候选、残留清理、试玩闭环和文档收口
 
-建议分支：`v5.9-victorian-release-candidate`
+阶段标识：`v5.9-victorian-release-candidate`。实际工作流：在 `main` 上提交，不创建长期候选分支。
 
 目标：
 
@@ -1239,6 +1339,28 @@ rg -n "Faction\\.opponent|germanAI|alliedPlayer" WWIIHexV0
 未跑：
 
 - 没有人工明确授权时，不跑 Xcode / XCTest / 模拟器 / app 启动 / Probe / Smoke / Stage Regression / Dynamic Theater Regression / Full / 性能测试。
+
+### 5.10 阶段提示词完成定义
+
+每个新阶段提示词都必须能让 Agent B 不回头猜需求，最低包含：
+
+- 当前阶段目标、非目标、已完成前置条件和不得误写为已完成的事项。
+- 入口文档清单：`AGENTS.md`、`update_log.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`、本文、上一阶段记录和当前阶段提示词。
+- 文件边界：可改、只读、禁止改，以及 `project.pbxproj` 是否允许改。
+- 实现顺序：先定位根因和硬编码，再小步迁移，最后同步文档。
+- 规则权威：hex / region / theater / front / deploy / command / diplomacy / economy 的边界。
+- 本机轻量检查：按 `md/test/test.md` 写出实际命令，不写笼统“已验证”。
+- 云端验收：要求 push 到 `origin/main`，等待 `WWIIHexV0 CI Results`，记录 run id、run attempt、artifact 名称。
+- Agent C 核对项：manifest、JUnit、主构建日志、failure summary、commit SHA 和 branch。
+- 交付格式：改动摘要、关键文件、commit SHA、push 状态、本机轻量检查、云端结论、未跑重测试、风险和下一步。
+
+阶段提示词禁止：
+
+- 用阶段愿景代替可执行任务。
+- 让 Agent B 一次性重命名大量 public API。
+- 要求本机默认跑 Xcode、XCTest、模拟器或 Probe。
+- 要求 Agent C 验收旧 run、旧 artifact 或只看文字汇报。
+- 把历史迁移资料、旧 prompt 或未验证分支当作当前源码事实。
 
 ---
 
@@ -1321,6 +1443,9 @@ rg -n "ComponentType|ProductionKind|EconomyResources|DiplomacyState|CountryProfi
 - 每轮按 `md/test/test.md` 做轻量检查。
 - 不伪造测试通过。
 - 未跑 Xcode / XCTest / 模拟器 / 性能测试时明确说明原因。
+- Swift / Xcode / JSON / workflow / 业务逻辑改动 push 到 `origin/main` 后，云端必须以 `WWIIHexV0 CI Results` 最新 run 为准。
+- Agent C 验收必须下载未加密 artifact，并核对 `ci-artifact-manifest.json`、`junit.xml`、`xcodebuild.log`、`ci-failure-summary.md`。
+- 文档-only 修改若未 commit / push，交付必须明说没有云端 run 和 Agent C 结果包核对。
 - README、`md/flow/flow.md`、`md/flow/flowchart.md`、`update_log.md` 和阶段记录口径一致。
 - 多 Agent 并发后完成文件/API/schema/project/doc 冲突检查。
 
@@ -1344,6 +1469,13 @@ rg -n "ComponentType|ProductionKind|EconomyResources|DiplomacyState|CountryProfi
 - md/flow/flowchart.md
 - md/test/test.md
 - md/prompt/v5.0-维多利亚迁移/codex-v5.0-维多利亚时代aiagent历史策略迁移总提示词.md
+- md/prompt/v5.0-维多利亚迁移/上一阶段记录或当前阶段提示词
+
+当前工作流：
+- 当前分支必须是 main。
+- 开始前同步 origin/main。
+- 本轮是否需要 commit / push。
+- 预期 GitHub Actions workflow 和 artifact。
 
 文件边界：
 - 可改 ...
@@ -1365,9 +1497,12 @@ rg -n "ComponentType|ProductionKind|EconomyResources|DiplomacyState|CountryProfi
 
 1. 完成了什么。
 2. 改了哪些关键文件。
-3. 跑了哪些轻量检查，具体结果是什么。
-4. 哪些重测试没跑，原因是什么。
-5. 还剩什么风险或下一步。
+3. 当前分支、commit SHA、push 状态。
+4. 跑了哪些本地轻量检查，具体结果是什么。
+5. GitHub Actions run id、run attempt、artifact 名称和云端结论。
+6. Agent C 是否下载并核对结果包。
+7. 哪些本机重测试没跑，原因是什么。
+8. 还剩什么风险或下一步。
 
 ---
 
@@ -1377,3 +1512,23 @@ rg -n "ComponentType|ProductionKind|EconomyResources|DiplomacyState|CountryProfi
 - 不要用一次性大重命名制造不可控风险。
 - 不要让 AI、UI、外交、经济绕过 `Command` / `ZoneDirective` / `WarCommandExecutor` / `RuleEngine`。
 - 不要把发布级目标理解成堆功能。首发要小而完整：一个好玩的黑海危机剧本、清晰的工业/外交/军事闭环、可解释的 Agent、没有主要二战残留、视觉完成度足够高。
+
+---
+
+## 10. 本总提示词完成与维护规则
+
+本文达到“可交给后续 Agent 使用”的标准，是因为它已经覆盖：
+
+- 当前工程事实、运行时权威链路和不可破坏边界。
+- 维多利亚产品目标、首发剧本、非目标和题材表达边界。
+- 二战语义替换清单、多国家/外交/经济/军事/Agent/UI/MapEditor 的迁移方向。
+- v5.0-v5.9 阶段路线、阶段提示词完成定义和 main 直推云端验收要求。
+- 数据与 schema 迁移合同、硬编码审计命令、发布级验收标准和交付模板。
+
+后续维护本文时，只做三类更新：
+
+1. 当前源码事实变化：例如 v5.1 已经完成多国家和通用回合，必须把“当前仍只有二元阵营”的描述改成真实状态，并在 `update_log.md` 记录。
+2. 协作或验证制度变化：例如 CI artifact 字段、workflow 名称、Agent C 缓存路径变化，必须同步本文、`AGENTS.md`、`md/test/test.md` 和 `md/prompt/README.md`。
+3. 阶段路线拆分变化：例如 v5.2 被拆成 v5.2a 数据、v5.2b MapEditor，必须新增阶段提示词并在本文只保留总览，不把实现细节堆回总提示词。
+
+不要为普通实现细节反复膨胀本文。具体执行交给阶段提示词，本文只维护稳定总控合同。

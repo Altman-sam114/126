@@ -295,10 +295,14 @@ struct FrontLineManager {
                       theaterState.theaters[neighborTheaterId]?.status != .inactive else {
                     return false
                 }
-                if theaterState.theaters[neighborTheaterId]?.controllingFaction != sourceFaction {
+                if let neighborFaction = theaterState.theaters[neighborTheaterId]?.controllingFaction,
+                   isOperationalOpponent(sourceFaction, neighborFaction) {
                     return true
                 }
-                return map.regions[neighborId]?.controller != sourceFaction
+                guard let controller = map.regions[neighborId]?.controller else {
+                    return false
+                }
+                return isOperationalOpponent(sourceFaction, controller)
             }
             .sorted { $0.rawValue < $1.rawValue }
     }
@@ -409,17 +413,21 @@ struct FrontLineManager {
             let maxPressure = finalSegments.map(\.pressureLevel).max() ?? 0
             let hasEncirclement = finalSegments.contains { $0.isEncirclementCandidate }
             let hasBreakthrough = finalSegments.contains { segment in
-                map.regions[segment.regionA]?.controller != factionA
+                guard let controller = map.regions[segment.regionA]?.controller else {
+                    return false
+                }
+                return isOperationalOpponent(factionA, controller)
             }
             let type: FrontLineType = hasEncirclement ? .encirclement : (hasBreakthrough ? .breakthrough : .normal)
             let state = operationalState(maxPressure: maxPressure, hasEncirclement: hasEncirclement)
+            let factionB = opposingFaction(for: finalSegments, factionA: factionA, map: map)
 
             return FrontLine(
-                id: frontLineId(theaterId: theaterId, factionA: factionA, factionB: factionA.opponent),
+                id: frontLineId(theaterId: theaterId, factionA: factionA, factionB: factionB),
                 theaterId: theaterId,
                 opposingTheaterIds: Array(opposingTheaterIds),
                 factionA: factionA,
-                factionB: factionA.opponent,
+                factionB: factionB,
                 segments: finalSegments,
                 type: type,
                 state: state
@@ -486,6 +494,27 @@ struct FrontLineManager {
             return nil
         }
         return Faction.allCases.max { (counts[$0] ?? 0) < (counts[$1] ?? 0) }
+    }
+
+    private func opposingFaction(for segments: [FrontSegment], factionA: Faction, map: MapState) -> Faction {
+        var counts: [Faction: Int] = [:]
+        for segment in segments {
+            guard let controller = map.regions[segment.regionB]?.controller,
+                  isOperationalOpponent(factionA, controller) else {
+                continue
+            }
+            counts[controller, default: 0] += 1
+        }
+        return counts.sorted {
+            if $0.value == $1.value {
+                return $0.key.rawValue < $1.key.rawValue
+            }
+            return $0.value > $1.value
+        }.first?.key ?? factionA.legacyOpponent ?? .neutral
+    }
+
+    private func isOperationalOpponent(_ lhs: Faction, _ rhs: Faction) -> Bool {
+        lhs != rhs && lhs.participatesInTurnOrder && rhs.participatesInTurnOrder
     }
 
     private func frontLineId(theaterId: TheaterId, factionA: Faction, factionB: Faction) -> FrontLineId {

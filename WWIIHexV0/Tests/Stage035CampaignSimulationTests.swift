@@ -219,6 +219,14 @@ final class Stage035CampaignSimulationTests: XCTestCase {
                 role: .armyCommander,
                 assignedDivisionIds: prepared.divisions.filter { $0.faction == .allies && !$0.isDestroyed }.map(\.id)
             )
+        default:
+            agent = GameAgent.sample(
+                id: "\(faction.rawValue)_observer_commander",
+                name: "\(faction.commanderDisplayName) Observer Commander",
+                faction: faction,
+                role: .armyCommander,
+                assignedDivisionIds: prepared.divisions.filter { $0.faction == faction && !$0.isDestroyed }.map(\.id)
+            )
         }
 
         let manager = TurnManager(
@@ -542,6 +550,8 @@ private struct FactionSupplyCounts: Equatable {
             germany.increment(supplyState)
         case .allies:
             allies.increment(supplyState)
+        case .britain, .france, .russia, .ottoman, .austria, .sardinia, .neutral:
+            break
         }
     }
 

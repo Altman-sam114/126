@@ -41,6 +41,13 @@ struct CommandValidator {
             return .invalid(.destinationOccupied)
         }
 
+        if let controller = state.map.tile(at: destination)?.controller,
+           controller != division.faction,
+           !state.diplomacyState.canAttack(attacker: division.faction, target: controller),
+           !state.diplomacyState.canEnterTerritory(faction: division.faction, controller: controller) {
+            return .invalid(.invalidTargetFaction)
+        }
+
         if let path = movementRules.shortestPathIgnoringMovement(for: division, to: destination, in: state),
            path.cost > division.movement {
             return .invalid(.insufficientMovement)
@@ -64,7 +71,7 @@ struct CommandValidator {
             return .invalid(.targetNotFound)
         }
 
-        guard target.faction != attacker.faction else {
+        guard state.diplomacyState.canAttack(attacker: attacker.faction, target: target.faction) else {
             return .invalid(.invalidTargetFaction)
         }
 
@@ -136,13 +143,6 @@ struct CommandValidator {
     }
 
     private func phaseAllowsCommands(in state: GameState) -> Bool {
-        switch state.phase {
-        case .germanAI:
-            return state.activeFaction == .germany
-        case .alliedPlayer:
-            return state.activeFaction == .allies
-        case .resolution:
-            return false
-        }
+        state.phase.isActionPhase && state.activeFaction.participatesInTurnOrder
     }
 }

@@ -112,7 +112,7 @@ final class HexNode: SKNode {
 
         if let supplySourceFaction {
             addLabel(
-                text: supplySourceFaction == .allies ? "SUP A" : "SUP G",
+                text: "SUP \(supplySourceFaction.supplyLabelSuffix)",
                 y: layout.hexSize * 0.36,
                 fontSize: max(6, layout.hexSize * 0.13),
                 color: TerrainStyle.textColor(for: displayState.terrain),
@@ -160,5 +160,30 @@ final class HexNode: SKNode {
         }
         path.closeSubpath()
         return path
+    }
+}
+
+private extension Faction {
+    var supplyLabelSuffix: String {
+        switch self {
+        case .germany:
+            return "G"
+        case .allies:
+            return "A"
+        case .britain:
+            return "B"
+        case .france:
+            return "F"
+        case .russia:
+            return "R"
+        case .ottoman:
+            return "O"
+        case .austria:
+            return "AU"
+        case .sardinia:
+            return "S"
+        case .neutral:
+            return "N"
+        }
     }
 }

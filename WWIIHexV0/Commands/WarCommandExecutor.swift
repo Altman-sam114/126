@@ -806,7 +806,7 @@ struct WarCommandExecutor {
     ) -> Int {
         state.divisions
             .filter { division in
-                guard division.faction != faction,
+                guard state.diplomacyState.canAttack(attacker: faction, target: division.faction),
                       !division.isDestroyed else {
                     return false
                 }
@@ -872,7 +872,7 @@ struct WarCommandExecutor {
     ) -> [RegionId] {
         var regionIds: [RegionId] = []
         for segment in segments.sorted(by: { $0.regionId.rawValue < $1.regionId.rawValue }) {
-            if state.map.regions[segment.regionId]?.controller != zone.faction ||
+            if isEnemyControlled(segment.regionId, for: zone.faction, in: state) ||
                 hasEnemyPresence(in: segment.regionId, zone: zone, state: state) {
                 regionIds.append(segment.regionId)
             }
@@ -883,7 +883,7 @@ struct WarCommandExecutor {
                     targetZoneId: targetZoneId,
                     state: state
                 ),
-                    (state.map.regions[neighborId]?.controller != zone.faction ||
+                    (isEnemyControlled(neighborId, for: zone.faction, in: state) ||
                      hasEnemyPresence(in: neighborId, zone: zone, state: state)) else {
                     return false
                 }
@@ -924,7 +924,7 @@ struct WarCommandExecutor {
         state: GameState
     ) -> Bool {
         state.divisions.contains { division in
-            guard division.faction != zone.faction,
+            guard state.diplomacyState.canAttack(attacker: zone.faction, target: division.faction),
                   !division.isDestroyed else {
                 return false
             }
@@ -941,7 +941,7 @@ struct WarCommandExecutor {
         let regionSet = Set(regionIds)
         return state.divisions
             .filter { target in
-                guard target.faction != zone.faction,
+                guard state.diplomacyState.canAttack(attacker: zone.faction, target: target.faction),
                       !target.isDestroyed,
                       let targetRegion = target.location(in: state.map),
                       regionSet.contains(targetRegion) else {
@@ -982,8 +982,8 @@ struct WarCommandExecutor {
                 if lhsIsCurrent != rhsIsCurrent {
                     return !lhsIsCurrent
                 }
-                let lhsEnemyControlled = state.map.tile(at: $0)?.controller == division.faction.opponent
-                let rhsEnemyControlled = state.map.tile(at: $1)?.controller == division.faction.opponent
+                let lhsEnemyControlled = isEnemyControlled($0, for: division.faction, in: state)
+                let rhsEnemyControlled = isEnemyControlled($1, for: division.faction, in: state)
                 if lhsEnemyControlled != rhsEnemyControlled {
                     return lhsEnemyControlled
                 }
@@ -1002,7 +1002,7 @@ struct WarCommandExecutor {
             return destination
         }
 
-        if let current = candidates.first(where: { $0 == division.coord && state.map.tile(at: $0)?.controller != division.faction }) {
+        if let current = candidates.first(where: { $0 == division.coord && isEnemyControlled($0, for: division.faction, in: state) }) {
             return current
         }
 
@@ -1022,8 +1022,8 @@ struct WarCommandExecutor {
                 let lhsDistance = nearestDistance(from: $0, to: targets)
                 let rhsDistance = nearestDistance(from: $1, to: targets)
                 if lhsDistance == rhsDistance {
-                    let lhsEnemyControlled = state.map.tile(at: $0)?.controller == division.faction.opponent
-                    let rhsEnemyControlled = state.map.tile(at: $1)?.controller == division.faction.opponent
+                    let lhsEnemyControlled = isEnemyControlled($0, for: division.faction, in: state)
+                    let rhsEnemyControlled = isEnemyControlled($1, for: division.faction, in: state)
                     if lhsEnemyControlled != rhsEnemyControlled {
                         return lhsEnemyControlled
                     }
@@ -1039,6 +1039,20 @@ struct WarCommandExecutor {
 
     private func nearestDistance(from coord: HexCoord, to targets: [HexCoord]) -> Int {
         targets.map { coord.distance(to: $0) }.min() ?? Int.max
+    }
+
+    private func isEnemyControlled(_ coord: HexCoord, for faction: Faction, in state: GameState) -> Bool {
+        guard let controller = state.map.tile(at: coord)?.controller else {
+            return false
+        }
+        return state.diplomacyState.canAttack(attacker: faction, target: controller)
+    }
+
+    private func isEnemyControlled(_ regionId: RegionId, for faction: Faction, in state: GameState) -> Bool {
+        guard let controller = state.map.regions[regionId]?.controller else {
+            return false
+        }
+        return state.diplomacyState.canAttack(attacker: faction, target: controller)
     }
 
     private func lightestFrontRegion(in zone: FrontZone, loads: [RegionId: Int]) -> RegionId? {
@@ -1240,11 +1254,11 @@ struct WarCommandExecutor {
         if let destinationZoneId,
            destinationZoneId != advancingZoneId,
            let destinationFaction = state.warDeploymentState.frontZones[destinationZoneId]?.faction {
-            return destinationFaction != advancingFaction
+            return state.diplomacyState.canAttack(attacker: advancingFaction, target: destinationFaction)
         }
 
         if let controller = state.map.tile(at: hex)?.controller {
-            return controller != advancingFaction
+            return state.diplomacyState.canAttack(attacker: advancingFaction, target: controller)
         }
 
         return false

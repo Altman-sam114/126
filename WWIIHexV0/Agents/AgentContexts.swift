@@ -129,7 +129,7 @@ struct AgentContextBuilder {
             .map { divisionSummary($0, state: state) }
             .sorted { $0.id < $1.id }
         let enemyDivisions = state.divisions
-            .filter { $0.faction == agent.faction.opponent }
+            .filter { state.diplomacyState.canAttack(attacker: agent.faction, target: $0.faction) }
             .map { divisionSummary($0, state: state) }
             .sorted { $0.id < $1.id }
 
@@ -224,7 +224,7 @@ struct AgentContextBuilder {
 
     private func supplySummary(for faction: Faction, state: GameState) -> SupplySummary {
         let friendly = state.divisions.filter { $0.faction == faction }
-        let enemy = state.divisions.filter { $0.faction == faction.opponent }
+        let enemy = state.divisions.filter { state.diplomacyState.canAttack(attacker: faction, target: $0.faction) }
 
         return SupplySummary(
             friendlySupplied: friendly.filter { $0.supplyState == .supplied }.count,

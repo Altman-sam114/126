@@ -18,6 +18,8 @@ struct ScenarioDefinition: Codable, Equatable {
     let initialPhase: String
     let playerFaction: String
     let aiFaction: String
+    let turnOrder: [String]?
+    let humanControlledFactions: [String]?
     let keyLocations: [KeyLocationDefinition]
     let objectives: [ObjectiveDefinition]
     let initialUnits: [InitialUnitDefinition]

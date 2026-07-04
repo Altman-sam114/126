@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文是 WWIIHexV0 项目的入口记忆、总览、基本规则和多 Agent 工作流。任何 Agent 接手任务时，先读本文，再读任务所需文档和源码；不要凭旧 prompt、旧记忆或猜测修改项目。
+本文是 WWIIHexV0 / Steam & Empire Agent 迁移项目的入口记忆、总览、基本规则和多 Agent 工作流。当前仓库仍以 WWIIHexV0 二战 hex 战棋工程为代码基线，v5.0 起按 `蒸汽帝国 Agent` / `Steam & Empire Agent Strategy` 维多利亚时代历史策略方向规划迁移。任何 Agent 接手任务时，先读本文，再读任务所需文档和源码；不要凭旧 prompt、旧记忆或猜测修改项目。
 
 ## 1. 必读文件
 
@@ -19,7 +19,10 @@
 
 ## 2. 项目基本规则
 
-- 本项目是 Swift + SwiftUI + SpriteKit 的 iOS / macOS 二战回合制 hex 战棋。
+- 本项目是 Swift + SwiftUI + SpriteKit 的 iOS / macOS AI 战略战棋工程。
+- 当前可运行代码基线仍是 WWIIHexV0 二战阿登测试板及其多层扩展；默认数据、源码兼容名和部分 UI 仍可能保留 Germany / Allies、Ardennes、Bastogne、Panzer、Division 等二战语义。
+- v5.0-v5.9 路线目标是迁移为维多利亚时代 AI Agent 历史策略题材：多国家势力、黑海危机、工业预算、铁路补给、港口远征、围城、外交危机、战争目标、舆论压力和可审计内阁/军令 Agent 决策链。
+- 不得把 v5 规划文档误写成已完成业务实现；任何维多利亚迁移功能是否落地，以当前源码、数据和真实检查结果为准。
 - Hex 是战术权威：单位位置、移动、攻击、真实占领、视野、补给落点以 hex 为准。
 - Region 是战略聚合层：资源、人力、补给、胜利点、控制比例从 hex 状态聚合，不替代 hex。
 - `regionToTheater` 是初始/基础战区归属和地图编辑器种子，不是运行时推进层。
@@ -29,6 +32,8 @@
 - 玩家、AI、聊天命令和 MockAI 都必须落到 `Command` / `ZoneDirective`，再经 `WarCommandExecutor`、`CommandValidator`、`RuleEngine` 执行；禁止绕过规则系统直接改 `GameState`。
 - Legacy Agent D 管线保留作回归参考，默认战争 AI 主路径不得退回旧管线。
 - 不恢复 organization；当前战斗核心是 strength、retreat、supply、encirclement。
+- 维多利亚迁移时，多国家外交、铁路/港口补给、海权封锁、工业预算、动员、围城、报纸舆论和内阁 Agent 都只能作为规则状态、派生层或命令任务进入系统，不能替代 hex 权威或绕过 `RuleEngine`。
+- 首发维多利亚剧本推荐使用 `black_sea_crisis_1853` / `黑海危机 1853`；第一版不做完整全球七十年沙盒、完整全球市场、完整海军战术或无成本殖民扩张叙事。
 - 严守用户给定范围。不要擅自扩展功能、重构架构、删除旧实现或回滚其他人改动。
 
 ## 3. Agent 召唤与身份

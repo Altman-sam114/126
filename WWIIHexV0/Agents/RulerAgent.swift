@@ -274,7 +274,8 @@ struct RulerStrategicSnapshot {
                 if segment.isEncircled {
                     priorities[segment.regionId, default: 0] += 6
                 }
-                if state.map.regions[segment.regionId]?.controller != faction {
+                if let controller = state.map.regions[segment.regionId]?.controller,
+                   state.diplomacyState.canAttack(attacker: faction, target: controller) {
                     contestedPresence += 1
                     priorities[segment.regionId, default: 0] += 4
                 }
@@ -300,7 +301,7 @@ struct RulerStrategicSnapshot {
     private static func enemyStrength(adjacentTo zone: FrontZone, state: GameState) -> Int {
         let visibleEnemyRegions = Set(zone.frontSegments.map(\.regionId))
         return state.divisions
-            .filter { $0.faction != zone.faction && !$0.isDestroyed }
+            .filter { state.diplomacyState.canAttack(attacker: zone.faction, target: $0.faction) && !$0.isDestroyed }
             .filter { division in
                 guard let regionId = division.location(in: state.map) else {
                     return false
@@ -357,6 +358,16 @@ extension RulerAgent {
                 aggression: 58,
                 coalitionDiscipline: 82,
                 riskTolerance: 48
+            )
+        default:
+            config = RulerAgentConfig(
+                id: country?.rulerAgentId ?? "ruler_\(faction.rawValue)",
+                name: "\(faction.displayName) Cabinet",
+                faction: faction,
+                countryId: country?.id,
+                aggression: faction.isNeutral ? 20 : 55,
+                coalitionDiscipline: faction.isNeutral ? 60 : 65,
+                riskTolerance: faction.isNeutral ? 20 : 45
             )
         }
         return RulerAgent(config: config)

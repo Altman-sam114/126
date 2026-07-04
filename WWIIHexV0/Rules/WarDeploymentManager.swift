@@ -212,7 +212,7 @@ struct WarDeploymentManager {
             zones: state.frontZones,
             hexToZone: state.hexToFrontZone,
             map: map
-        ) || map.tile(at: division.coord)?.controller != zone.faction {
+        ) || isEnemyControlled(division.coord, by: zone.faction, map: map) {
             return .frontUnit
         }
 
@@ -337,13 +337,13 @@ struct WarDeploymentManager {
 
                 let hasEnemyPresence = divisions.contains { division in
                     guard !division.isDestroyed,
-                          division.faction != zone.faction else {
+                          isOperationalOpponent(zone.faction, division.faction) else {
                         return false
                     }
                     return division.location(in: map) == regionId
                 }
 
-                if (map.regions[regionId]?.controller != zone.faction || hasEnemyPresence),
+                if (isEnemyControlled(regionId, by: zone.faction, map: map) || hasEnemyPresence),
                    let ownerZoneId = enemyZoneIds.sorted(by: { $0.rawValue < $1.rawValue }).first {
                     segmentsByRegion[regionId] = FrontZoneSegment(
                         regionId: regionId,
@@ -438,7 +438,7 @@ struct WarDeploymentManager {
                 map: map
             )
             let isInsideEnemyDynamicZone = assignedZoneId != zoneId
-            let isOnEnemyControlledHex = map.tile(at: division.coord)?.controller != assignedZone.faction
+            let isOnEnemyControlledHex = isEnemyControlled(division.coord, by: assignedZone.faction, map: map)
             if isHostileContact || isInsideEnemyDynamicZone || isOnEnemyControlledHex {
                 appendFrontUnit(division.id, to: assignedZoneId, zones: &zones)
             } else if assignedZone.isCoreZone || regionHasCityOrFactory(regionId, map: map) {
@@ -520,7 +520,8 @@ struct WarDeploymentManager {
                 guard map.tile(at: neighborHex) != nil,
                       let enemyZoneId = hexToZone[neighborHex],
                       enemyZoneId != zoneId,
-                      zones[enemyZoneId]?.faction != faction else {
+                      let enemyFaction = zones[enemyZoneId]?.faction,
+                      isOperationalOpponent(faction, enemyFaction) else {
                     continue
                 }
                 enemyZoneIds.insert(enemyZoneId)
@@ -610,7 +611,7 @@ struct WarDeploymentManager {
                   let neighborFaction = zones[neighborZoneId]?.faction else {
                 return false
             }
-            return neighborFaction != faction
+            return isOperationalOpponent(faction, neighborFaction)
         }
     }
 
@@ -632,11 +633,29 @@ struct WarDeploymentManager {
                   let neighborFaction = zones[neighborZoneId]?.faction else {
                 continue
             }
-            if neighborFaction != faction {
+            if isOperationalOpponent(faction, neighborFaction) {
                 return true
             }
         }
         return false
+    }
+
+    private func isEnemyControlled(_ regionId: RegionId, by faction: Faction, map: MapState) -> Bool {
+        guard let controller = map.regions[regionId]?.controller else {
+            return false
+        }
+        return isOperationalOpponent(faction, controller)
+    }
+
+    private func isEnemyControlled(_ coord: HexCoord, by faction: Faction, map: MapState) -> Bool {
+        guard let controller = map.tile(at: coord)?.controller else {
+            return false
+        }
+        return isOperationalOpponent(faction, controller)
+    }
+
+    private func isOperationalOpponent(_ lhs: Faction, _ rhs: Faction) -> Bool {
+        lhs != rhs && lhs.participatesInTurnOrder && rhs.participatesInTurnOrder
     }
 
     private func faction(for theater: TheaterNode, map: MapState) -> Faction? {

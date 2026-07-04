@@ -1,23 +1,22 @@
-# WWIIHexV0 — iOS / macOS 二战 AI 战略战棋游戏
+# WWIIHexV0 / Steam & Empire Agent — iOS / macOS AI 战略战棋工程
 
-> **当前状态：v0.5 元帅决策链分支 `v0.5-marshal-decision-chain`。默认战争 AI 已加入“元帅 -> 模拟 LLM JSON -> decoder -> compiler -> ZoneDirective”决策链；下游仍收口到 `WarCommandExecutor -> RuleEngine`。统治者层只作为后续上游预留，当前 v0.5 主链路不调用 `RulerAgent`，也不恢复 Cabinet / Minister。历史测试基线曾达到 v0.37 Probe 18/0、Stage Regression 69/0、Full 226/0；当前工作流默认不跑 Xcode / XCTest / 模拟器测试，只按 `md/test/test.md` 做轻量检查。**
+> **当前状态：代码基线仍是 WWIIHexV0 二战 hex 战棋工程，已沉淀 Hex / Region / Theater / FrontLine / WarDeployment / Command / AI Agent 管线。项目路线按 v5.0-v5.9 维多利亚时代历史策略迁移规划推进，目标产品暂定为 `蒸汽帝国 Agent` / `Steam & Empire Agent Strategy`。本地工作树已落地 v5.1 基础切片：`Faction` 支持多国家和 neutral、`GameState` 支持通用 turn order / human-controlled factions，规则侧敌我判断开始收口到 `DiplomacyState`；但默认剧本、源码命名和 UI 仍保留大量阿登、Germany / Allies、Division、Panzer 等二战语义，且该切片尚需 commit / push / GitHub Actions / Agent C 结果包验收。当前工作流默认不跑本机 Xcode / XCTest / 模拟器测试，只按 `md/test/test.md` 做轻量检查，重验证交给 GitHub Actions。**
 
 ---
 
 ## 项目定位
 
-一款 iOS / macOS 回合制二战策略游戏，目标结合战棋（六角格操作感）、大战略（省份占领、补给、前线）与角色扮演（LLM 驱动的将领 AI）。
+一款 iOS / macOS 回合制 AI 战略战棋工程。当前可运行基础来自二战阿登测试板，长期目标是迁移为维多利亚时代历史策略题材：玩家在黑海危机等局部剧本中处理多国家外交、工业预算、铁路补给、港口远征、围城、战争目标和舆论压力；AI Agent 通过可审计 JSON 指令协作决策，所有行动仍被统一规则系统约束。
 
-**核心参考：**
-- 《统一指挥2》：六角格战棋、补给、攻击（战术层参照）
-- 《钢铁雄心4》：大战略、省份占领、前线、补给、生产、国家管理（战略层参照）
-- EasyTech《钢铁命令》：战役推进、将领、战术操作
-- 《世界征服者4》：移动端轻量化策略体验
+**历史参考与迁移方向：**
+- 既有 WWIIHexV0：六角格战术、Region 战略聚合、动态战区、前线、部署、统一命令管线。
+- 维多利亚迁移目标：多国家势力、外交危机、工业财政、铁路/港口补给、远征军、围城、海权封锁、战争支持和报纸舆论。
+- 产品口径：首发推荐 `black_sea_crisis_1853` / `黑海危机 1853`，不第一版做完整全球七十年沙盒、完整全球市场、完整海军战术或无成本殖民扩张叙事。
 
-**核心创新：本地部署 LLM 驱动游戏 AI**
-- 将领、元帅已进入当前指挥链；国家统治者、部长只作为后续方向预留
-- agent 根据视野、战况摘要、性格和历史背景输出结构化 JSON 命令
-- 游戏规则系统负责校验并执行，LLM 不直接绕过规则修改状态
+**核心创新：规则约束的 AI Agent 指挥链**
+- 现有将领 / 元帅 / 统治者草案和 Legacy Agent D 管线提供迁移基础。
+- v5 路线将扩展为 HeadOfState / Cabinet / ForeignMinister / WarMinister / Treasury / Admiralty / GeneralStaff / TheaterCommander / Press 等维多利亚 Agent 层级。
+- Agent 只能输出结构化 JSON / Codable directive；游戏规则系统负责校验并执行，LLM 或 MockAI 不直接绕过规则修改状态。
 
 ---
 

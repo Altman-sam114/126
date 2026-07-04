@@ -110,11 +110,14 @@ scenarioId
 turn / maxTurns
 activeFaction
 phase
+turnOrder
+humanControlledFactions
 map: MapState
 theaterState: TheaterState
 frontLineState: FrontLineState
 warDeploymentState: WarDeploymentState
 economyState: EconomyState
+diplomacyState: DiplomacyState
 divisions: [Division]
 victoryState
 eventLog
@@ -130,6 +133,8 @@ playerCommandState
 - `frontLineState` 从动态战区相邻 hex 派生。
 - `warDeploymentState` 从动态战区/前线/单位位置派生，供 AI 调度单位。
 - `economyState` 保存 manpower、industry、supplies、生产队列、上回合收入/维护费/补员消耗，不直接改变战术占领权。
+- `diplomacyState` 保存国家/集团/关系草案。v5.1 起移动、攻击、补给、AI 目标选择的敌我判断优先通过 `DiplomacyState.canAttack` / `canEnterTerritory`，不再走 `Faction.opponent` 主路径。
+- `turnOrder` 保存本局参战势力行动顺序，`humanControlledFactions` 保存人类控制势力；旧阿登数据默认兼容为 Germany -> Allies，Allies 为玩家。
 - `eventLog` 给 UI 和调试看。
 - `warDirectiveRecords` 记录战争指令执行回放，供 v0.36+ 后续接 LLM / 聊天命令审计。
 
@@ -530,6 +535,9 @@ loadRegionDataSet(named:)
   -> RegionOccupationRules().mapByAggregatingControllers(in: map)
      - 从 hex controller 派生 region controller
   -> makeDivisions(from: scenario.initialUnits)
+  -> initialActiveFaction / initialPhase / turnOrder / humanControlledFactions
+     - 旧 germanAI/alliedPlayer 仍可解码
+     - 新 humanAction/aiAction 按 activeFaction 和 humanControlledFactions 解释
   -> makeTheaterState(map, regionData, divisions, turn)
      - 优先使用 regionData.regions[].theaterId
      - 没有 assignment 时使用 TheaterSystem.makeInitialFixedTheaters
@@ -537,6 +545,9 @@ loadRegionDataSet(named:)
      - capture initialSnapshot
   -> FrontLineManager.makeInitialState(...)
   -> WarDeploymentManager.makeInitialState(...)
+  -> DiplomacyState.initial(for: scenario.factions, turn:)
+     - legacy Germany / Allies 默认 atWar
+     - Britain / France / Russia / Ottoman / Austria / Sardinia / Neutral 默认 neutral
   -> GameState(...)
 ```
 
@@ -679,7 +690,7 @@ RegionDataSet JSON
 - map width/height/isSparse。
 - 每个 `MapEditorHex` 写为 `ScenarioTileDefinition`。
 - terrain / road / controller / city / fortress / supply / objective / regionId。
-- factions、initialTurn、initialPhase、playerFaction、aiFaction。
+- factions、initialTurn、initialPhase、playerFaction、aiFaction、turnOrder、humanControlledFactions。
 - `initialUnits` 从 `MapEditorUnitDraft` 写入。
 - 底图不写入。
 
@@ -798,7 +809,7 @@ handleBoardTap(coord)
 - 非 observer mode。
 - 单位属于 `playerFaction`。
 - 当前 activeFaction 是 `playerFaction`。
-- 当前 phase 是 `.alliedPlayer`。
+- 当前 phase 是 action phase；旧阿登兼容时仍可能显示 `.alliedPlayer`。
 - 未行动。
 
 ### 4.2 RootGameView
@@ -947,6 +958,7 @@ division 未行动、未撤退、canAct
 destination 在地图内
 destination passable
 destination 没有其他单位
+若目标 hex 已由其他势力控制，必须满足外交上可攻击或可通行
 忽略 movement 的最短路径 cost <= division.movement
 真实 shortestPath 存在
 ```
@@ -956,7 +968,7 @@ destination 没有其他单位
 ```text
 attacker 可行动
 target exists
-target.faction != attacker.faction
+DiplomacyState.canAttack(attacker.faction, target.faction)
 distance <= attacker.range
 ```
 
@@ -981,6 +993,8 @@ phaseAllowsCommands
 phaseAllowsCommands
 active faction economy ledger 有足够 manpower / industry / supplies
 ```
+
+`phaseAllowsCommands` 在 v5.1 后不再硬编码 `.germanAI` / `.alliedPlayer`，而是要求 `state.phase.isActionPhase` 且 `activeFaction.participatesInTurnOrder`。
 
 ### 5.3 移动与占领
 
@@ -1127,9 +1141,10 @@ SupplyRules.advanceRetreats
 SupplyRules.applyEncirclementAttrition
 VictoryRules.updateVictoryState
 
-activeFaction:
-  germany -> allies, phase alliedPlayer
-  allies -> germany, phase germanAI, turn += 1
+nextFaction = GameState.nextFaction(after: activeFaction)
+activeFaction = nextFaction.faction
+phase = GameState.actionPhase(for: nextFaction.faction)
+如果 turnOrder 完成一轮循环，turn += 1
 
 resetActionsForActiveFaction
 StrategicStateBootstrapper.refreshRuntimeState
@@ -1222,11 +1237,9 @@ TurnManager.runAITurn(... pipelineMode: .zoneDirective)
 `AppContainer.shouldRunAI`：
 
 ```text
-germany:
-  phase == .germanAI
-
-allies:
-  observerModeEnabled && phase == .alliedPlayer
+phase.isActionPhase
+activeFaction.participatesInTurnOrder
+observerModeEnabled || !state.isHumanControlled(activeFaction)
 ```
 
 `runAISequence`：

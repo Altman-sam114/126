@@ -34,6 +34,8 @@ struct VictoryState: Codable, Equatable {
             eliminatedGermanDivisions += 1
         case .allies:
             eliminatedAlliedDivisions += 1
+        case .britain, .france, .russia, .ottoman, .austria, .sardinia, .neutral:
+            break
         }
     }
 }

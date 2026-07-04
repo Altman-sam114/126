@@ -122,7 +122,7 @@ struct MockAICommander {
         })
         return state.divisions
             .filter { division in
-                guard division.faction != zone.faction,
+                guard state.diplomacyState.canAttack(attacker: zone.faction, target: division.faction),
                       !division.isDestroyed,
                       let regionId = division.location(in: state.map) else {
                     return false

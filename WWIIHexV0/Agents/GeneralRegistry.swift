@@ -203,7 +203,9 @@ struct GeneralDispatcher {
               let region = map.region(id: hqRegionId) else {
             return false
         }
-        return region.controller != zone.faction
+        return region.controller != zone.faction &&
+            region.controller.participatesInTurnOrder &&
+            zone.faction.participatesInTurnOrder
     }
 
     private func seededGeneral(

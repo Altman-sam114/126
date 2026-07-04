@@ -131,12 +131,14 @@ enum MapEditorExporter {
                     )
                 }
             ),
-            factions: Faction.allCases.map(\.rawValue),
+            factions: Faction.legacyTurnOrder.map(\.rawValue),
             maxTurns: 12,
             initialTurn: 1,
             initialPhase: GamePhase.alliedPlayer.rawValue,
             playerFaction: Faction.allies.rawValue,
             aiFaction: Faction.germany.rawValue,
+            turnOrder: Faction.legacyTurnOrder.map(\.rawValue),
+            humanControlledFactions: [Faction.allies.rawValue],
             keyLocations: keyLocations,
             objectives: objectives,
             initialUnits: document.initialUnits.map { unit in

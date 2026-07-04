@@ -6,6 +6,8 @@ struct GameState: Codable, Equatable {
     var maxTurns: Int
     var activeFaction: Faction
     var phase: GamePhase
+    var turnOrder: [Faction]
+    var humanControlledFactions: Set<Faction>
     var map: MapState
     var theaterState: TheaterState
     var frontLineState: FrontLineState
@@ -25,6 +27,8 @@ struct GameState: Codable, Equatable {
         maxTurns: Int,
         activeFaction: Faction,
         phase: GamePhase,
+        turnOrder: [Faction] = [],
+        humanControlledFactions: Set<Faction> = [],
         map: MapState,
         theaterState: TheaterState = .empty,
         frontLineState: FrontLineState = .empty,
@@ -43,6 +47,16 @@ struct GameState: Codable, Equatable {
         self.maxTurns = maxTurns
         self.activeFaction = activeFaction
         self.phase = phase
+        let normalizedTurnOrder = Self.normalizedTurnOrder(
+            turnOrder,
+            activeFaction: activeFaction,
+            divisions: divisions
+        )
+        self.turnOrder = normalizedTurnOrder
+        let normalizedHumanFactions = Set(humanControlledFactions.filter(\.participatesInTurnOrder))
+        self.humanControlledFactions = normalizedHumanFactions.isEmpty && normalizedTurnOrder == Faction.legacyTurnOrder
+            ? Set([.allies])
+            : normalizedHumanFactions
         self.map = map
         self.theaterState = theaterState
         self.frontLineState = frontLineState
@@ -66,12 +80,14 @@ struct GameState: Codable, Equatable {
             maxTurns: 8,
             activeFaction: .germany,
             phase: .germanAI,
+            turnOrder: Faction.legacyTurnOrder,
+            humanControlledFactions: [.allies],
             map: map,
             theaterState: .empty,
             frontLineState: .empty,
             warDeploymentState: .empty,
             economyState: .empty,
-            diplomacyState: DiplomacyState.initial(for: Faction.allCases, turn: 1),
+            diplomacyState: DiplomacyState.initial(for: Faction.legacyTurnOrder, turn: 1),
             divisions: [
                 .panzer(
                     id: "ger_panzer_1",
@@ -141,6 +157,8 @@ struct GameState: Codable, Equatable {
         case maxTurns
         case activeFaction
         case phase
+        case turnOrder
+        case humanControlledFactions
         case map
         case theaterState
         case frontLineState
@@ -163,6 +181,8 @@ struct GameState: Codable, Equatable {
             maxTurns: try container.decode(Int.self, forKey: .maxTurns),
             activeFaction: try container.decode(Faction.self, forKey: .activeFaction),
             phase: try container.decode(GamePhase.self, forKey: .phase),
+            turnOrder: try container.decodeIfPresent([Faction].self, forKey: .turnOrder) ?? [],
+            humanControlledFactions: try container.decodeIfPresent(Set<Faction>.self, forKey: .humanControlledFactions) ?? [],
             map: try container.decode(MapState.self, forKey: .map),
             theaterState: try container.decodeIfPresent(TheaterState.self, forKey: .theaterState) ?? .empty,
             frontLineState: try container.decodeIfPresent(FrontLineState.self, forKey: .frontLineState) ?? .empty,
@@ -188,6 +208,59 @@ struct GameState: Codable, Equatable {
 
     func division(at coord: HexCoord) -> Division? {
         divisions.first { $0.coord == coord }
+    }
+
+    func isHumanControlled(_ faction: Faction) -> Bool {
+        humanControlledFactions.contains(faction)
+    }
+
+    func nextFaction(after faction: Faction) -> (faction: Faction, completedCycle: Bool) {
+        let order = Self.normalizedTurnOrder(turnOrder, activeFaction: faction, divisions: divisions)
+        guard let currentIndex = order.firstIndex(of: faction) else {
+            return (order.first ?? faction, false)
+        }
+
+        let nextIndex = (currentIndex + 1) % order.count
+        return (order[nextIndex], nextIndex == 0)
+    }
+
+    func actionPhase(for faction: Faction) -> GamePhase {
+        if turnOrder == Faction.legacyTurnOrder,
+           humanControlledFactions == Set([Faction.allies]) {
+            if faction == .germany {
+                return .germanAI
+            }
+            if faction == .allies {
+                return .alliedPlayer
+            }
+        }
+        GamePhase.actionPhase(for: faction, humanControlledFactions: humanControlledFactions)
+    }
+
+    static func normalizedTurnOrder(
+        _ requestedOrder: [Faction],
+        activeFaction: Faction,
+        divisions: [Division]
+    ) -> [Faction] {
+        var seen: Set<Faction> = []
+        var ordered: [Faction] = []
+        for faction in requestedOrder where faction.participatesInTurnOrder && !seen.contains(faction) {
+            ordered.append(faction)
+            seen.insert(faction)
+        }
+
+        if ordered.isEmpty {
+            for faction in divisions.map(\.faction) where faction.participatesInTurnOrder && !seen.contains(faction) {
+                ordered.append(faction)
+                seen.insert(faction)
+            }
+        }
+
+        if activeFaction.participatesInTurnOrder && !seen.contains(activeFaction) {
+            ordered.insert(activeFaction, at: 0)
+        }
+
+        return ordered.isEmpty ? Faction.legacyTurnOrder : ordered
     }
 
     mutating func updateDivision(_ division: Division) {

@@ -592,7 +592,8 @@ struct ZoneCommanderAgent: ZoneCommanderProviding {
         let visibleEnemyRegions = Set(visibleEnemyRegionIds(zone: zone, state: state))
         var strengthByRegion: [RegionId: Int] = [:]
 
-        for division in state.divisions where division.faction != zone.faction && !division.isDestroyed {
+        for division in state.divisions
+            where state.diplomacyState.canAttack(attacker: zone.faction, target: division.faction) && !division.isDestroyed {
             guard let regionId = division.location(in: state.map),
                   visibleEnemyRegions.contains(regionId) else {
                 continue
@@ -606,7 +607,7 @@ struct ZoneCommanderAgent: ZoneCommanderProviding {
     private func visibleEnemyRegionIds(zone: FrontZone, state: GameState) -> [RegionId] {
         var regionIds: [RegionId] = []
         for segment in zone.frontSegments.sorted(by: { $0.regionId.rawValue < $1.regionId.rawValue }) {
-            if state.map.regions[segment.regionId]?.controller != zone.faction ||
+            if isEnemyControlled(segment.regionId, for: zone.faction, in: state) ||
                 hasEnemyPresence(in: segment.regionId, zone: zone, state: state) {
                 regionIds.append(segment.regionId)
             }
@@ -618,7 +619,7 @@ struct ZoneCommanderAgent: ZoneCommanderProviding {
                     targetZoneId: segment.neighborEnemyZone,
                     state: state
                 ),
-                    (state.map.regions[neighborId]?.controller != zone.faction ||
+                    (isEnemyControlled(neighborId, for: zone.faction, in: state) ||
                      hasEnemyPresence(in: neighborId, zone: zone, state: state)) else {
                     continue
                 }
@@ -707,12 +708,19 @@ struct ZoneCommanderAgent: ZoneCommanderProviding {
         state: GameState
     ) -> Bool {
         state.divisions.contains { division in
-            guard division.faction != zone.faction,
+            guard state.diplomacyState.canAttack(attacker: zone.faction, target: division.faction),
                   !division.isDestroyed else {
                 return false
             }
             return division.location(in: state.map) == regionId
         }
+    }
+
+    private func isEnemyControlled(_ regionId: RegionId, for faction: Faction, in state: GameState) -> Bool {
+        guard let controller = state.map.regions[regionId]?.controller else {
+            return false
+        }
+        return state.diplomacyState.canAttack(attacker: faction, target: controller)
     }
 
     private func hasContestedForwardPresence(zone: FrontZone, state: GameState) -> Bool {
@@ -725,7 +733,7 @@ struct ZoneCommanderAgent: ZoneCommanderProviding {
                   let region = state.map.regions[regionId] else {
                 return false
             }
-            return region.controller != zone.faction
+            return state.diplomacyState.canAttack(attacker: zone.faction, target: region.controller)
         }
     }
 
@@ -843,10 +851,9 @@ struct TheaterCommanderPool {
 
     static func defaultConfig(for zone: FrontZone) -> ZoneCommanderAgentConfig {
         let style: ZoneCommanderAgentConfig.CommandStyle = zone.faction == .germany ? .aggressive : .balanced
-        let factionName = zone.faction == .germany ? "German" : "Allied"
         return ZoneCommanderAgentConfig(
             id: "auto_\(zone.id.rawValue)",
-            name: "\(factionName) Commander (\(zone.id.rawValue))",
+            name: "\(zone.faction.commanderDisplayName) Commander (\(zone.id.rawValue))",
             faction: zone.faction,
             assignedZoneId: zone.id,
             skills: [],
@@ -910,6 +917,15 @@ struct MarshalAgentConfig: Codable, Equatable, Identifiable {
                 faction: .allies,
                 personality: "Coalition commander; favors stable fronts, reserves, and coordinated limited counterattacks.",
                 strategicBias: .balanced,
+                theaterGroupZoneIds: zoneIds
+            )
+        default:
+            return MarshalAgentConfig(
+                id: "marshal_\(faction.rawValue)",
+                name: "\(faction.commanderDisplayName) General Staff",
+                faction: faction,
+                personality: "General staff planner; favors legal objectives, supply-aware operations, and controlled commitments.",
+                strategicBias: faction.isNeutral ? .defensive : .balanced,
                 theaterGroupZoneIds: zoneIds
             )
         }
@@ -986,7 +1002,7 @@ struct MarshalBattlefieldSummarizer {
             .map { frontSummary(for: $0, faction: faction, state: state) }
 
         let heldObjectives = objectiveNames(controlledBy: faction, state: state)
-        let lostObjectives = objectiveNames(controlledBy: faction.opponent, state: state)
+        let lostObjectives = enemyObjectiveNames(against: faction, state: state)
         let recentEvents = Array(state.eventLog.suffix(maxRecentEvents)).map(\.message)
 
         return MarshalBattlefieldSummary(
@@ -1021,7 +1037,7 @@ struct MarshalBattlefieldSummarizer {
         let enemyStrength = enemyRegionIds.reduce(0) { total, regionId in
             total + state.divisions
                 .filter {
-                    $0.faction != faction
+                    state.diplomacyState.canAttack(attacker: faction, target: $0.faction)
                         && !$0.isDestroyed
                         && $0.location(in: state.map) == regionId
                 }
@@ -1051,7 +1067,7 @@ struct MarshalBattlefieldSummarizer {
             garrisonUnitCount: zone.unitsGarrison.count,
             supplyWarningCount: supplyWarnings,
             keyObjectivesHeld: objectiveNames(in: frontRegionIds, controlledBy: faction, state: state),
-            keyObjectivesLost: objectiveNames(in: enemyRegionIds, controlledBy: faction.opponent, state: state),
+            keyObjectivesLost: enemyObjectiveNames(in: enemyRegionIds, against: faction, state: state),
             status: status(for: zone, ratio: ratio, supplyWarnings: supplyWarnings)
         )
     }
@@ -1083,7 +1099,7 @@ struct MarshalBattlefieldSummarizer {
     private func visibleEnemyRegionIds(zone: FrontZone, state: GameState) -> [RegionId] {
         var regionIds: [RegionId] = []
         for segment in zone.frontSegments.sorted(by: { $0.regionId.rawValue < $1.regionId.rawValue }) {
-            if state.map.regions[segment.regionId]?.controller != zone.faction ||
+            if isEnemyControlled(segment.regionId, for: zone.faction, in: state) ||
                 hasEnemyPresence(in: segment.regionId, zone: zone, state: state) {
                 regionIds.append(segment.regionId)
             }
@@ -1095,7 +1111,7 @@ struct MarshalBattlefieldSummarizer {
                     targetZoneId: segment.neighborEnemyZone,
                     state: state
                 ),
-                    (state.map.regions[neighborId]?.controller != zone.faction ||
+                    (isEnemyControlled(neighborId, for: zone.faction, in: state) ||
                      hasEnemyPresence(in: neighborId, zone: zone, state: state)) else {
                     continue
                 }
@@ -1131,7 +1147,7 @@ struct MarshalBattlefieldSummarizer {
 
     private func hasEnemyPresence(in regionId: RegionId, zone: FrontZone, state: GameState) -> Bool {
         state.divisions.contains { division in
-            division.faction != zone.faction
+            state.diplomacyState.canAttack(attacker: zone.faction, target: division.faction)
                 && !division.isDestroyed
                 && division.location(in: state.map) == regionId
         }
@@ -1140,6 +1156,18 @@ struct MarshalBattlefieldSummarizer {
     private func objectiveNames(controlledBy faction: Faction, state: GameState) -> [String] {
         state.map.objectives
             .filter { state.map.tile(at: $0.coord)?.controller == faction }
+            .map(\.name)
+            .sorted()
+    }
+
+    private func enemyObjectiveNames(against faction: Faction, state: GameState) -> [String] {
+        state.map.objectives
+            .filter { objective in
+                guard let controller = state.map.tile(at: objective.coord)?.controller else {
+                    return false
+                }
+                return state.diplomacyState.canAttack(attacker: faction, target: controller)
+            }
             .map(\.name)
             .sorted()
     }
@@ -1153,6 +1181,25 @@ struct MarshalBattlefieldSummarizer {
         return state.map.objectives
             .filter { objective in
                 guard state.map.tile(at: objective.coord)?.controller == faction,
+                      let regionId = state.map.region(for: objective.coord) else {
+                    return false
+                }
+                return regionSet.contains(regionId)
+            }
+            .map(\.name)
+            .sorted()
+    }
+
+    private func enemyObjectiveNames(
+        in regionIds: [RegionId],
+        against faction: Faction,
+        state: GameState
+    ) -> [String] {
+        let regionSet = Set(regionIds)
+        return state.map.objectives
+            .filter { objective in
+                guard let controller = state.map.tile(at: objective.coord)?.controller,
+                      state.diplomacyState.canAttack(attacker: faction, target: controller),
                       let regionId = state.map.region(for: objective.coord) else {
                     return false
                 }

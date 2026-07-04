@@ -149,7 +149,7 @@ final class AppContainer: ObservableObject {
 
         let displayedDivisions = mapDisplayAdapter.divisions(displayedAt: coord, viewerFaction: playerFaction)
         if let attacker = selectedActionDivision,
-           let enemy = displayedDivisions.first(where: { $0.faction != attacker.faction }) {
+           let enemy = displayedDivisions.first(where: { gameState.diplomacyState.canAttack(attacker: attacker.faction, target: $0.faction) }) {
             submit(.attack(attackerId: attacker.id, targetId: enemy.id))
             return
         }
@@ -388,7 +388,7 @@ final class AppContainer: ObservableObject {
         guard let division = selectedDivision,
               division.faction == playerFaction,
               gameState.activeFaction == playerFaction,
-              gameState.phase == .alliedPlayer,
+              gameState.phase.isActionPhase,
               !division.hasActed else {
             return nil
         }
@@ -399,14 +399,14 @@ final class AppContainer: ObservableObject {
     private var canIssuePlayerDirective: Bool {
         !observerModeEnabled &&
             gameState.activeFaction == playerFaction &&
-            gameState.phase == .alliedPlayer
+            gameState.phase.isActionPhase
     }
 
     private var selectedAttackTarget: (region: RegionNode, zone: FrontZone)? {
         guard let selectedRegionId,
               let region = gameState.map.region(id: selectedRegionId),
               let targetZone = gameState.warDeploymentState.zone(for: selectedRegionId),
-              targetZone.faction != playerFaction else {
+              gameState.diplomacyState.canAttack(attacker: playerFaction, target: targetZone.faction) else {
             return nil
         }
         return (region, targetZone)
@@ -454,7 +454,7 @@ final class AppContainer: ObservableObject {
 
         guard let divisionId = command.actingDivisionId,
               previousState.activeFaction == playerFaction,
-              previousState.phase == .alliedPlayer,
+              previousState.phase.isActionPhase,
               previousState.division(id: divisionId)?.faction == playerFaction else {
             return next
         }
@@ -492,7 +492,7 @@ final class AppContainer: ObservableObject {
         }
 
         guard let targetZone = selectedGeneralTargetZone,
-              targetZone.faction != playerFaction else {
+              gameState.diplomacyState.canAttack(attacker: playerFaction, target: targetZone.faction) else {
             return nil
         }
 
@@ -645,12 +645,9 @@ final class AppContainer: ObservableObject {
     }
 
     private func shouldRunAI(for faction: Faction, phase: GamePhase) -> Bool {
-        switch faction {
-        case .germany:
-            return phase == .germanAI
-        case .allies:
-            return observerModeEnabled && phase == .alliedPlayer
-        }
+        phase.isActionPhase &&
+            faction.participatesInTurnOrder &&
+            (observerModeEnabled || !gameState.isHumanControlled(faction))
     }
 
     private func runAISequence(
@@ -699,12 +696,9 @@ final class AppContainer: ObservableObject {
     }
 
     private func shouldRunAIInSnapshot(state: GameState, observerEnabled: Bool) -> Bool {
-        switch state.activeFaction {
-        case .germany:
-            return state.phase == .germanAI
-        case .allies:
-            return observerEnabled && state.phase == .alliedPlayer
-        }
+        state.phase.isActionPhase &&
+            state.activeFaction.participatesInTurnOrder &&
+            (observerEnabled || !state.isHumanControlled(state.activeFaction))
     }
 
     private func turnManager(for faction: Faction, state: GameState) -> TurnManager {
@@ -716,14 +710,14 @@ final class AppContainer: ObservableObject {
         switch faction {
         case .germany:
             agent = GameAgent.guderian(from: dataLoader, state: state)
-        case .allies:
+        default:
             let assignedIds = state.divisions
-                .filter { $0.faction == .allies && !$0.isDestroyed }
+                .filter { $0.faction == faction && !$0.isDestroyed }
                 .map(\.id)
             agent = GameAgent.sample(
-                id: "allied_mock_commander",
-                name: "Allied Mock Commander",
-                faction: .allies,
+                id: "\(faction.rawValue)_mock_commander",
+                name: "\(faction.commanderDisplayName) Mock Commander",
+                faction: faction,
                 role: .armyCommander,
                 assignedDivisionIds: assignedIds
             )
@@ -751,10 +745,9 @@ final class AppContainer: ObservableObject {
             .sorted { $0.id.rawValue < $1.id.rawValue }
             .map { zone in
                 let style: ZoneCommanderAgentConfig.CommandStyle = zone.faction == .germany ? .aggressive : .balanced
-                let factionName = zone.faction == .germany ? "German" : "Allied"
                 let config = ZoneCommanderAgentConfig(
                     id: "auto_\(zone.id.rawValue)",
-                    name: "\(factionName) Commander (\(zone.id.rawValue))",
+                    name: "\(zone.faction.commanderDisplayName) Commander (\(zone.id.rawValue))",
                     faction: zone.faction,
                     assignedZoneId: zone.id,
                     skills: [],
@@ -820,7 +813,10 @@ final class AppContainer: ObservableObject {
         movementHighlights = MovementRules().movementRange(for: division, in: gameState)
         attackHighlights = Set(
             gameState.divisions
-                .filter { $0.faction != division.faction && division.coord.distance(to: $0.coord) <= division.range }
+                .filter {
+                    gameState.diplomacyState.canAttack(attacker: division.faction, target: $0.faction) &&
+                        division.coord.distance(to: $0.coord) <= division.range
+                }
                 .map(\.coord)
         )
     }

@@ -84,6 +84,7 @@ flowchart TD
     FRONT["前线层<br/>FrontLine / FrontSegment<br/>按双方动态战区的真实相邻 hex 生成"]:::derived
     DEPLOY["部署层<br/>WarDeploymentState<br/>用 hexToFrontZone 把单位分成前线/纵深/驻军"]:::derived
     ECO["经济总账<br/>EconomyState / EconomyRules<br/>收入、维护费、生产队列、自动补员"]:::economy
+    DIP["外交关系<br/>DiplomacyState<br/>判断 atWar、通行权、中立、可攻击"]:::diplomacy
     PLAYER["玩家输入<br/>点击地图、移动、攻击、结束回合"]:::input
     AI["AI 元帅系统<br/>MarshalAgent + TheaterDirective JSON<br/>先做大战役级规划"]:::input
     DEC["元帅 JSON 解码<br/>TheaterDirectiveDecoder<br/>提取 fenced JSON、校验 id 与 schema"]:::command
@@ -108,6 +109,7 @@ flowchart TD
     HEX --> H2T
     H2T --> FRONT --> DEPLOY
     GS --> ECO
+    GS --> DIP
 
     PLAYER --> CMD
     AI --> DEC --> COMP --> ZD --> WCE --> CMD
@@ -140,6 +142,7 @@ flowchart TD
     classDef snapshot fill:#e0f2fe,stroke:#0284c7,color:#082f49
     classDef input fill:#fef3c7,stroke:#d97706,color:#1f1600
     classDef economy fill:#fef9c3,stroke:#ca8a04,color:#292107
+    classDef diplomacy fill:#f3e8ff,stroke:#7e22ce,color:#2e1065
     classDef command fill:#fae8ff,stroke:#a21caf,color:#2a0a2f
     classDef rules fill:#ccfbf1,stroke:#0f766e,color:#042f2e
     classDef ui fill:#e5e7eb,stroke:#4b5563,color:#111827
@@ -154,7 +157,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     A["移动命令进入<br/>Command.move<br/>来源可以是玩家，也可以是 WarCommandExecutor"]:::command
-    B["移动合法性检查<br/>CommandValidator.validateMove<br/>检查阶段、阵营、行动力、路径、目标是否被占"]:::rules
+    B["移动合法性检查<br/>CommandValidator.validateMove<br/>检查阶段、阵营、外交通行/敌对、行动力、路径、目标是否被占"]:::rules
     C{"移动是否合法?"}:::decision
     R["命令被拒绝<br/>CommandResult rejected<br/>GameState 不变，只记录拒绝原因"]:::stop
     M["执行移动<br/>CommandExecutor.executeMove<br/>更新单位坐标、朝向、已行动标记"]:::rules
@@ -261,7 +264,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     START["触发 AI 行动<br/>AppContainer.advanceOrRunAI / runAIIfNeeded<br/>玩家点下一回合，或命令后轮到 AI"]:::input
-    CHECK{"当前阵营该由 AI 控制吗?<br/>德军 AI 阶段一定可跑；盟军只有观察者模式才跑"}:::decision
+    CHECK{"当前阵营该由 AI 控制吗?<br/>action phase 且参战；观察者模式或非人控势力才跑"}:::decision
     STOP["不运行 AI<br/>等待玩家操作或阶段切换"]:::stop
     REFRESH["行动前刷新运行时战略层<br/>StrategicStateBootstrapper.refreshRuntimeState<br/>避免 AI 读到旧前线/旧部署"]:::rules
     TM["AI 回合编排器<br/>TurnManager.runAITurn<br/>默认 pipelineMode = marshalDirective"]:::rules
@@ -275,7 +278,7 @@ flowchart TD
     BOTTOM["具体单位命令<br/>Command<br/>attack / move / hold / allowRetreat"]:::command
     RE["统一规则校验执行<br/>RuleEngine<br/>AI 和玩家共用同一套规则"]:::rules
     RECORD["指令复盘记录<br/>WarDirectiveRecord<br/>记录 tactic、target、结果、拒绝原因"]:::ui
-    END["AI 自动结束回合<br/>RuleEngine.execute(.endTurn)<br/>切换 activeFaction / phase"]:::rules
+    END["AI 自动结束回合<br/>RuleEngine.execute(.endTurn)<br/>按 turnOrder 切换 activeFaction / action phase"]:::rules
 
     START --> CHECK
     CHECK -->|否| STOP

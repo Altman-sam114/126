@@ -100,6 +100,10 @@ struct DataLoader {
         map = RegionOccupationRules().mapByAggregatingControllers(in: map)
         let divisions = try makeDivisions(from: scenario.initialUnits)
         let turn = scenario.initialTurn
+        let activeFaction = initialActiveFaction(for: scenario)
+        let phase = initialPhase(for: scenario, activeFaction: activeFaction)
+        let turnOrder = initialTurnOrder(for: scenario, activeFaction: activeFaction, divisions: divisions)
+        let humanControlledFactions = initialHumanControlledFactions(for: scenario)
 
         let theaterState = makeTheaterState(
             map: map,
@@ -129,8 +133,10 @@ struct DataLoader {
             scenarioId: scenario.id,
             turn: turn,
             maxTurns: scenario.maxTurns,
-            activeFaction: initialActiveFaction(for: scenario),
-            phase: GamePhase(rawValue: scenario.initialPhase) ?? .germanAI,
+            activeFaction: activeFaction,
+            phase: phase,
+            turnOrder: turnOrder,
+            humanControlledFactions: humanControlledFactions,
             map: map,
             theaterState: theaterState,
             frontLineState: frontLineState,
@@ -142,8 +148,8 @@ struct DataLoader {
             eventLog: [
                 GameLogEntry(
                     turn: turn,
-                    faction: initialActiveFaction(for: scenario),
-                    phase: GamePhase(rawValue: scenario.initialPhase) ?? .germanAI,
+                    faction: activeFaction,
+                    phase: phase,
                     message: "Loaded \(scenario.id) from MapEditor-compatible JSON."
                 )
             ]
@@ -153,13 +159,60 @@ struct DataLoader {
     private func initialActiveFaction(for scenario: ScenarioDefinition) -> Faction {
         let phase = GamePhase(rawValue: scenario.initialPhase) ?? .alliedPlayer
         switch phase {
-        case .alliedPlayer:
+        case .alliedPlayer, .humanAction:
             return Faction(rawValue: scenario.playerFaction) ?? .allies
-        case .germanAI:
+        case .germanAI, .aiAction:
             return Faction(rawValue: scenario.aiFaction) ?? .germany
-        case .resolution:
+        case .resolution, .diplomacyResolution:
             return Faction(rawValue: scenario.playerFaction) ?? .allies
         }
+    }
+
+    private func initialPhase(for scenario: ScenarioDefinition, activeFaction: Faction) -> GamePhase {
+        let phase = GamePhase(rawValue: scenario.initialPhase) ?? .humanAction
+        switch phase {
+        case .germanAI, .alliedPlayer, .resolution, .diplomacyResolution:
+            return phase
+        case .humanAction, .aiAction:
+            let humanControlledFactions = initialHumanControlledFactions(for: scenario)
+            return GamePhase.actionPhase(for: activeFaction, humanControlledFactions: humanControlledFactions)
+        }
+    }
+
+    private func initialTurnOrder(
+        for scenario: ScenarioDefinition,
+        activeFaction: Faction,
+        divisions: [Division]
+    ) -> [Faction] {
+        let parsedTurnOrder = (scenario.turnOrder ?? [])
+            .compactMap(Faction.init(rawValue:))
+            .filter(\.participatesInTurnOrder)
+
+        let fallbackOrder = scenario.factions
+            .compactMap(Faction.init(rawValue:))
+            .filter(\.participatesInTurnOrder)
+
+        return GameState.normalizedTurnOrder(
+            parsedTurnOrder.isEmpty ? fallbackOrder : parsedTurnOrder,
+            activeFaction: activeFaction,
+            divisions: divisions
+        )
+    }
+
+    private func initialHumanControlledFactions(for scenario: ScenarioDefinition) -> Set<Faction> {
+        let configured = (scenario.humanControlledFactions ?? [])
+            .compactMap(Faction.init(rawValue:))
+            .filter(\.participatesInTurnOrder)
+        if !configured.isEmpty {
+            return Set(configured)
+        }
+
+        if let playerFaction = Faction(rawValue: scenario.playerFaction),
+           playerFaction.participatesInTurnOrder {
+            return [playerFaction]
+        }
+
+        return [.allies]
     }
 
     func loadTerrainRules() throws -> TerrainRuleDefinition {
@@ -266,17 +319,18 @@ struct DataLoader {
             }
         }
 
-        let germanSupplySources = scenario.map.tiles.filter {
-            $0.isSupplySource && $0.supplyFaction == "germany"
-        }
-        let alliedSupplySources = scenario.map.tiles.filter {
-            $0.isSupplySource && $0.supplyFaction == "allies"
-        }
-        if germanSupplySources.isEmpty {
-            errors.append(DataValidationError(message: "Scenario is missing a German supply source."))
-        }
-        if alliedSupplySources.isEmpty {
-            errors.append(DataValidationError(message: "Scenario is missing an Allied supply source."))
+        let factionsWithUnits = Set(scenario.initialUnits.compactMap { Faction(rawValue: $0.faction) })
+            .filter(\.participatesInTurnOrder)
+        let supplyFactions = Set(scenario.map.tiles.compactMap { tile -> Faction? in
+            guard tile.isSupplySource,
+                  let supplyFaction = tile.supplyFaction.flatMap(Faction.init(rawValue:)),
+                  supplyFaction.participatesInTurnOrder else {
+                return nil
+            }
+            return supplyFaction
+        })
+        for faction in factionsWithUnits.sorted(by: { $0.rawValue < $1.rawValue }) where !supplyFactions.contains(faction) {
+            errors.append(DataValidationError(message: "Scenario is missing a supply source for \(faction.displayName)."))
         }
 
         let objectiveIds = scenario.objectives.map(\.id)

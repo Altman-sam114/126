@@ -100,6 +100,16 @@ final class ObserverModeIntegrationTests: XCTestCase {
                     .filter { $0.faction == .allies && !$0.isDestroyed }
                     .map(\.id)
             )
+        default:
+            agent = GameAgent.sample(
+                id: "\(faction.rawValue)_mock_commander",
+                name: "\(faction.commanderDisplayName) Mock Commander",
+                faction: faction,
+                role: .armyCommander,
+                assignedDivisionIds: state.divisions
+                    .filter { $0.faction == faction && !$0.isDestroyed }
+                    .map(\.id)
+            )
         }
 
         let manager = TurnManager(

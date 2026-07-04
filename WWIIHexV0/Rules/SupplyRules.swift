@@ -134,7 +134,9 @@ struct SupplyRules {
             return false
         }
 
-        if tile.isCapturable && tile.controller == faction.opponent {
+        if tile.isCapturable,
+           let controller = tile.controller,
+           !state.diplomacyState.canEnterTerritory(faction: faction, controller: controller) {
             return false
         }
 
@@ -210,11 +212,15 @@ struct SupplyRules {
     }
 
     private func canSupplyPass(through coord: HexCoord, tile: HexTile, for faction: Faction, in state: GameState) -> Bool {
-        if let division = state.division(at: coord), division.faction != faction {
+        if let division = state.division(at: coord),
+           division.faction != faction,
+           !state.diplomacyState.isFriendly(division.faction, toward: faction) {
             return false
         }
 
-        if tile.isCapturable && tile.controller == faction.opponent {
+        if tile.isCapturable,
+           let controller = tile.controller,
+           !state.diplomacyState.canEnterTerritory(faction: faction, controller: controller) {
             return false
         }
 

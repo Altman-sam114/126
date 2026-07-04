@@ -170,13 +170,10 @@ struct CommandExecutor {
         supplyRules.applyEncirclementAttrition(in: &state)
         victoryRules.updateVictoryState(in: &state)
 
-        switch state.activeFaction {
-        case .germany:
-            state.activeFaction = .allies
-            state.phase = .alliedPlayer
-        case .allies:
-            state.activeFaction = .germany
-            state.phase = .germanAI
+        let nextFaction = state.nextFaction(after: state.activeFaction)
+        state.activeFaction = nextFaction.faction
+        state.phase = state.actionPhase(for: nextFaction.faction)
+        if nextFaction.completedCycle {
             state.turn += 1
         }
 
@@ -323,11 +320,11 @@ struct CommandExecutor {
         if let destinationZoneId,
            destinationZoneId != sourceZoneId,
            let destinationFaction = state.warDeploymentState.frontZones[destinationZoneId]?.faction {
-            return destinationFaction != faction
+            return state.diplomacyState.canAttack(attacker: faction, target: destinationFaction)
         }
 
         if let controller = state.map.tile(at: hex)?.controller {
-            return controller != faction
+            return state.diplomacyState.canAttack(attacker: faction, target: controller)
         }
 
         return false

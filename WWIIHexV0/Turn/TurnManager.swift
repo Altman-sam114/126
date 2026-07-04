@@ -378,12 +378,9 @@ struct TurnManager {
     }
 
     private func isAITurn(faction: Faction, state: GameState) -> Bool {
-        switch faction {
-        case .germany:
-            return state.activeFaction == .germany && state.phase == .germanAI
-        case .allies:
-            return state.activeFaction == .allies && state.phase == .alliedPlayer
-        }
+        state.activeFaction == faction &&
+            state.phase.isActionPhase &&
+            faction.participatesInTurnOrder
     }
 
     private func directiveDiagnostics(for faction: Faction, state: GameState) -> [String] {

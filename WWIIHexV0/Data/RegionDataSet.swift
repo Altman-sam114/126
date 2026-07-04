@@ -268,12 +268,13 @@ extension RegionDataSet {
     func toRegions() -> [RegionId: RegionNode] {
         var result: [RegionId: RegionNode] = [:]
         for def in regions {
-            let resolvedController = def.controller ?? def.owner
+            let resolvedOwner = def.owner ?? .neutral
+            let resolvedController = def.controller ?? def.owner ?? .neutral
             result[def.id] = RegionNode(
                 id: def.id,
                 name: def.name,
-                owner: def.owner ?? .allies,
-                controller: resolvedController ?? .allies,
+                owner: resolvedOwner,
+                controller: resolvedController,
                 terrain: def.terrain,
                 neighbors: def.neighbors,
                 displayHexes: def.displayHexes,
