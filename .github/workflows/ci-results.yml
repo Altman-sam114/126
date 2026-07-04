@@ -1,0 +1,218 @@
+name: WWIIHexV0 CI Results
+
+"on":
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  ci-results:
+    name: Build and package CI results
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    env:
+      PROJECT_NAME: WWIIHexV0
+      PROJECT_FILE: WWIIHexV0.xcodeproj
+      SCHEME: WWIIHexV0
+      CONFIGURATION: Debug
+      DESTINATION: generic/platform=iOS
+      RESULT_BUNDLE: ci-results/WWIIHexV0.xcresult
+      DERIVED_DATA: .derivedData-ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run checks and build
+        id: package
+        shell: bash
+        run: |
+          set +e
+
+          mkdir -p ci-results
+          : > ci-results/static-checks.log
+          : > ci-results/xcodebuild.log
+
+          short_sha="${GITHUB_SHA:0:7}"
+          branch_slug="$(printf '%s' "${GITHUB_REF_NAME}" | tr '/[:upper:]' '-[:lower:]')"
+          artifact_name="WWIIHexV0-ci-v1-${branch_slug}-${short_sha}-run${GITHUB_RUN_ID}-attempt${GITHUB_RUN_ATTEMPT}"
+          echo "artifact_name=${artifact_name}" >> "${GITHUB_OUTPUT}"
+          printf '%s\n' "${artifact_name}" > ci-results/artifact-name.txt
+
+          static_rc=0
+          run_static_check() {
+            local label="$1"
+            shift
+            {
+              printf '\n## %s\n' "${label}"
+              printf '$'
+              printf ' %q' "$@"
+              printf '\n'
+            } >> ci-results/static-checks.log
+
+            "$@" >> ci-results/static-checks.log 2>&1
+            local rc=$?
+            if [ "${rc}" -ne 0 ]; then
+              static_rc=1
+              printf 'FAILED: %s (exit %s)\n' "${label}" "${rc}" >> ci-results/static-checks.log
+            else
+              printf 'OK: %s\n' "${label}" >> ci-results/static-checks.log
+            fi
+          }
+
+          run_static_check "git diff whitespace" git diff --check
+          run_static_check "xcode project plist" plutil -lint "${PROJECT_FILE}/project.pbxproj"
+          run_static_check "main scheme XML" xmllint --noout "${PROJECT_FILE}/xcshareddata/xcschemes/WWIIHexV0.xcscheme"
+          run_static_check "probe scheme XML" xmllint --noout "${PROJECT_FILE}/xcshareddata/xcschemes/WWIIHexV0Probes.xcscheme"
+          run_static_check "scenario JSON" jq empty WWIIHexV0/Data/ardennes_v0_scenario.json
+          run_static_check "region JSON" jq empty WWIIHexV0/Data/ardennes_v02_regions.json
+          run_static_check "legacy general JSON" jq empty WWIIHexV0/Data/general_agents.json
+          run_static_check "general registry JSON" jq empty WWIIHexV0/Data/generals.json
+          run_static_check "terrain JSON" jq empty WWIIHexV0/Data/terrain_rules.json
+          run_static_check "unit template JSON" jq empty WWIIHexV0/Data/unit_templates.json
+
+          if [ "${static_rc}" -eq 0 ]; then
+            static_outcome="success"
+          else
+            static_outcome="failure"
+          fi
+
+          xcodebuild \
+            -project "${PROJECT_FILE}" \
+            -scheme "${SCHEME}" \
+            -configuration "${CONFIGURATION}" \
+            -destination "${DESTINATION}" \
+            -derivedDataPath "${DERIVED_DATA}" \
+            -resultBundlePath "${RESULT_BUNDLE}" \
+            CODE_SIGNING_ALLOWED=NO \
+            build > ci-results/xcodebuild.log 2>&1
+          build_rc=$?
+
+          if [ "${build_rc}" -eq 0 ]; then
+            build_outcome="success"
+          else
+            build_outcome="failure"
+          fi
+
+          test_outcome="skipped"
+
+          failures=0
+          if [ "${static_outcome}" != "success" ]; then
+            failures=$((failures + 1))
+          fi
+          if [ "${build_outcome}" != "success" ]; then
+            failures=$((failures + 1))
+          fi
+
+          cat > ci-results/junit.xml <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuite name="WWIIHexV0CI" tests="3" failures="${failures}" skipped="1">
+            <testcase classname="ci" name="staticChecks">
+          EOF
+          if [ "${static_outcome}" != "success" ]; then
+            cat >> ci-results/junit.xml <<EOF
+              <failure message="Static checks failed">See ci-results/static-checks.log.</failure>
+          EOF
+          fi
+          cat >> ci-results/junit.xml <<EOF
+            </testcase>
+            <testcase classname="ci" name="xcodebuild">
+          EOF
+          if [ "${build_outcome}" != "success" ]; then
+            cat >> ci-results/junit.xml <<EOF
+              <failure message="xcodebuild failed">See ci-results/xcodebuild.log.</failure>
+          EOF
+          fi
+          cat >> ci-results/junit.xml <<EOF
+            </testcase>
+            <testcase classname="ci" name="xctest">
+              <skipped message="Simulator XCTest and Probe suites are not enabled in the default cloud matrix yet."/>
+            </testcase>
+          </testsuite>
+          EOF
+
+          {
+            printf '# WWIIHexV0 CI Failure Summary\n\n'
+            printf '- Branch: `%s`\n' "${GITHUB_REF_NAME}"
+            printf '- Commit: `%s`\n' "${GITHUB_SHA}"
+            printf '- Run: `%s` attempt `%s`\n' "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}"
+            printf '- Static checks: `%s`\n' "${static_outcome}"
+            printf '- Build: `%s`\n' "${build_outcome}"
+            printf '- XCTest / Probe: `%s`\n\n' "${test_outcome}"
+            if [ "${static_outcome}" != "success" ] || [ "${build_outcome}" != "success" ]; then
+              printf '## Failure Pointers\n\n'
+              printf '- Static check log: `ci-results/static-checks.log`\n'
+              printf '- Xcode build log: `ci-results/xcodebuild.log`\n'
+              printf '- JUnit summary: `ci-results/junit.xml`\n\n'
+              printf '## Last xcodebuild Lines\n\n```text\n'
+              tail -n 120 ci-results/xcodebuild.log
+              printf '\n```\n'
+            else
+              printf 'No failures recorded. XCTest / Probe suites are intentionally skipped in this default cloud matrix.\n'
+            fi
+          } > ci-results/ci-failure-summary.md
+
+          export STATIC_OUTCOME="${static_outcome}"
+          export BUILD_OUTCOME="${build_outcome}"
+          export TEST_OUTCOME="${test_outcome}"
+          export SHORT_SHA="${short_sha}"
+          python3 - <<'PY'
+          import datetime
+          import json
+          import os
+          from pathlib import Path
+
+          reports = [
+              "ci-results/static-checks.log",
+              "ci-results/xcodebuild.log",
+              "ci-results/junit.xml",
+              "ci-results/ci-failure-summary.md",
+          ]
+          if Path(os.environ["RESULT_BUNDLE"]).exists():
+              reports.append(os.environ["RESULT_BUNDLE"])
+
+          manifest = {
+              "version": "v1",
+              "branch": os.environ["GITHUB_REF_NAME"],
+              "commitSha": os.environ["GITHUB_SHA"],
+              "shortSha": os.environ["SHORT_SHA"],
+              "runId": os.environ["GITHUB_RUN_ID"],
+              "runAttempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "workflowName": os.environ["GITHUB_WORKFLOW"],
+              "createdAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "projectName": os.environ["PROJECT_NAME"],
+              "scheme": os.environ["SCHEME"],
+              "destination": os.environ["DESTINATION"],
+              "resultBundlePath": os.environ["RESULT_BUNDLE"],
+              "junitPath": "ci-results/junit.xml",
+              "buildLogPath": "ci-results/xcodebuild.log",
+              "failureSummaryPath": "ci-results/ci-failure-summary.md",
+              "staticChecksOutcome": os.environ["STATIC_OUTCOME"],
+              "buildOutcome": os.environ["BUILD_OUTCOME"],
+              "testOutcome": os.environ["TEST_OUTCOME"],
+              "projectSpecificReports": reports,
+          }
+
+          Path("ci-results/ci-artifact-manifest.json").write_text(
+              json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+          if [ "${static_outcome}" != "success" ] || [ "${build_outcome}" != "success" ]; then
+            exit 1
+          fi
+
+      - name: Upload CI result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.artifact_name }}
+          path: ci-results
+          if-no-files-found: error

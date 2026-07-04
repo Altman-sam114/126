@@ -24,6 +24,47 @@
 - 蓝色：初始快照/基准状态，不是运行时推进状态。
 - 紫色：命令管线，玩家、AI、未来聊天命令都要走这里。
 
+## 0.5 云端协作闭环：main 直推到 Agent C 结果包验收
+
+这张图看工程协作流，不改变游戏运行时规则。默认只有 `main` 作为上传、提交、推送和云端验证分支；不使用 `smalldata_test`、`develop`、`codeb/...`、候选分支或 PR 合并流。
+
+```mermaid
+flowchart TD
+    HUMAN["人工提出目标<br/>说明功能、限制和验收标准"]:::input
+    A["Agent A<br/>阅读入口文档和源码<br/>写版本化实现提示词"]:::agent
+    PROMPT["阶段提示词<br/>md/prompt/...<br/>包含 main push、CI、artifact 要求"]:::doc
+    BSTART["Agent B 开始<br/>git fetch origin<br/>git switch main<br/>git pull --ff-only origin main"]:::git
+    BWORK["Agent B 实现<br/>只改本轮相关文件<br/>不改无关业务逻辑"]:::agent
+    LOCAL["本机轻量检查<br/>git diff --check / plutil / jq / YAML<br/>不跑本机 Xcode 重测试"]:::check
+    COMMIT["main commit<br/>本地提交本轮改动"]:::git
+    PUSH["push origin main<br/>触发 GitHub Actions"]:::git
+    GHA["GitHub Actions<br/>WWIIHexV0 CI Results<br/>静态检查 + xcodebuild build"]:::cloud
+    ART["未加密结果包<br/>ci-results artifact<br/>manifest / junit / log / failure summary / xcresult"]:::artifact
+    CGET["Agent C 下载<br/>gh auth login<br/>/private/tmp/wwiihexv0-c-review-run_id"]:::agent
+    CCHK["Agent C 核对<br/>branch=main<br/>commitSha / runId / runAttempt<br/>JUnit / xcodebuild.log / failure summary"]:::check
+    PASS{"云端结果通过?"}:::decision
+    FIX["退回 Agent B<br/>在 main 追加修复 commit<br/>再次 push origin main"]:::agent
+    DONE["验收通过<br/>更新 flow / update_log<br/>人工复核进入下一轮"]:::doc
+
+    HUMAN --> A --> PROMPT --> BSTART --> BWORK --> LOCAL --> COMMIT --> PUSH --> GHA --> ART --> CGET --> CCHK --> PASS
+    PASS -->|否| FIX --> LOCAL
+    PASS -->|是| DONE
+
+    WARN["禁止<br/>用旧 artifact 冒充本轮结果<br/>只看文字汇报<br/>默认创建 PR 或候选分支"]:::warn
+    CCHK -.守住.-> WARN
+    PUSH -.守住.-> WARN
+
+    classDef input fill:#fef3c7,stroke:#d97706,color:#1f1600
+    classDef agent fill:#e0e7ff,stroke:#4f46e5,color:#111827
+    classDef doc fill:#f8f9fb,stroke:#6b7280,color:#111827
+    classDef git fill:#ede9fe,stroke:#7c3aed,color:#1f143d
+    classDef check fill:#ccfbf1,stroke:#0f766e,color:#042f2e
+    classDef cloud fill:#dbeafe,stroke:#2563eb,color:#0f172a
+    classDef artifact fill:#dcfce7,stroke:#16a34a,color:#052e16
+    classDef decision fill:#fff7ed,stroke:#ea580c,color:#1f1300
+    classDef warn fill:#ffedd5,stroke:#f97316,color:#431407
+```
+
 ## 1. 总主线：从地图数据到游戏行动
 
 这张图看全局。左上是地图数据怎么进入游戏；中间是 hex、region、theater、front、deploy 的分层关系；右侧是玩家/AI 命令如何统一进入规则系统；底部是 UI 和日志怎么读取结果。

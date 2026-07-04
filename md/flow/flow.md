@@ -45,6 +45,58 @@ MapEditor / JSON 数据
 
 ---
 
+## 0.1 云端协作与验证闭环
+
+当前项目协作流程升级为 `main` 直推 + GitHub Actions 结果包验收。它是工程协作制度，不改变上面的游戏运行时权威链路。
+
+默认链路：
+
+```text
+人工目标
+  -> Agent A 阅读入口文档和源码，写版本化提示词
+  -> Agent B 基于最新 origin/main，在 main 上实现
+  -> Agent B 本机只跑轻量检查
+  -> Agent B commit 并 push 到 origin/main
+  -> GitHub Actions: WWIIHexV0 CI Results
+      -> 静态检查
+      -> Xcode generic iOS build
+      -> 生成未加密 ci-results artifact
+  -> Agent C 下载 artifact
+      -> 核对 ci-artifact-manifest.json
+      -> 核对 junit.xml / xcodebuild.log / ci-failure-summary.md
+      -> 核对 branch / commitSha / runId / runAttempt
+  -> 失败：Agent C 写退回清单，Agent B 在 main 追加修复 commit
+  -> 通过：Agent C 确认 origin/main 最新 run 通过并更新文档
+```
+
+边界：
+
+- 本轮固定 `main` 为唯一上传、提交、推送和云端验证分支。
+- 不默认使用 `smalldata_test`、`develop`、`codeb/...`、候选分支或 PR 合并制度。
+- AITRANS 的可复用部分是云端验证骨架、未加密结果包、Agent C 下载复判和失败追加修复；漫画探针、GGUF、模型 Release、`test/1.png`、`smalldata_test` 等项目特例不迁入 WWIIHexV0。
+- 本机默认只跑 `md/test/test.md` 允许的轻量检查；Xcode build 由 GitHub Actions 执行。
+- 当前 CI 默认跑静态检查和 `xcodebuild build`；XCTest / Probe 在 manifest 中标记 `skipped`，直到项目明确选择稳定云端模拟器矩阵。
+
+结果包：
+
+```text
+ci-results/
+  ci-artifact-manifest.json
+  ci-failure-summary.md
+  junit.xml
+  static-checks.log
+  xcodebuild.log
+  WWIIHexV0.xcresult
+```
+
+Agent C 下载缓存默认：
+
+```text
+/private/tmp/wwiihexv0-c-review-<run_id>/
+```
+
+---
+
 ## 1. 核心状态对象
 
 ### 1.1 GameState

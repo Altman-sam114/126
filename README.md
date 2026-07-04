@@ -67,6 +67,16 @@ ZoneDirective / WarCommandExecutor / RuleEngine
 
 ---
 
+## 协作与云端验证
+
+项目默认使用 `main` 直推协作流：Agent B 基于最新 `origin/main` 实现，本机只跑 `md/test/test.md` 允许的轻量检查，commit 后 push 到 `origin/main` 触发 GitHub Actions。云端 workflow `WWIIHexV0 CI Results` 负责静态检查、Xcode build 和未加密结果包上传。
+
+Agent C 验收时不只看文字汇报，必须用 `gh auth login` 后下载对应 run 的 artifact，核对 `ci-artifact-manifest.json`、`junit.xml`、`xcodebuild.log` 和 `ci-failure-summary.md`。结果包缓存默认在 `/private/tmp/wwiihexv0-c-review-<run_id>/`。
+
+本轮流程不使用 `smalldata_test`、`develop`、`codeb/...`、PR 合并或 AITRANS 的项目专属探针/模型包制度；历史分支只作为记录和打捞参考。
+
+---
+
 ## 项目架构
 
 ```
