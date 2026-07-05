@@ -9,6 +9,41 @@
 - 若本轮只是文档整理、目录迁移、回滚或打捞，不应伪装成新 v 版本；可写入“历史维护记录”。
 - 若 README、测试规范或源码语义发生变化，应同步更新本日志。
 
+## v5.2 - 黑海危机默认数据入口切片
+
+完成日期：2026-07-05
+
+核心更新：
+
+- 新增 `black_sea_crisis_1853` / `黑海危机 1853` 首版可加载数据：120 个 hex、40 个 region、6 个参战行动势力、17 个初始单位。
+- 新增维多利亚数据草案：`victorian_powers.json`、`victorian_unit_templates.json`、`victorian_personas.json`、`victorian_terrain_rules.json`。
+- `DataLoader.loadInitialGameState()` 默认优先加载黑海危机 scenario / regions，阿登资源保留为 legacy fallback。
+- `DataLoader` 按 `scenario.id` 选择 unit templates 和 general registry：黑海危机使用 `victorian_*`，legacy 阿登继续使用旧资源。
+- `MapEditorGameResourceBridge` 默认读写黑海危机资源，同时保留 legacy 阿登资源常量。
+- Xcode project 已把新增 JSON 加入 iOS / macOS app 资源阶段。
+
+关键文件：
+
+- `WWIIHexV0/Data/black_sea_crisis_1853_scenario.json`
+- `WWIIHexV0/Data/black_sea_crisis_1853_regions.json`
+- `WWIIHexV0/Data/victorian_powers.json`
+- `WWIIHexV0/Data/victorian_unit_templates.json`
+- `WWIIHexV0/Data/victorian_personas.json`
+- `WWIIHexV0/Data/victorian_terrain_rules.json`
+- `WWIIHexV0/Data/DataLoader.swift`
+- `MapEditor/MapEditorGameResourceBridge.swift`
+- `WWIIHexV0.xcodeproj/project.pbxproj`
+
+验证记录：
+
+- 本机轻量检查：新增 JSON `jq empty` 通过；黑海数据一致性脚本通过；`plutil -lint WWIIHexV0.xcodeproj/project.pbxproj` 通过；`swiftc -parse` 已覆盖 `DataLoader.swift` 和 `MapEditorGameResourceBridge.swift`。
+- 云端重验证：待 push 到 `origin/main` 后由 GitHub Actions `WWIIHexV0 CI Results` 生成结果包。
+
+遗留事项：
+
+- 铁路、港口、煤站、电报等 v5.2 语义本轮仅通过道路、城市/要塞、region infrastructure 和 `dataNotes` 表达；正式规则仍留 v5.3-v5.4。
+- UI、胜利规则、经济/生产和测试夹具仍有 legacy 二战语义，需要后续 v5.3-v5.9 继续清理。
+
 ## v0 - 六角格测试板
 
 完成日期：2026-06-14 至 2026-06-15

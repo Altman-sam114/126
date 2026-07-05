@@ -1,6 +1,18 @@
 import Foundation
 
 struct DataLoader {
+    static let defaultScenarioResourceName = "black_sea_crisis_1853_scenario"
+    static let defaultRegionResourceName = "black_sea_crisis_1853_regions"
+    static let defaultTerrainRulesResourceName = "victorian_terrain_rules"
+    static let defaultUnitTemplatesResourceName = "victorian_unit_templates"
+    static let defaultPersonasResourceName = "victorian_personas"
+    static let legacyScenarioResourceName = "ardennes_v0_scenario"
+    static let legacyRegionResourceName = "ardennes_v02_regions"
+    static let legacyTerrainRulesResourceName = "terrain_rules"
+    static let legacyUnitTemplatesResourceName = "unit_templates"
+    static let legacyGeneralAgentsResourceName = "general_agents"
+    static let legacyGeneralsResourceName = "generals"
+
     private let bundle: Bundle
     private let resourceDirectory: URL?
     private let decoder: JSONDecoder
@@ -17,8 +29,15 @@ struct DataLoader {
 
     func loadInitialGameState() -> GameState {
         if let state = try? loadGameState(
-            scenarioName: "ardennes_v0_scenario",
-            regionName: "ardennes_v02_regions"
+            scenarioName: Self.defaultScenarioResourceName,
+            regionName: Self.defaultRegionResourceName
+        ) {
+            return state
+        }
+
+        if let state = try? loadGameState(
+            scenarioName: Self.legacyScenarioResourceName,
+            regionName: Self.legacyRegionResourceName
         ) {
             return state
         }
@@ -61,7 +80,8 @@ struct DataLoader {
             state.warDeploymentState = assignGenerals(
                 to: deploymentState,
                 map: state.map,
-                regionData: regionData
+                regionData: regionData,
+                generalRegistryResourceName: Self.legacyGeneralsResourceName
             )
         }
 
@@ -69,6 +89,17 @@ struct DataLoader {
     }
 
     func loadArdennesDataSet() throws -> ScenarioDataSet {
+        let dataSet = ScenarioDataSet(
+            scenario: try loadScenarioDefinition(named: Self.legacyScenarioResourceName),
+            terrainRules: try loadTerrainRules(named: Self.legacyTerrainRulesResourceName),
+            unitTemplates: try loadUnitTemplates(named: Self.legacyUnitTemplatesResourceName),
+            generalAgents: try loadGeneralAgents(named: Self.legacyGeneralAgentsResourceName)
+        )
+        try validate(dataSet)
+        return dataSet
+    }
+
+    func loadDefaultDataSet() throws -> ScenarioDataSet {
         let dataSet = ScenarioDataSet(
             scenario: try loadScenarioDefinition(),
             terrainRules: try loadTerrainRules(),
@@ -80,7 +111,7 @@ struct DataLoader {
     }
 
     func loadScenarioDefinition() throws -> ScenarioDefinition {
-        try loadJSON(ScenarioDefinition.self, named: "ardennes_v0_scenario")
+        try loadJSON(ScenarioDefinition.self, named: Self.defaultScenarioResourceName)
     }
 
     func loadScenarioDefinition(named resourceName: String) throws -> ScenarioDefinition {
@@ -96,10 +127,11 @@ struct DataLoader {
     func loadGameState(scenarioName: String, regionName: String) throws -> GameState {
         let scenario = try loadScenarioDefinition(named: scenarioName)
         let regionData = try loadRegionDataSet(named: regionName)
+        let unitTemplates = try loadUnitTemplates(for: scenario)
         var map = try makeMapState(from: scenario)
         try apply(regionData, to: &map)
         map = RegionOccupationRules().mapByAggregatingControllers(in: map)
-        let divisions = try makeDivisions(from: scenario.initialUnits)
+        let divisions = try makeDivisions(from: scenario.initialUnits, unitTemplates: unitTemplates)
         let turn = scenario.initialTurn
         let activeFaction = initialActiveFaction(for: scenario)
         let phase = initialPhase(for: scenario, activeFaction: activeFaction)
@@ -129,7 +161,8 @@ struct DataLoader {
         let warDeploymentState = assignGenerals(
             to: deploymentState,
             map: map,
-            regionData: regionData
+            regionData: regionData,
+            generalRegistryResourceName: generalRegistryResourceName(for: scenario)
         )
 
         return GameState(
@@ -228,19 +261,35 @@ struct DataLoader {
     }
 
     func loadTerrainRules() throws -> TerrainRuleDefinition {
-        try loadJSON(TerrainRuleDefinition.self, named: "terrain_rules")
+        try loadTerrainRules(named: Self.defaultTerrainRulesResourceName)
+    }
+
+    func loadTerrainRules(named resourceName: String) throws -> TerrainRuleDefinition {
+        try loadJSON(TerrainRuleDefinition.self, named: resourceName)
     }
 
     func loadUnitTemplates() throws -> [UnitTemplateDefinition] {
-        try loadJSON(UnitTemplateCatalogDefinition.self, named: "unit_templates").templates
+        try loadUnitTemplates(named: Self.defaultUnitTemplatesResourceName)
+    }
+
+    func loadUnitTemplates(named resourceName: String) throws -> [UnitTemplateDefinition] {
+        try loadJSON(UnitTemplateCatalogDefinition.self, named: resourceName).templates
     }
 
     func loadGeneralAgents() throws -> [GeneralAgentDefinition] {
-        try loadJSON(GeneralAgentCatalogDefinition.self, named: "general_agents").agents
+        try loadGeneralAgents(named: Self.defaultPersonasResourceName)
+    }
+
+    func loadGeneralAgents(named resourceName: String) throws -> [GeneralAgentDefinition] {
+        try loadJSON(GeneralAgentCatalogDefinition.self, named: resourceName).agents
     }
 
     func loadGeneralRegistry() throws -> GeneralRegistry {
-        let catalog = try loadJSON(GeneralCatalogDefinition.self, named: "generals")
+        try loadGeneralRegistry(named: Self.defaultPersonasResourceName)
+    }
+
+    func loadGeneralRegistry(named resourceName: String) throws -> GeneralRegistry {
+        let catalog = try loadJSON(GeneralCatalogDefinition.self, named: resourceName)
         return GeneralRegistry(generals: catalog.generals)
     }
 
@@ -513,9 +562,10 @@ struct DataLoader {
     private func assignGenerals(
         to deploymentState: WarDeploymentState,
         map: MapState,
-        regionData: RegionDataSet
+        regionData: RegionDataSet,
+        generalRegistryResourceName: String
     ) -> WarDeploymentState {
-        let registry = (try? loadGeneralRegistry()) ?? .empty
+        let registry = (try? loadGeneralRegistry(named: generalRegistryResourceName)) ?? .empty
         let seedAssignments = Dictionary(uniqueKeysWithValues: regionData.regions.compactMap { definition in
             definition.assignedGeneralId.map { (definition.id, $0) }
         })
@@ -526,8 +576,10 @@ struct DataLoader {
         )
     }
 
-    private func makeDivisions(from definitions: [InitialUnitDefinition]) throws -> [Division] {
-        let templates = (try? loadUnitTemplates()) ?? []
+    private func makeDivisions(
+        from definitions: [InitialUnitDefinition],
+        unitTemplates templates: [UnitTemplateDefinition]
+    ) throws -> [Division] {
         var errors: [DataValidationError] = []
         let divisions = definitions.compactMap { definition -> Division? in
             guard let faction = Faction(rawValue: definition.faction) else {
@@ -536,13 +588,16 @@ struct DataLoader {
             }
 
             let components: [DivisionComponent]
+            let maxHP: Int
             if let template = templates.first(where: { $0.id == definition.templateId }) {
                 components = template.components.compactMap { component in
                     guard let type = ComponentType(rawValue: component.type) else { return nil }
                     return DivisionComponent(type: type, weight: component.weight)
                 }
+                maxHP = template.maxHP
             } else {
                 components = fallbackComponents(for: definition.templateId)
+                maxHP = 10
             }
 
             guard !components.isEmpty else {
@@ -557,7 +612,7 @@ struct DataLoader {
                 coord: HexCoord(q: definition.coord.q, r: definition.coord.r),
                 facing: HexDirection(rawValue: definition.facing) ?? .west,
                 hp: definition.hp,
-                maxHP: 10,
+                maxHP: maxHP,
                 components: components,
                 supplyState: SupplyState(rawValue: definition.supplyState) ?? .supplied,
                 retreatMode: definition.retreatMode.flatMap(RetreatMode.init(rawValue:)) ?? .retreatable
@@ -568,6 +623,22 @@ struct DataLoader {
             throw DataLoaderError.validationFailed(errors)
         }
         return divisions
+    }
+
+    private func loadUnitTemplates(for scenario: ScenarioDefinition) throws -> [UnitTemplateDefinition] {
+        try loadUnitTemplates(named: unitTemplateResourceName(for: scenario))
+    }
+
+    private func unitTemplateResourceName(for scenario: ScenarioDefinition) -> String {
+        scenario.id == "black_sea_crisis_1853"
+            ? Self.defaultUnitTemplatesResourceName
+            : Self.legacyUnitTemplatesResourceName
+    }
+
+    private func generalRegistryResourceName(for scenario: ScenarioDefinition) -> String {
+        scenario.id == "black_sea_crisis_1853"
+            ? Self.defaultPersonasResourceName
+            : Self.legacyGeneralsResourceName
     }
 
     private func fallbackComponents(for templateId: String) -> [DivisionComponent] {

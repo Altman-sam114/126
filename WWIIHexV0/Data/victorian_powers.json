@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "scenarioId": "black_sea_crisis_1853",
+  "powers": [
+    {
+      "id": "britain",
+      "displayName": "Britain",
+      "localizedName": "英国",
+      "alignment": "alliedCoalition",
+      "capitalRegionId": "region_05",
+      "warSupport": 68,
+      "prestige": 82
+    },
+    {
+      "id": "france",
+      "displayName": "France",
+      "localizedName": "法国",
+      "alignment": "alliedCoalition",
+      "capitalRegionId": "region_17",
+      "warSupport": 66,
+      "prestige": 78
+    },
+    {
+      "id": "ottoman",
+      "displayName": "Ottoman Empire",
+      "localizedName": "奥斯曼帝国",
+      "alignment": "defender",
+      "capitalRegionId": "region_05",
+      "warSupport": 72,
+      "prestige": 52
+    },
+    {
+      "id": "russia",
+      "displayName": "Russia",
+      "localizedName": "俄罗斯帝国",
+      "alignment": "russianEmpire",
+      "capitalRegionId": "region_08",
+      "warSupport": 74,
+      "prestige": 80
+    },
+    {
+      "id": "austria",
+      "displayName": "Austria",
+      "localizedName": "奥地利帝国",
+      "alignment": "armedNeutrality",
+      "capitalRegionId": "region_30",
+      "warSupport": 42,
+      "prestige": 70
+    },
+    {
+      "id": "sardinia",
+      "displayName": "Sardinia-Piedmont",
+      "localizedName": "撒丁王国",
+      "alignment": "expeditionaryAlly",
+      "capitalRegionId": "region_33",
+      "warSupport": 48,
+      "prestige": 45
+    },
+    {
+      "id": "neutral",
+      "displayName": "Neutral",
+      "localizedName": "中立地区",
+      "alignment": "neutral",
+      "capitalRegionId": null,
+      "warSupport": 0,
+      "prestige": 0
+    }
+  ],
+  "dataNotes": [
+    "Advisory catalog for v5.2; runtime authority remains Faction plus DiplomacyState until v5.5 expands diplomatic play state."
+  ]
+}

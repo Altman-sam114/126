@@ -38,10 +38,11 @@ MapEditor / JSON 数据
 
 当前历史包袱与已落地切片：
 
-- v5.1 本地工作树已把 `Faction` 扩展到 legacy Germany / Allies 加 Britain、France、Russia、Ottoman、Austria、Sardinia、Neutral，并新增 `humanAction` / `aiAction`、`turnOrder`、`humanControlledFactions` 和 `DiplomacyState.canAttack` / `canEnterTerritory` 入口；但该切片尚未 commit / push / CI / Agent C 验收。
+- v5.1 已把 `Faction` 扩展到 legacy Germany / Allies 加 Britain、France、Russia、Ottoman、Austria、Sardinia、Neutral，并新增 `humanAction` / `aiAction`、`turnOrder`、`humanControlledFactions` 和 `DiplomacyState.canAttack` / `canEnterTerritory` 入口；commit `2919c49` 已通过 GitHub Actions 结果包验收。
+- v5.2 已开始把默认入口切到 `black_sea_crisis_1853`：新增黑海危机 scenario / regions、`victorian_powers.json`、`victorian_unit_templates.json`、`victorian_personas.json`、`victorian_terrain_rules.json`，并保留阿登为 legacy fallback。
 - `Faction.opponent` 已不应再作为主路径敌我判断；后续新代码必须继续通过 `DiplomacyState` 或后续外交规则判断可攻击/可通行。
-- `Division`、`tank`、`motorizedInfantry`、`Panzer Division`、阿登、Germany、Allies、Bastogne、Guderian、Montgomery、Manpower、Industry、Supplies 等二战语义仍存在于默认数据、UI 或源码兼容名中。
-- `RegionDataSet.toRegions()` 的 nil owner/controller fallback 已在本地 v5.1 切片中改为 `.neutral`，但仍需云端构建确认旧数据加载和 UI 表现。
+- `Division`、`tank`、`motorizedInfantry`、`Panzer Division`、阿登、Germany、Allies、Bastogne、Guderian、Montgomery、Manpower、Industry、Supplies 等二战语义仍存在于 legacy 数据、UI 或源码兼容名中。
+- `RegionDataSet.toRegions()` 的 nil owner/controller fallback 已改为 `.neutral`；后续迁移仍不得把 nil / neutral fallback 到 legacy 双方。
 - project 文件和文档已多轮多分支修改；任何合并或迁移前必须做文件/API/schema/project/文档冲突审查。
 
 ## 2. 当前协作与验证大纲
@@ -348,8 +349,8 @@ Bottom Strip:
 | 版本 | 主题 | 关键交付 | 非目标 / 风险 |
 |---|---|---|---|
 | v5.0 | 迁移审计、产品合同和维多利亚术语层 | 已形成 `md/prompt/v5.0-维多利亚迁移/v5.0_audit_and_contract.md`：二战硬编码审计、术语表、首发剧本、版本边界、并发方案 | 不做大范围重命名，不实现完整维多利亚玩法 |
-| v5.1 | 多国家、通用回合、外交关系和敌我判断 | 已形成 `md/prompt/v5.0-维多利亚迁移/v5.1_powers_turns_diplomacy_prompt.md`，本地工作树已有基础代码切片：多国家 `Faction`、通用 action phase、turn order、人控势力集合、集中外交可攻击/可通行判断、neutral fallback | 尚未 commit / push / CI / Agent C 验收；二元模型连锁风险仍需云端构建确认 |
-| v5.2 | 黑海危机地图、剧本数据和地图编辑器迁移 | `black_sea_crisis_1853`、维多利亚 regions、powers、unit templates、personas、terrain rules | 不破坏主游戏 JSON 加载格式 |
+| v5.1 | 多国家、通用回合、外交关系和敌我判断 | 已形成 `md/prompt/v5.0-维多利亚迁移/v5.1_powers_turns_diplomacy_prompt.md`；多国家 `Faction`、通用 action phase、turn order、人控势力集合、集中外交可攻击/可通行判断、neutral fallback 已通过 commit `2919c49` 云端验收 | 后续仍要清理测试、UI、胜利条件和 legacy 数据残留 |
+| v5.2 | 黑海危机地图、剧本数据和地图编辑器迁移 | 已开始接入 `black_sea_crisis_1853` 默认入口、维多利亚 regions、powers、unit templates、personas、terrain rules，并保留 legacy 阿登加载入口 | 铁路/港口/煤站/电报暂以 notes、道路、城市/要塞、infrastructure 表达；正式规则留 v5.3-v5.4 |
 | v5.3 | 维多利亚军队、铁路补给、港口远征和围城规则 | 步兵/近卫/骑兵/炮兵/工兵/补给纵队、铁路/港口/要塞规则 | 不追求复杂军事仿真 |
 | v5.4 | 工业经济、预算、动员和建设命令 | 国库、工业、补给、铁路运输力、船运量、威望、战争支持，建设/动员命令 | 不做完整全球市场 |
 | v5.5 | 外交危机、战争目标、列强干预和舆论压力 | DiplomaticPlay、warGoal、backers、escalation、战争支持和谈判 | 外交不直接占领 hex |
@@ -361,7 +362,7 @@ Bottom Strip:
 当前 v5.0 / v5.1 审计结论：
 
 - `Faction.germany/allies`、`Faction.opponent`、`GamePhase.germanAI/alliedPlayer`、`CommandValidator.phaseAllowsCommands` 和 `CommandExecutor.executeEndTurn` 的主路径已在本地 v5.1 切片中开始迁移；后续仍要清理测试、UI、胜利条件和 legacy 数据残留。
-- `DataLoader` 默认阿登资源、Guderian 专项校验和旧 `playerFaction` / `aiFaction` 仍是 v5.2 以前的兼容风险；German/Allied supply source 校验已改为按有单位的参战势力检查。
+- `DataLoader` 默认资源已开始切到黑海危机；Guderian 专项校验只限 legacy 阿登数据，旧 `playerFaction` / `aiFaction` 字段仍保留作 schema 兼容。
 - `ComponentType.tank/motorizedInfantry`、`ProductionKind.panzerDivision`、`EconomyResources.manpower/industry/supplies` 和默认 `unit_templates.json` 是 v5.3-v5.4 必修点。
 - `DiplomacyState` 已有 `CountryProfile` 基础，但默认仍是 German Reich / Allied Coalition，后续必须改为 Black Sea Crisis 多国家关系。
 - `VictoryRules` 仍绑定 Bastogne / St. Vith / German armor，后续要改成数据驱动战争目标。

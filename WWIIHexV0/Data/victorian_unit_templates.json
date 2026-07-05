@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "templates": [
+    {
+      "id": "line_infantry_corps",
+      "displayName": "Line Infantry Corps",
+      "maxHP": 10,
+      "components": [
+        {
+          "type": "infantry",
+          "weight": 0.7
+        },
+        {
+          "type": "artillery",
+          "weight": 0.2
+        },
+        {
+          "type": "motorizedInfantry",
+          "weight": 0.1
+        },
+        {
+          "type": "tank",
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "id": "guard_brigade",
+      "displayName": "Guard Brigade",
+      "maxHP": 10,
+      "components": [
+        {
+          "type": "infantry",
+          "weight": 0.75
+        },
+        {
+          "type": "artillery",
+          "weight": 0.15
+        },
+        {
+          "type": "motorizedInfantry",
+          "weight": 0.1
+        },
+        {
+          "type": "tank",
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "id": "cavalry_brigade",
+      "displayName": "Cavalry Brigade",
+      "maxHP": 9,
+      "components": [
+        {
+          "type": "motorizedInfantry",
+          "weight": 0.55
+        },
+        {
+          "type": "infantry",
+          "weight": 0.25
+        },
+        {
+          "type": "artillery",
+          "weight": 0.2
+        },
+        {
+          "type": "tank",
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "id": "siege_artillery_battery",
+      "displayName": "Siege Artillery Battery",
+      "maxHP": 8,
+      "components": [
+        {
+          "type": "artillery",
+          "weight": 0.7
+        },
+        {
+          "type": "infantry",
+          "weight": 0.2
+        },
+        {
+          "type": "motorizedInfantry",
+          "weight": 0.1
+        },
+        {
+          "type": "tank",
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "id": "fortress_garrison",
+      "displayName": "Fortress Garrison",
+      "maxHP": 11,
+      "components": [
+        {
+          "type": "infantry",
+          "weight": 0.8
+        },
+        {
+          "type": "artillery",
+          "weight": 0.2
+        },
+        {
+          "type": "motorizedInfantry",
+          "weight": 0
+        },
+        {
+          "type": "tank",
+          "weight": 0
+        }
+      ]
+    }
+  ]
+}

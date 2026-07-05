@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "generals": [
+    {
+      "id": "general_raglan",
+      "name": "Lord Raglan",
+      "localizedName": "拉格伦勋爵",
+      "rank": "Field Marshal",
+      "faction": "britain",
+      "commandStyle": "balanced",
+      "skills": [
+        "coalition_coordination",
+        "expeditionary_logistics"
+      ],
+      "portrait": "portrait_raglan",
+      "biography": "British commander balancing cabinet pressure, limited expeditionary lift, and allied coordination around the Black Sea.",
+      "preferredTheaterIds": [
+        "theater_black_sea_expedition"
+      ],
+      "preferredRegionIds": [
+        "region_05",
+        "region_17"
+      ],
+      "baseLoyalty": 72,
+      "baseSatisfaction": 70
+    },
+    {
+      "id": "general_saint_arnaud",
+      "name": "Armand Jacques Leroy de Saint-Arnaud",
+      "localizedName": "圣阿尔诺",
+      "rank": "Marshal",
+      "faction": "france",
+      "commandStyle": "aggressive",
+      "skills": [
+        "rapid_landing",
+        "siege_pressure"
+      ],
+      "portrait": "portrait_saint_arnaud",
+      "biography": "French marshal inclined toward decisive expeditionary action and pressure on Sevastopol.",
+      "preferredTheaterIds": [
+        "theater_black_sea_expedition"
+      ],
+      "preferredRegionIds": [
+        "region_17",
+        "region_15"
+      ],
+      "baseLoyalty": 68,
+      "baseSatisfaction": 74
+    },
+    {
+      "id": "general_omar_pasha",
+      "name": "Omar Pasha",
+      "localizedName": "奥马尔帕夏",
+      "rank": "Serdar",
+      "faction": "ottoman",
+      "commandStyle": "balanced",
+      "skills": [
+        "danube_defense",
+        "fortress_coordination"
+      ],
+      "portrait": "portrait_omar_pasha",
+      "biography": "Ottoman commander focused on holding the Danube fortress line while keeping Allied support engaged.",
+      "preferredTheaterIds": [
+        "theater_balkan_danube"
+      ],
+      "preferredRegionIds": [
+        "region_10",
+        "region_14"
+      ],
+      "baseLoyalty": 78,
+      "baseSatisfaction": 72
+    },
+    {
+      "id": "general_menshikov",
+      "name": "Alexander Menshikov",
+      "localizedName": "缅希科夫",
+      "rank": "Prince",
+      "faction": "russia",
+      "commandStyle": "cautious",
+      "skills": [
+        "fortress_defense",
+        "imperial_pressure"
+      ],
+      "portrait": "portrait_menshikov",
+      "biography": "Russian commander defending Crimea and Sevastopol under imperial expectations and coalition naval pressure.",
+      "preferredTheaterIds": [
+        "theater_crimea_siege"
+      ],
+      "preferredRegionIds": [
+        "region_15",
+        "region_08"
+      ],
+      "baseLoyalty": 74,
+      "baseSatisfaction": 66
+    },
+    {
+      "id": "general_hess",
+      "name": "Heinrich von Hess",
+      "localizedName": "海因里希冯赫斯",
+      "rank": "Feldmarschall",
+      "faction": "austria",
+      "commandStyle": "cautious",
+      "skills": [
+        "armed_neutrality",
+        "railhead_control"
+      ],
+      "portrait": "portrait_hess",
+      "biography": "Austrian staff commander guarding mobilization options without automatically entering the war.",
+      "preferredTheaterIds": [
+        "theater_balkan_danube"
+      ],
+      "preferredRegionIds": [
+        "region_30",
+        "region_34"
+      ],
+      "baseLoyalty": 76,
+      "baseSatisfaction": 64
+    },
+    {
+      "id": "general_la_marmora",
+      "name": "Alfonso La Marmora",
+      "localizedName": "拉马尔莫拉",
+      "rank": "General",
+      "faction": "sardinia",
+      "commandStyle": "balanced",
+      "skills": [
+        "expeditionary_corps",
+        "prestige_warfare"
+      ],
+      "portrait": "portrait_la_marmora",
+      "biography": "Sardinian expeditionary commander seeking coalition prestige through a limited but visible commitment.",
+      "preferredTheaterIds": [
+        "theater_black_sea_expedition"
+      ],
+      "preferredRegionIds": [
+        "region_33"
+      ],
+      "baseLoyalty": 70,
+      "baseSatisfaction": 76
+    }
+  ],
+  "agents": [
+    {
+      "id": "raglan",
+      "name": "Lord Raglan",
+      "faction": "britain",
+      "role": "expeditionaryCommander",
+      "commandStyle": "balanced",
+      "personalityPrompt": "Prioritize coalition landings, port security, and limited advances toward Sevastopol without overextending supply.",
+      "assignedDivisionIds": [
+        "unit_british_guards",
+        "unit_british_rifles",
+        "unit_british_naval"
+      ]
+    },
+    {
+      "id": "saint_arnaud",
+      "name": "Saint-Arnaud",
+      "faction": "france",
+      "role": "expeditionaryCommander",
+      "commandStyle": "aggressive",
+      "personalityPrompt": "Favor decisive pressure on Russian fortress nodes when artillery and allied support are present.",
+      "assignedDivisionIds": [
+        "unit_french_line",
+        "unit_french_artillery",
+        "unit_french_chasseurs"
+      ]
+    },
+    {
+      "id": "omar_pasha",
+      "name": "Omar Pasha",
+      "faction": "ottoman",
+      "role": "fieldCommander",
+      "commandStyle": "balanced",
+      "personalityPrompt": "Hold the Danube fortress belt, keep Ottoman supply intact, and coordinate with Allied expeditionary forces.",
+      "assignedDivisionIds": [
+        "unit_ottoman_shumla",
+        "unit_ottoman_silistra",
+        "unit_ottoman_varna"
+      ]
+    },
+    {
+      "id": "menshikov",
+      "name": "Alexander Menshikov",
+      "faction": "russia",
+      "role": "fieldCommander",
+      "commandStyle": "cautious",
+      "personalityPrompt": "Preserve Sevastopol and Odessa, delay coalition landings, and avoid exposing fortress garrisons.",
+      "assignedDivisionIds": [
+        "unit_russian_crimea",
+        "unit_russian_sevastopol",
+        "unit_russian_odessa",
+        "unit_russian_cavalry"
+      ]
+    }
+  ]
+}

@@ -507,12 +507,12 @@ AppContainer.bootstrap()
 
 ```text
 loadGameState(
-  scenarioName: "ardennes_v0_scenario",
-  regionName: "ardennes_v02_regions"
+  scenarioName: "black_sea_crisis_1853_scenario",
+  regionName: "black_sea_crisis_1853_regions"
 )
 ```
 
-如果失败，才 fallback 到老的 `GameState.initial()` + v0.2 region 叠加路径。
+如果失败，会先 fallback 到 legacy `ardennes_v0_scenario` + `ardennes_v02_regions`，再 fallback 到老的 `GameState.initial()` + v0.2 region 叠加路径。
 
 ### 2.2 loadGameState 的完整链条
 
@@ -521,9 +521,12 @@ loadGameState(
 ```text
 loadScenarioDefinition(named:)
 loadRegionDataSet(named:)
+loadUnitTemplates(for: scenario)
+  -> black_sea_crisis_1853 使用 victorian_unit_templates
+  -> legacy 场景使用 unit_templates
   -> makeMapState(from: scenario)
      - ScenarioTileDefinition -> HexTile
-     - tile.controller 字符串转 Faction；"neutral" 转 nil
+     - tile.controller 字符串转 Faction；"neutral" 转 .neutral，未知值才为 nil
      - tile.regionId 写入 HexTile.regionId
      - supply source / objective 写入 MapState
   -> apply(regionData, to: map)
@@ -545,7 +548,10 @@ loadRegionDataSet(named:)
      - capture initialSnapshot
   -> FrontLineManager.makeInitialState(...)
   -> WarDeploymentManager.makeInitialState(...)
-  -> DiplomacyState.initial(for: scenario.factions, turn:)
+  -> assignGenerals(...)
+     - black_sea_crisis_1853 使用 victorian_personas
+     - legacy 场景使用 generals
+  -> DiplomacyState.initial(from: scenario.factions, turn:)
      - legacy Germany / Allies 默认 atWar
      - Britain / France / Russia / Ottoman / Austria / Sardinia / Neutral 默认 neutral
   -> GameState(...)
@@ -726,9 +732,11 @@ supplySources / objectives:
 默认读写路径：
 
 ```text
-WWIIHexV0/Data/ardennes_v0_scenario.json
-WWIIHexV0/Data/ardennes_v02_regions.json
+WWIIHexV0/Data/black_sea_crisis_1853_scenario.json
+WWIIHexV0/Data/black_sea_crisis_1853_regions.json
 ```
+
+legacy 阿登资源仍保留为 `ardennes_v0_scenario.json` / `ardennes_v02_regions.json`，供历史测试、打捞和回归参考显式加载。
 
 流程：
 

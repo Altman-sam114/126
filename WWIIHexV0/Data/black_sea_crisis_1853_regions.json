@@ -1,0 +1,2504 @@
+{
+  "schemaVersion": 1,
+  "scenarioId": "black_sea_crisis_1853",
+  "displayName": "黑海危机 1853 Region Graph",
+  "hexToRegion": {
+    "0,0": "region_01",
+    "1,0": "region_01",
+    "2,0": "region_01",
+    "3,0": "region_02",
+    "4,0": "region_02",
+    "5,0": "region_02",
+    "6,0": "region_03",
+    "7,0": "region_03",
+    "8,0": "region_03",
+    "9,0": "region_04",
+    "10,0": "region_04",
+    "11,0": "region_04",
+    "0,1": "region_05",
+    "1,1": "region_05",
+    "2,1": "region_05",
+    "3,1": "region_06",
+    "4,1": "region_06",
+    "5,1": "region_06",
+    "6,1": "region_07",
+    "7,1": "region_07",
+    "8,1": "region_07",
+    "9,1": "region_08",
+    "10,1": "region_08",
+    "11,1": "region_08",
+    "0,2": "region_09",
+    "1,2": "region_09",
+    "2,2": "region_09",
+    "3,2": "region_10",
+    "4,2": "region_10",
+    "5,2": "region_10",
+    "6,2": "region_11",
+    "7,2": "region_11",
+    "8,2": "region_11",
+    "9,2": "region_12",
+    "10,2": "region_12",
+    "11,2": "region_12",
+    "0,3": "region_13",
+    "1,3": "region_13",
+    "2,3": "region_13",
+    "3,3": "region_14",
+    "4,3": "region_14",
+    "5,3": "region_14",
+    "6,3": "region_15",
+    "7,3": "region_15",
+    "8,3": "region_15",
+    "9,3": "region_16",
+    "10,3": "region_16",
+    "11,3": "region_16",
+    "0,4": "region_17",
+    "1,4": "region_17",
+    "2,4": "region_17",
+    "3,4": "region_18",
+    "4,4": "region_18",
+    "5,4": "region_18",
+    "6,4": "region_19",
+    "7,4": "region_19",
+    "8,4": "region_19",
+    "9,4": "region_20",
+    "10,4": "region_20",
+    "11,4": "region_20",
+    "0,5": "region_21",
+    "1,5": "region_21",
+    "2,5": "region_21",
+    "3,5": "region_22",
+    "4,5": "region_22",
+    "5,5": "region_22",
+    "6,5": "region_23",
+    "7,5": "region_23",
+    "8,5": "region_23",
+    "9,5": "region_24",
+    "10,5": "region_24",
+    "11,5": "region_24",
+    "0,6": "region_25",
+    "1,6": "region_25",
+    "2,6": "region_25",
+    "3,6": "region_26",
+    "4,6": "region_26",
+    "5,6": "region_26",
+    "6,6": "region_27",
+    "7,6": "region_27",
+    "8,6": "region_27",
+    "9,6": "region_28",
+    "10,6": "region_28",
+    "11,6": "region_28",
+    "0,7": "region_29",
+    "1,7": "region_29",
+    "2,7": "region_29",
+    "3,7": "region_30",
+    "4,7": "region_30",
+    "5,7": "region_30",
+    "6,7": "region_31",
+    "7,7": "region_31",
+    "8,7": "region_31",
+    "9,7": "region_32",
+    "10,7": "region_32",
+    "11,7": "region_32",
+    "0,8": "region_33",
+    "1,8": "region_33",
+    "2,8": "region_33",
+    "3,8": "region_34",
+    "4,8": "region_34",
+    "5,8": "region_34",
+    "6,8": "region_35",
+    "7,8": "region_35",
+    "8,8": "region_35",
+    "9,8": "region_36",
+    "10,8": "region_36",
+    "11,8": "region_36",
+    "0,9": "region_37",
+    "1,9": "region_37",
+    "2,9": "region_37",
+    "3,9": "region_38",
+    "4,9": "region_38",
+    "5,9": "region_38",
+    "6,9": "region_39",
+    "7,9": "region_39",
+    "8,9": "region_39",
+    "9,9": "region_40",
+    "10,9": "region_40",
+    "11,9": "region_40"
+  },
+  "regions": [
+    {
+      "id": "region_01",
+      "name": "Western Black Sea Approaches",
+      "owner": "britain",
+      "controller": "britain",
+      "theaterId": "theater_black_sea_expedition",
+      "assignedGeneralId": null,
+      "terrain": "hill",
+      "neighbors": [
+        "region_02",
+        "region_05"
+      ],
+      "displayHexes": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 0
+        }
+      ],
+      "representativeHex": {
+        "q": 1,
+        "r": 0
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "britain"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_02",
+      "name": "Bosphorus Heights",
+      "owner": "ottoman",
+      "controller": "ottoman",
+      "theaterId": "theater_balkan_danube",
+      "assignedGeneralId": null,
+      "terrain": "hill",
+      "neighbors": [
+        "region_01",
+        "region_03",
+        "region_06"
+      ],
+      "displayHexes": [
+        {
+          "q": 3,
+          "r": 0
+        },
+        {
+          "q": 4,
+          "r": 0
+        },
+        {
+          "q": 5,
+          "r": 0
+        }
+      ],
+      "representativeHex": {
+        "q": 4,
+        "r": 0
+      },
+      "city": null,
+      "infrastructure": 2,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "chromium",
+          "amount": 1
+        }
+      ],
+      "coreOf": [
+        "ottoman"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_03",
+      "name": "Crimean Littoral",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_crimea_siege",
+      "assignedGeneralId": null,
+      "terrain": "hill",
+      "neighbors": [
+        "region_02",
+        "region_04",
+        "region_07"
+      ],
+      "displayHexes": [
+        {
+          "q": 6,
+          "r": 0
+        },
+        {
+          "q": 7,
+          "r": 0
+        },
+        {
+          "q": 8,
+          "r": 0
+        }
+      ],
+      "representativeHex": {
+        "q": 7,
+        "r": 0
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_04",
+      "name": "Odessa Roadstead",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_caucasus_observation",
+      "assignedGeneralId": null,
+      "terrain": "hill",
+      "neighbors": [
+        "region_03",
+        "region_08"
+      ],
+      "displayHexes": [
+        {
+          "q": 9,
+          "r": 0
+        },
+        {
+          "q": 10,
+          "r": 0
+        },
+        {
+          "q": 11,
+          "r": 0
+        }
+      ],
+      "representativeHex": {
+        "q": 10,
+        "r": 0
+      },
+      "city": null,
+      "infrastructure": 2,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_05",
+      "name": "Constantinople Straits",
+      "owner": "britain",
+      "controller": "britain",
+      "theaterId": "theater_black_sea_expedition",
+      "assignedGeneralId": "general_omar_pasha",
+      "terrain": "city",
+      "neighbors": [
+        "region_06",
+        "region_01",
+        "region_09"
+      ],
+      "displayHexes": [
+        {
+          "q": 0,
+          "r": 1
+        },
+        {
+          "q": 1,
+          "r": 1
+        },
+        {
+          "q": 2,
+          "r": 1
+        }
+      ],
+      "representativeHex": {
+        "q": 1,
+        "r": 1
+      },
+      "city": {
+        "name": "Constantinople",
+        "victoryPoints": 4,
+        "isCapital": true
+      },
+      "infrastructure": 3,
+      "supplyValue": 2,
+      "factories": 1,
+      "resources": [],
+      "coreOf": [
+        "britain"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_06",
+      "name": "Ottoman Thrace",
+      "owner": "ottoman",
+      "controller": "ottoman",
+      "theaterId": "theater_balkan_danube",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_05",
+        "region_07",
+        "region_02",
+        "region_10"
+      ],
+      "displayHexes": [
+        {
+          "q": 3,
+          "r": 1
+        },
+        {
+          "q": 4,
+          "r": 1
+        },
+        {
+          "q": 5,
+          "r": 1
+        }
+      ],
+      "representativeHex": {
+        "q": 4,
+        "r": 1
+      },
+      "city": null,
+      "infrastructure": 4,
+      "supplyValue": 4,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "chromium",
+          "amount": 1
+        }
+      ],
+      "coreOf": [
+        "ottoman"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_07",
+      "name": "Northern Crimea",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_crimea_siege",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_06",
+        "region_08",
+        "region_03",
+        "region_11"
+      ],
+      "displayHexes": [
+        {
+          "q": 6,
+          "r": 1
+        },
+        {
+          "q": 7,
+          "r": 1
+        },
+        {
+          "q": 8,
+          "r": 1
+        }
+      ],
+      "representativeHex": {
+        "q": 7,
+        "r": 1
+      },
+      "city": null,
+      "infrastructure": 3,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_08",
+      "name": "Odessa Hinterland",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_caucasus_observation",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_07",
+        "region_04",
+        "region_12"
+      ],
+      "displayHexes": [
+        {
+          "q": 9,
+          "r": 1
+        },
+        {
+          "q": 10,
+          "r": 1
+        },
+        {
+          "q": 11,
+          "r": 1
+        }
+      ],
+      "representativeHex": {
+        "q": 10,
+        "r": 1
+      },
+      "city": null,
+      "infrastructure": 4,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_09",
+      "name": "Gallipoli Roads",
+      "owner": "britain",
+      "controller": "britain",
+      "theaterId": "theater_black_sea_expedition",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_10",
+        "region_05",
+        "region_13"
+      ],
+      "displayHexes": [
+        {
+          "q": 0,
+          "r": 2
+        },
+        {
+          "q": 1,
+          "r": 2
+        },
+        {
+          "q": 2,
+          "r": 2
+        }
+      ],
+      "representativeHex": {
+        "q": 1,
+        "r": 2
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "britain"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_10",
+      "name": "Shumla District",
+      "owner": "ottoman",
+      "controller": "ottoman",
+      "theaterId": "theater_balkan_danube",
+      "assignedGeneralId": null,
+      "terrain": "city",
+      "neighbors": [
+        "region_09",
+        "region_11",
+        "region_06",
+        "region_14"
+      ],
+      "displayHexes": [
+        {
+          "q": 3,
+          "r": 2
+        },
+        {
+          "q": 4,
+          "r": 2
+        },
+        {
+          "q": 5,
+          "r": 2
+        }
+      ],
+      "representativeHex": {
+        "q": 4,
+        "r": 2
+      },
+      "city": {
+        "name": "Shumla",
+        "victoryPoints": 1,
+        "isCapital": false
+      },
+      "infrastructure": 2,
+      "supplyValue": 2,
+      "factories": 1,
+      "resources": [
+        {
+          "type": "chromium",
+          "amount": 1
+        }
+      ],
+      "coreOf": [
+        "ottoman"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_11",
+      "name": "Simferopol Uplands",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_crimea_siege",
+      "assignedGeneralId": null,
+      "terrain": "city",
+      "neighbors": [
+        "region_10",
+        "region_12",
+        "region_07",
+        "region_15"
+      ],
+      "displayHexes": [
+        {
+          "q": 6,
+          "r": 2
+        },
+        {
+          "q": 7,
+          "r": 2
+        },
+        {
+          "q": 8,
+          "r": 2
+        }
+      ],
+      "representativeHex": {
+        "q": 7,
+        "r": 2
+      },
+      "city": {
+        "name": "Simferopol",
+        "victoryPoints": 1,
+        "isCapital": false
+      },
+      "infrastructure": 1,
+      "supplyValue": 2,
+      "factories": 1,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_12",
+      "name": "Bessarabian Steppe",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_caucasus_observation",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_11",
+        "region_08",
+        "region_16"
+      ],
+      "displayHexes": [
+        {
+          "q": 9,
+          "r": 2
+        },
+        {
+          "q": 10,
+          "r": 2
+        },
+        {
+          "q": 11,
+          "r": 2
+        }
+      ],
+      "representativeHex": {
+        "q": 10,
+        "r": 2
+      },
+      "city": null,
+      "infrastructure": 2,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_13",
+      "name": "French Landing Beaches",
+      "owner": "france",
+      "controller": "france",
+      "theaterId": "theater_black_sea_expedition",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_14",
+        "region_09",
+        "region_17"
+      ],
+      "displayHexes": [
+        {
+          "q": 0,
+          "r": 3
+        },
+        {
+          "q": 1,
+          "r": 3
+        },
+        {
+          "q": 2,
+          "r": 3
+        }
+      ],
+      "representativeHex": {
+        "q": 1,
+        "r": 3
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "france"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_14",
+      "name": "Silistra Fortress Belt",
+      "owner": "ottoman",
+      "controller": "ottoman",
+      "theaterId": "theater_balkan_danube",
+      "assignedGeneralId": null,
+      "terrain": "fortress",
+      "neighbors": [
+        "region_13",
+        "region_15",
+        "region_10",
+        "region_18"
+      ],
+      "displayHexes": [
+        {
+          "q": 3,
+          "r": 3
+        },
+        {
+          "q": 4,
+          "r": 3
+        },
+        {
+          "q": 5,
+          "r": 3
+        }
+      ],
+      "representativeHex": {
+        "q": 4,
+        "r": 3
+      },
+      "city": {
+        "name": "Silistra Fortress",
+        "victoryPoints": 4,
+        "isCapital": false
+      },
+      "infrastructure": 2,
+      "supplyValue": 2,
+      "factories": 1,
+      "resources": [
+        {
+          "type": "chromium",
+          "amount": 1
+        }
+      ],
+      "coreOf": [
+        "ottoman"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_15",
+      "name": "Sevastopol Approaches",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_crimea_siege",
+      "assignedGeneralId": "general_menshikov",
+      "terrain": "fortress",
+      "neighbors": [
+        "region_14",
+        "region_16",
+        "region_11",
+        "region_19"
+      ],
+      "displayHexes": [
+        {
+          "q": 6,
+          "r": 3
+        },
+        {
+          "q": 7,
+          "r": 3
+        },
+        {
+          "q": 8,
+          "r": 3
+        }
+      ],
+      "representativeHex": {
+        "q": 7,
+        "r": 3
+      },
+      "city": {
+        "name": "Sevastopol Fortress",
+        "victoryPoints": 4,
+        "isCapital": false
+      },
+      "infrastructure": 1,
+      "supplyValue": 2,
+      "factories": 1,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_16",
+      "name": "Lower Dniester",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_caucasus_observation",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_15",
+        "region_12",
+        "region_20"
+      ],
+      "displayHexes": [
+        {
+          "q": 9,
+          "r": 3
+        },
+        {
+          "q": 10,
+          "r": 3
+        },
+        {
+          "q": 11,
+          "r": 3
+        }
+      ],
+      "representativeHex": {
+        "q": 10,
+        "r": 3
+      },
+      "city": null,
+      "infrastructure": 2,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_17",
+      "name": "Varna Harbor",
+      "owner": "france",
+      "controller": "france",
+      "theaterId": "theater_black_sea_expedition",
+      "assignedGeneralId": "general_saint_arnaud",
+      "terrain": "plain",
+      "neighbors": [
+        "region_18",
+        "region_13",
+        "region_21"
+      ],
+      "displayHexes": [
+        {
+          "q": 0,
+          "r": 4
+        },
+        {
+          "q": 1,
+          "r": 4
+        },
+        {
+          "q": 2,
+          "r": 4
+        }
+      ],
+      "representativeHex": {
+        "q": 1,
+        "r": 4
+      },
+      "city": null,
+      "infrastructure": 3,
+      "supplyValue": 4,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "france"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_18",
+      "name": "Danube Crossing",
+      "owner": "ottoman",
+      "controller": "ottoman",
+      "theaterId": "theater_balkan_danube",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_17",
+        "region_19",
+        "region_14",
+        "region_22"
+      ],
+      "displayHexes": [
+        {
+          "q": 3,
+          "r": 4
+        },
+        {
+          "q": 4,
+          "r": 4
+        },
+        {
+          "q": 5,
+          "r": 4
+        }
+      ],
+      "representativeHex": {
+        "q": 4,
+        "r": 4
+      },
+      "city": null,
+      "infrastructure": 4,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "chromium",
+          "amount": 1
+        }
+      ],
+      "coreOf": [
+        "ottoman"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_19",
+      "name": "Neutral Steppe Corridor",
+      "owner": "neutral",
+      "controller": "neutral",
+      "theaterId": "theater_crimea_siege",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_18",
+        "region_20",
+        "region_15",
+        "region_23"
+      ],
+      "displayHexes": [
+        {
+          "q": 6,
+          "r": 4
+        },
+        {
+          "q": 7,
+          "r": 4
+        },
+        {
+          "q": 8,
+          "r": 4
+        }
+      ],
+      "representativeHex": {
+        "q": 7,
+        "r": 4
+      },
+      "city": null,
+      "infrastructure": 3,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_20",
+      "name": "Danube Mouth",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_caucasus_observation",
+      "assignedGeneralId": null,
+      "terrain": "city",
+      "neighbors": [
+        "region_19",
+        "region_16",
+        "region_24"
+      ],
+      "displayHexes": [
+        {
+          "q": 9,
+          "r": 4
+        },
+        {
+          "q": 10,
+          "r": 4
+        },
+        {
+          "q": 11,
+          "r": 4
+        }
+      ],
+      "representativeHex": {
+        "q": 10,
+        "r": 4
+      },
+      "city": {
+        "name": "Kilia",
+        "victoryPoints": 1,
+        "isCapital": false
+      },
+      "infrastructure": 4,
+      "supplyValue": 2,
+      "factories": 1,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_21",
+      "name": "Balkan Foothills",
+      "owner": "france",
+      "controller": "france",
+      "theaterId": "theater_black_sea_expedition",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_22",
+        "region_17",
+        "region_25"
+      ],
+      "displayHexes": [
+        {
+          "q": 0,
+          "r": 5
+        },
+        {
+          "q": 1,
+          "r": 5
+        },
+        {
+          "q": 2,
+          "r": 5
+        }
+      ],
+      "representativeHex": {
+        "q": 1,
+        "r": 5
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "france"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_22",
+      "name": "Dobrudja Interior",
+      "owner": "ottoman",
+      "controller": "ottoman",
+      "theaterId": "theater_balkan_danube",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_21",
+        "region_23",
+        "region_18",
+        "region_26"
+      ],
+      "displayHexes": [
+        {
+          "q": 3,
+          "r": 5
+        },
+        {
+          "q": 4,
+          "r": 5
+        },
+        {
+          "q": 5,
+          "r": 5
+        }
+      ],
+      "representativeHex": {
+        "q": 4,
+        "r": 5
+      },
+      "city": null,
+      "infrastructure": 2,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "chromium",
+          "amount": 1
+        }
+      ],
+      "coreOf": [
+        "ottoman"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_23",
+      "name": "Black Sea Coast Road",
+      "owner": "neutral",
+      "controller": "neutral",
+      "theaterId": "theater_crimea_siege",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_22",
+        "region_24",
+        "region_19",
+        "region_27"
+      ],
+      "displayHexes": [
+        {
+          "q": 6,
+          "r": 5
+        },
+        {
+          "q": 7,
+          "r": 5
+        },
+        {
+          "q": 8,
+          "r": 5
+        }
+      ],
+      "representativeHex": {
+        "q": 7,
+        "r": 5
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_24",
+      "name": "Kilia Line",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_caucasus_observation",
+      "assignedGeneralId": null,
+      "terrain": "fortress",
+      "neighbors": [
+        "region_23",
+        "region_20",
+        "region_28"
+      ],
+      "displayHexes": [
+        {
+          "q": 9,
+          "r": 5
+        },
+        {
+          "q": 10,
+          "r": 5
+        },
+        {
+          "q": 11,
+          "r": 5
+        }
+      ],
+      "representativeHex": {
+        "q": 10,
+        "r": 5
+      },
+      "city": {
+        "name": "Danube Forts",
+        "victoryPoints": 4,
+        "isCapital": false
+      },
+      "infrastructure": 2,
+      "supplyValue": 2,
+      "factories": 1,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_25",
+      "name": "Sardinian Staging Port",
+      "owner": "sardinia",
+      "controller": "sardinia",
+      "theaterId": "theater_black_sea_expedition",
+      "assignedGeneralId": null,
+      "terrain": "forest",
+      "neighbors": [
+        "region_26",
+        "region_21",
+        "region_29"
+      ],
+      "displayHexes": [
+        {
+          "q": 0,
+          "r": 6
+        },
+        {
+          "q": 1,
+          "r": 6
+        },
+        {
+          "q": 2,
+          "r": 6
+        }
+      ],
+      "representativeHex": {
+        "q": 1,
+        "r": 6
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "sardinia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_26",
+      "name": "Wallachian Plain",
+      "owner": "austria",
+      "controller": "austria",
+      "theaterId": "theater_balkan_danube",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_25",
+        "region_27",
+        "region_22",
+        "region_30"
+      ],
+      "displayHexes": [
+        {
+          "q": 3,
+          "r": 6
+        },
+        {
+          "q": 4,
+          "r": 6
+        },
+        {
+          "q": 5,
+          "r": 6
+        }
+      ],
+      "representativeHex": {
+        "q": 4,
+        "r": 6
+      },
+      "city": null,
+      "infrastructure": 2,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "austria"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_27",
+      "name": "Caucasus Foothills",
+      "owner": "neutral",
+      "controller": "neutral",
+      "theaterId": "theater_crimea_siege",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_26",
+        "region_28",
+        "region_23",
+        "region_31"
+      ],
+      "displayHexes": [
+        {
+          "q": 6,
+          "r": 6
+        },
+        {
+          "q": 7,
+          "r": 6
+        },
+        {
+          "q": 8,
+          "r": 6
+        }
+      ],
+      "representativeHex": {
+        "q": 7,
+        "r": 6
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_28",
+      "name": "North Caucasus Road",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_caucasus_observation",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_27",
+        "region_24",
+        "region_32"
+      ],
+      "displayHexes": [
+        {
+          "q": 9,
+          "r": 6
+        },
+        {
+          "q": 10,
+          "r": 6
+        },
+        {
+          "q": 11,
+          "r": 6
+        }
+      ],
+      "representativeHex": {
+        "q": 10,
+        "r": 6
+      },
+      "city": null,
+      "infrastructure": 2,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_29",
+      "name": "Burgas Roads",
+      "owner": "sardinia",
+      "controller": "sardinia",
+      "theaterId": "theater_black_sea_expedition",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_30",
+        "region_25",
+        "region_33"
+      ],
+      "displayHexes": [
+        {
+          "q": 0,
+          "r": 7
+        },
+        {
+          "q": 1,
+          "r": 7
+        },
+        {
+          "q": 2,
+          "r": 7
+        }
+      ],
+      "representativeHex": {
+        "q": 1,
+        "r": 7
+      },
+      "city": null,
+      "infrastructure": 3,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "sardinia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_30",
+      "name": "Bucharest Railhead",
+      "owner": "austria",
+      "controller": "austria",
+      "theaterId": "theater_balkan_danube",
+      "assignedGeneralId": "general_hess",
+      "terrain": "city",
+      "neighbors": [
+        "region_29",
+        "region_31",
+        "region_26",
+        "region_34"
+      ],
+      "displayHexes": [
+        {
+          "q": 3,
+          "r": 7
+        },
+        {
+          "q": 4,
+          "r": 7
+        },
+        {
+          "q": 5,
+          "r": 7
+        }
+      ],
+      "representativeHex": {
+        "q": 4,
+        "r": 7
+      },
+      "city": {
+        "name": "Bucharest",
+        "victoryPoints": 1,
+        "isCapital": false
+      },
+      "infrastructure": 4,
+      "supplyValue": 2,
+      "factories": 1,
+      "resources": [],
+      "coreOf": [
+        "austria"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_31",
+      "name": "Kerch Gate",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_crimea_siege",
+      "assignedGeneralId": null,
+      "terrain": "forest",
+      "neighbors": [
+        "region_30",
+        "region_32",
+        "region_27",
+        "region_35"
+      ],
+      "displayHexes": [
+        {
+          "q": 6,
+          "r": 7
+        },
+        {
+          "q": 7,
+          "r": 7
+        },
+        {
+          "q": 8,
+          "r": 7
+        }
+      ],
+      "representativeHex": {
+        "q": 7,
+        "r": 7
+      },
+      "city": null,
+      "infrastructure": 3,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_32",
+      "name": "Azov Road",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_caucasus_observation",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_31",
+        "region_28",
+        "region_36"
+      ],
+      "displayHexes": [
+        {
+          "q": 9,
+          "r": 7
+        },
+        {
+          "q": 10,
+          "r": 7
+        },
+        {
+          "q": 11,
+          "r": 7
+        }
+      ],
+      "representativeHex": {
+        "q": 10,
+        "r": 7
+      },
+      "city": null,
+      "infrastructure": 4,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_33",
+      "name": "Balaklava Anchorage",
+      "owner": "sardinia",
+      "controller": "sardinia",
+      "theaterId": "theater_black_sea_expedition",
+      "assignedGeneralId": "general_la_marmora",
+      "terrain": "plain",
+      "neighbors": [
+        "region_34",
+        "region_29",
+        "region_37"
+      ],
+      "displayHexes": [
+        {
+          "q": 0,
+          "r": 8
+        },
+        {
+          "q": 1,
+          "r": 8
+        },
+        {
+          "q": 2,
+          "r": 8
+        }
+      ],
+      "representativeHex": {
+        "q": 1,
+        "r": 8
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "sardinia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_34",
+      "name": "Austrian Observation Zone",
+      "owner": "austria",
+      "controller": "austria",
+      "theaterId": "theater_balkan_danube",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_33",
+        "region_35",
+        "region_30",
+        "region_38"
+      ],
+      "displayHexes": [
+        {
+          "q": 3,
+          "r": 8
+        },
+        {
+          "q": 4,
+          "r": 8
+        },
+        {
+          "q": 5,
+          "r": 8
+        }
+      ],
+      "representativeHex": {
+        "q": 4,
+        "r": 8
+      },
+      "city": null,
+      "infrastructure": 2,
+      "supplyValue": 4,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "austria"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_35",
+      "name": "Caucasus Passes",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_crimea_siege",
+      "assignedGeneralId": null,
+      "terrain": "plain",
+      "neighbors": [
+        "region_34",
+        "region_36",
+        "region_31",
+        "region_39"
+      ],
+      "displayHexes": [
+        {
+          "q": 6,
+          "r": 8
+        },
+        {
+          "q": 7,
+          "r": 8
+        },
+        {
+          "q": 8,
+          "r": 8
+        }
+      ],
+      "representativeHex": {
+        "q": 7,
+        "r": 8
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_36",
+      "name": "Kutaisi Gate",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_caucasus_observation",
+      "assignedGeneralId": null,
+      "terrain": "city",
+      "neighbors": [
+        "region_35",
+        "region_32",
+        "region_40"
+      ],
+      "displayHexes": [
+        {
+          "q": 9,
+          "r": 8
+        },
+        {
+          "q": 10,
+          "r": 8
+        },
+        {
+          "q": 11,
+          "r": 8
+        }
+      ],
+      "representativeHex": {
+        "q": 10,
+        "r": 8
+      },
+      "city": {
+        "name": "Kutaisi",
+        "victoryPoints": 4,
+        "isCapital": false
+      },
+      "infrastructure": 2,
+      "supplyValue": 2,
+      "factories": 1,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_37",
+      "name": "Sardinian Reserve Area",
+      "owner": "sardinia",
+      "controller": "sardinia",
+      "theaterId": "theater_black_sea_expedition",
+      "assignedGeneralId": null,
+      "terrain": "hill",
+      "neighbors": [
+        "region_38",
+        "region_33"
+      ],
+      "displayHexes": [
+        {
+          "q": 0,
+          "r": 9
+        },
+        {
+          "q": 1,
+          "r": 9
+        },
+        {
+          "q": 2,
+          "r": 9
+        }
+      ],
+      "representativeHex": {
+        "q": 1,
+        "r": 9
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "sardinia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_38",
+      "name": "Carpathian Screen",
+      "owner": "austria",
+      "controller": "austria",
+      "theaterId": "theater_balkan_danube",
+      "assignedGeneralId": null,
+      "terrain": "hill",
+      "neighbors": [
+        "region_37",
+        "region_39",
+        "region_34"
+      ],
+      "displayHexes": [
+        {
+          "q": 3,
+          "r": 9
+        },
+        {
+          "q": 4,
+          "r": 9
+        },
+        {
+          "q": 5,
+          "r": 9
+        }
+      ],
+      "representativeHex": {
+        "q": 4,
+        "r": 9
+      },
+      "city": null,
+      "infrastructure": 2,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [],
+      "coreOf": [
+        "austria"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_39",
+      "name": "Russian Mountain Screen",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_crimea_siege",
+      "assignedGeneralId": null,
+      "terrain": "hill",
+      "neighbors": [
+        "region_38",
+        "region_40",
+        "region_35"
+      ],
+      "displayHexes": [
+        {
+          "q": 6,
+          "r": 9
+        },
+        {
+          "q": 7,
+          "r": 9
+        },
+        {
+          "q": 8,
+          "r": 9
+        }
+      ],
+      "representativeHex": {
+        "q": 7,
+        "r": 9
+      },
+      "city": null,
+      "infrastructure": 1,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    },
+    {
+      "id": "region_40",
+      "name": "Eastern Caucasus March",
+      "owner": "russia",
+      "controller": "russia",
+      "theaterId": "theater_caucasus_observation",
+      "assignedGeneralId": null,
+      "terrain": "hill",
+      "neighbors": [
+        "region_39",
+        "region_36"
+      ],
+      "displayHexes": [
+        {
+          "q": 9,
+          "r": 9
+        },
+        {
+          "q": 10,
+          "r": 9
+        },
+        {
+          "q": 11,
+          "r": 9
+        }
+      ],
+      "representativeHex": {
+        "q": 10,
+        "r": 9
+      },
+      "city": null,
+      "infrastructure": 2,
+      "supplyValue": 0,
+      "factories": 0,
+      "resources": [
+        {
+          "type": "steel",
+          "amount": 2
+        }
+      ],
+      "coreOf": [
+        "russia"
+      ],
+      "occupationState": null,
+      "isPassable": true
+    }
+  ],
+  "edges": [
+    {
+      "from": "region_01",
+      "to": "region_02",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_01",
+      "to": "region_05",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_02",
+      "to": "region_03",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_02",
+      "to": "region_06",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_03",
+      "to": "region_04",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_03",
+      "to": "region_07",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_04",
+      "to": "region_08",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_05",
+      "to": "region_06",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_05",
+      "to": "region_09",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_06",
+      "to": "region_07",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_06",
+      "to": "region_10",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_07",
+      "to": "region_08",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_07",
+      "to": "region_11",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_08",
+      "to": "region_12",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_09",
+      "to": "region_10",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_09",
+      "to": "region_13",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_10",
+      "to": "region_11",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_10",
+      "to": "region_14",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_11",
+      "to": "region_12",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_11",
+      "to": "region_15",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_12",
+      "to": "region_16",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_13",
+      "to": "region_14",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_13",
+      "to": "region_17",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_14",
+      "to": "region_15",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_14",
+      "to": "region_18",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_15",
+      "to": "region_16",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_15",
+      "to": "region_19",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_16",
+      "to": "region_20",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_17",
+      "to": "region_18",
+      "hasRoad": true,
+      "hasRiverCrossing": true,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_17",
+      "to": "region_21",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_18",
+      "to": "region_19",
+      "hasRoad": true,
+      "hasRiverCrossing": true,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_18",
+      "to": "region_22",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_19",
+      "to": "region_20",
+      "hasRoad": true,
+      "hasRiverCrossing": true,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_19",
+      "to": "region_23",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_20",
+      "to": "region_24",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_21",
+      "to": "region_22",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_21",
+      "to": "region_25",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_22",
+      "to": "region_23",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_22",
+      "to": "region_26",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_23",
+      "to": "region_24",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_23",
+      "to": "region_27",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_24",
+      "to": "region_28",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_25",
+      "to": "region_26",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_25",
+      "to": "region_29",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_26",
+      "to": "region_27",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_26",
+      "to": "region_30",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_27",
+      "to": "region_28",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_27",
+      "to": "region_31",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_28",
+      "to": "region_32",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_29",
+      "to": "region_30",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_29",
+      "to": "region_33",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_30",
+      "to": "region_31",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_30",
+      "to": "region_34",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_31",
+      "to": "region_32",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_31",
+      "to": "region_35",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_32",
+      "to": "region_36",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_33",
+      "to": "region_34",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_33",
+      "to": "region_37",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_34",
+      "to": "region_35",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_34",
+      "to": "region_38",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_35",
+      "to": "region_36",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_35",
+      "to": "region_39",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 1
+    },
+    {
+      "from": "region_36",
+      "to": "region_40",
+      "hasRoad": true,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_37",
+      "to": "region_38",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_38",
+      "to": "region_39",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    },
+    {
+      "from": "region_39",
+      "to": "region_40",
+      "hasRoad": false,
+      "hasRiverCrossing": false,
+      "movementCostModifier": 0
+    }
+  ],
+  "supplySources": [
+    {
+      "id": "supply_british_fleet",
+      "faction": "britain",
+      "regionId": "region_05"
+    },
+    {
+      "id": "supply_french_varna",
+      "faction": "france",
+      "regionId": "region_17"
+    },
+    {
+      "id": "supply_ottoman_shumla",
+      "faction": "ottoman",
+      "regionId": "region_06"
+    },
+    {
+      "id": "supply_russian_odessa",
+      "faction": "russia",
+      "regionId": "region_12"
+    },
+    {
+      "id": "supply_austrian_railhead",
+      "faction": "austria",
+      "regionId": "region_34"
+    },
+    {
+      "id": "supply_sardinian_balaklava",
+      "faction": "sardinia",
+      "regionId": "region_33"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "region_obj_constantinople",
+      "name": "Constantinople",
+      "regionId": "region_05",
+      "type": "city",
+      "victoryPoints": 12,
+      "mainObjective": true
+    },
+    {
+      "id": "region_obj_varna",
+      "name": "Varna Harbor",
+      "regionId": "region_17",
+      "type": "city",
+      "victoryPoints": 6,
+      "mainObjective": true
+    },
+    {
+      "id": "region_obj_silistra",
+      "name": "Silistra Fortress",
+      "regionId": "region_14",
+      "type": "fortress",
+      "victoryPoints": 8,
+      "mainObjective": true
+    },
+    {
+      "id": "region_obj_sevastopol",
+      "name": "Sevastopol Fortress",
+      "regionId": "region_15",
+      "type": "fortress",
+      "victoryPoints": 14,
+      "mainObjective": true
+    },
+    {
+      "id": "region_obj_odessa",
+      "name": "Odessa Roadstead",
+      "regionId": "region_08",
+      "type": "city",
+      "victoryPoints": 8,
+      "mainObjective": false
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "terrain": {
+    "plain": {
+      "movementCost": 1,
+      "defenseBonus": 0
+    },
+    "forest": {
+      "movementCost": 2,
+      "defenseBonus": 2
+    },
+    "mountain": {
+      "movementCost": 3,
+      "defenseBonus": 3
+    },
+    "hill": {
+      "movementCost": 2,
+      "defenseBonus": 1
+    },
+    "city": {
+      "movementCost": 1,
+      "defenseBonus": 2
+    },
+    "fortress": {
+      "movementCost": 2,
+      "defenseBonus": 4
+    }
+  },
+  "roadMovementCost": 1,
+  "riverCrossingExtraCost": 2,
+  "dataNotes": [
+    "v5.2 uses existing BaseTerrain cases; rail and ports are represented by roads, cities, fortresses, and region infrastructure until schema expansion."
+  ]
+}

@@ -29,6 +29,12 @@
 		010000000000000000000014 /* terrain_rules.json in Resources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000016 /* terrain_rules.json */; };
 		010000000000000000000015 /* unit_templates.json in Resources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000017 /* unit_templates.json */; };
 		010000000000000000000016 /* general_agents.json in Resources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000018 /* general_agents.json */; };
+		0E0000000000000000000101 /* black_sea_crisis_1853_scenario.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000001 /* black_sea_crisis_1853_scenario.json */; };
+		0E0000000000000000000102 /* black_sea_crisis_1853_regions.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000002 /* black_sea_crisis_1853_regions.json */; };
+		0E0000000000000000000103 /* victorian_powers.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000003 /* victorian_powers.json */; };
+		0E0000000000000000000104 /* victorian_unit_templates.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000004 /* victorian_unit_templates.json */; };
+		0E0000000000000000000105 /* victorian_personas.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000005 /* victorian_personas.json */; };
+		0E0000000000000000000106 /* victorian_terrain_rules.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000006 /* victorian_terrain_rules.json */; };
 		010000000000000000000017 /* ScenarioDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000019 /* ScenarioDataTests.swift */; };
 		010000000000000000000018 /* HexDirection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02000000000000000000001A /* HexDirection.swift */; };
 		010000000000000000000019 /* HexCoord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02000000000000000000001B /* HexCoord.swift */; };
@@ -349,6 +355,12 @@
 		0C0000000000000000000165 /* unit_templates.json in Resources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000017 /* unit_templates.json */; };
 		0C0000000000000000000166 /* general_agents.json in Resources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000018 /* general_agents.json */; };
 		0C0000000000000000000167 /* ardennes_v02_regions.json in Resources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000044 /* ardennes_v02_regions.json */; };
+		0E0000000000000000000201 /* black_sea_crisis_1853_scenario.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000001 /* black_sea_crisis_1853_scenario.json */; };
+		0E0000000000000000000202 /* black_sea_crisis_1853_regions.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000002 /* black_sea_crisis_1853_regions.json */; };
+		0E0000000000000000000203 /* victorian_powers.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000003 /* victorian_powers.json */; };
+		0E0000000000000000000204 /* victorian_unit_templates.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000004 /* victorian_unit_templates.json */; };
+		0E0000000000000000000205 /* victorian_personas.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000005 /* victorian_personas.json */; };
+		0E0000000000000000000206 /* victorian_terrain_rules.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E0000000000000000000006 /* victorian_terrain_rules.json */; };
 		0D0000000000000000000101 /* GeneralRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D0000000000000000000001 /* GeneralRegistry.swift */; };
 		0D0000000000000000000102 /* RulerAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D0000000000000000000002 /* RulerAgent.swift */; };
 		0D0000000000000000000103 /* DiplomacyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D0000000000000000000003 /* DiplomacyState.swift */; };
@@ -424,6 +436,12 @@
 		020000000000000000000016 /* terrain_rules.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = terrain_rules.json; sourceTree = "<group>"; };
 		020000000000000000000017 /* unit_templates.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = unit_templates.json; sourceTree = "<group>"; };
 		020000000000000000000018 /* general_agents.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = general_agents.json; sourceTree = "<group>"; };
+		0E0000000000000000000001 /* black_sea_crisis_1853_scenario.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = black_sea_crisis_1853_scenario.json; sourceTree = "<group>"; };
+		0E0000000000000000000002 /* black_sea_crisis_1853_regions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = black_sea_crisis_1853_regions.json; sourceTree = "<group>"; };
+		0E0000000000000000000003 /* victorian_powers.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = victorian_powers.json; sourceTree = "<group>"; };
+		0E0000000000000000000004 /* victorian_unit_templates.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = victorian_unit_templates.json; sourceTree = "<group>"; };
+		0E0000000000000000000005 /* victorian_personas.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = victorian_personas.json; sourceTree = "<group>"; };
+		0E0000000000000000000006 /* victorian_terrain_rules.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = victorian_terrain_rules.json; sourceTree = "<group>"; };
 		020000000000000000000019 /* ScenarioDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioDataTests.swift; sourceTree = "<group>"; };
 		02000000000000000000001A /* HexDirection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HexDirection.swift; sourceTree = "<group>"; };
 		02000000000000000000001B /* HexCoord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HexCoord.swift; sourceTree = "<group>"; };
@@ -804,6 +822,12 @@
 			children = (
 				020000000000000000000010 /* DataLoader.swift */,
 				020000000000000000000014 /* ScenarioDefinition.swift */,
+				0E0000000000000000000001 /* black_sea_crisis_1853_scenario.json */,
+				0E0000000000000000000002 /* black_sea_crisis_1853_regions.json */,
+				0E0000000000000000000003 /* victorian_powers.json */,
+				0E0000000000000000000004 /* victorian_unit_templates.json */,
+				0E0000000000000000000005 /* victorian_personas.json */,
+				0E0000000000000000000006 /* victorian_terrain_rules.json */,
 				020000000000000000000015 /* ardennes_v0_scenario.json */,
 				020000000000000000000016 /* terrain_rules.json */,
 				020000000000000000000017 /* unit_templates.json */,
@@ -1055,6 +1079,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0E0000000000000000000101 /* black_sea_crisis_1853_scenario.json in Resources */,
+				0E0000000000000000000102 /* black_sea_crisis_1853_regions.json in Resources */,
+				0E0000000000000000000103 /* victorian_powers.json in Resources */,
+				0E0000000000000000000104 /* victorian_unit_templates.json in Resources */,
+				0E0000000000000000000105 /* victorian_personas.json in Resources */,
+				0E0000000000000000000106 /* victorian_terrain_rules.json in Resources */,
 				010000000000000000000013 /* ardennes_v0_scenario.json in Resources */,
 				010000000000000000000014 /* terrain_rules.json in Resources */,
 				010000000000000000000015 /* unit_templates.json in Resources */,
@@ -1089,6 +1119,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0E0000000000000000000201 /* black_sea_crisis_1853_scenario.json in Resources */,
+				0E0000000000000000000202 /* black_sea_crisis_1853_regions.json in Resources */,
+				0E0000000000000000000203 /* victorian_powers.json in Resources */,
+				0E0000000000000000000204 /* victorian_unit_templates.json in Resources */,
+				0E0000000000000000000205 /* victorian_personas.json in Resources */,
+				0E0000000000000000000206 /* victorian_terrain_rules.json in Resources */,
 				0C0000000000000000000163 /* ardennes_v0_scenario.json in Resources */,
 				0C0000000000000000000164 /* terrain_rules.json in Resources */,
 				0C0000000000000000000165 /* unit_templates.json in Resources */,
