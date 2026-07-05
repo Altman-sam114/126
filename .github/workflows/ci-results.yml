@@ -139,17 +139,17 @@ jobs:
 
           {
             printf '# WWIIHexV0 CI Failure Summary\n\n'
-            printf '- Branch: `%s`\n' "${GITHUB_REF_NAME}"
-            printf '- Commit: `%s`\n' "${GITHUB_SHA}"
-            printf '- Run: `%s` attempt `%s`\n' "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}"
-            printf '- Static checks: `%s`\n' "${static_outcome}"
-            printf '- Build: `%s`\n' "${build_outcome}"
-            printf '- XCTest / Probe: `%s`\n\n' "${test_outcome}"
+            printf '%s\n' "- Branch: \`${GITHUB_REF_NAME}\`"
+            printf '%s\n' "- Commit: \`${GITHUB_SHA}\`"
+            printf '%s\n' "- Run: \`${GITHUB_RUN_ID}\` attempt \`${GITHUB_RUN_ATTEMPT}\`"
+            printf '%s\n' "- Static checks: \`${static_outcome}\`"
+            printf '%s\n' "- Build: \`${build_outcome}\`"
+            printf '%s\n\n' "- XCTest / Probe: \`${test_outcome}\`"
             if [ "${static_outcome}" != "success" ] || [ "${build_outcome}" != "success" ]; then
               printf '## Failure Pointers\n\n'
-              printf '- Static check log: `ci-results/static-checks.log`\n'
-              printf '- Xcode build log: `ci-results/xcodebuild.log`\n'
-              printf '- JUnit summary: `ci-results/junit.xml`\n\n'
+              printf '%s\n' '- Static check log: `ci-results/static-checks.log`'
+              printf '%s\n' '- Xcode build log: `ci-results/xcodebuild.log`'
+              printf '%s\n\n' '- JUnit summary: `ci-results/junit.xml`'
               printf '## Last xcodebuild Lines\n\n```text\n'
               tail -n 120 ci-results/xcodebuild.log
               printf '\n```\n'
