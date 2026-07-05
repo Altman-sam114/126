@@ -366,7 +366,7 @@ Bottom Strip:
 - `Faction.germany/allies`、`Faction.opponent`、`GamePhase.germanAI/alliedPlayer`、`CommandValidator.phaseAllowsCommands` 和 `CommandExecutor.executeEndTurn` 的主路径已在本地 v5.1 切片中开始迁移；后续仍要清理测试、UI 和 legacy 数据残留。
 - `DataLoader` 默认资源已开始切到黑海危机；`DiplomacyState` 对 `black_sea_crisis_1853` 有场景化初始关系，英法奥斯曼撒丁对俄开战，奥地利保持武装中立压力；Guderian 专项校验只限 legacy 阿登数据，旧 `playerFaction` / `aiFaction` 字段仍保留作 schema 兼容。
 - `HexTile.logisticsTags` 已开始承载铁路、港口、电报、远征 depot 和围城 depot；`SupplyRules` 可把本方或 allied / coBelligerent 控制的港口作为补给锚点，单纯 `militaryAccess` 不算共同补给。
-- `ComponentType.tank/motorizedInfantry` 仍作为 legacy 兼容 case 保留；黑海默认 `victorian_unit_templates.json` 已使用维多利亚组件，规则和 AI 新增 `isShockFormation` / `isMobileFormation` 作为兼容判断。`ProductionKind.panzerDivision`、`EconomyResources.manpower/industry/supplies` 仍是源码兼容名；完整生产 kind 和经济资源 schema 迁移仍是 v5.4 必修点。
+- `ComponentType.tank/motorizedInfantry` 仍作为 legacy 兼容 case 保留；黑海默认 `victorian_unit_templates.json` 已使用维多利亚组件，规则和 AI 新增 `isShockFormation` / `isMobileFormation` 作为兼容判断。`ProductionKind` 默认生产项已切到 `lineInfantryCorps`、`guardBrigade`、`cavalryBrigade`、`siegeArtilleryBattery`、`supplyConvoy`，legacy `panzerDivision` 等 case 继续保留兼容；`EconomyResources.manpower/industry/supplies` 仍是源码兼容名，完整经济资源 schema 迁移仍是 v5.4 后续必修点。
 - `DiplomacyState` 已有 `CountryProfile` 基础，并开始支持 Black Sea Crisis 多国家默认关系；后续仍需把外交危机、战争目标、后援方、升级和谈判迁入规则状态。
 - `VictoryRules` 对黑海危机已改为读取 scenario `victoryConditions`，但外交危机、谈判结果、威望和战争支持仍未接入完整战争目标系统。
 

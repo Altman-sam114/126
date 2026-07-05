@@ -108,6 +108,37 @@
 - `ComponentType.tank/motorizedInfantry` raw value 仍保留作 legacy 兼容；完整围城状态、多回合封锁、海权、铁路建设命令、港口/铁路 UI 图标、生产 kind raw value 迁移和 MapEditor 新字段编辑能力仍待 v5.4-v5.7 后续切片。
 - 本轮只做规则层最小可观察效果，未引入完整全球市场、完整海军战术或复杂远征状态机。
 
+## v5.4 - 维多利亚生产 taxonomy 起步切片
+
+完成日期：2026-07-05
+
+核心更新：
+
+- `ProductionKind` 新增默认维多利亚生产 case：`lineInfantryCorps`、`guardBrigade`、`cavalryBrigade`、`siegeArtilleryBattery`、`supplyConvoy`。
+- `ProductionKind.allCases` 默认只向经济面板暴露维多利亚生产项；legacy `infantryDivision`、`panzerDivision`、`motorizedDivision`、`artilleryDivision`、`supplyStockpile` 保留解码和执行兼容。
+- 生产完成逻辑按新旧 case 分组生成线列步兵军、近卫旅、骑兵旅、攻城炮兵或补给车队效果，不绕过 `Command.queueProduction -> RuleEngine -> EconomyRules` 管线。
+- `EconomyResources.victorianSummary` 统一经济日志、经济面板成本和 region inspector 输出为 `REC/TRE/STO`，减少默认 UI 中 `MP/IC/SUP` 残留。
+- `Division.isInfantryHeavy` 扩展识别 `lineInfantry`、`guardInfantry`、`colonialInfantry` 和 `irregulars`，让维多利亚组件获得既有步兵地形防御规则兼容。
+- `md/flow/flow.md` 同步记录当前经济/生产兼容边界。
+
+关键文件：
+
+- `WWIIHexV0/Core/EconomyState.swift`
+- `WWIIHexV0/Rules/EconomyRules.swift`
+- `WWIIHexV0/UI/EconomyPanelView.swift`
+- `WWIIHexV0/UI/RegionInspectorView.swift`
+- `md/flow/flow.md`
+
+验证记录：
+
+- 本机轻量检查：`swiftc -parse` 覆盖 `EconomyState.swift`、`EconomyRules.swift`、`EconomyPanelView.swift`、`RegionInspectorView.swift` 通过；`git diff --check` 通过；本轮改动文件尾随空白扫描无命中；冲突标记扫描无命中。
+- 云端重验证：run `28734509698` attempt `1` 结果包 `WWIIHexV0-ci-v1-main-aa2935a-run28734509698-attempt1` 已核对，`branch=main`、`commitSha=aa2935a684505ba44ef512eff10aef53bf86f9c3`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
+
+遗留事项：
+
+- `EconomyResources.manpower/industry/supplies` 内部字段仍保留作兼容；完整国库、工业产能、铁路运输力、船运量、战争支持、战争贷款和建设命令仍待后续 v5.4-v5.7 切片。
+- 本轮未引入铁路建设、港口扩建、舰队整备或完整财政/舆论状态机。
+
 ## v0 - 六角格测试板
 
 完成日期：2026-06-14 至 2026-06-15
