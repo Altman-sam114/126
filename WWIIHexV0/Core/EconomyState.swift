@@ -36,6 +36,10 @@ struct EconomyResources: Codable, Equatable {
         industry = max(0, industry - resources.industry)
         supplies = max(0, supplies - resources.supplies)
     }
+
+    var victorianSummary: String {
+        "REC \(manpower), TRE \(industry), STO \(supplies)"
+    }
 }
 
 enum CityLevel: String, Codable, Equatable, CaseIterable {
@@ -85,70 +89,142 @@ enum CityLevel: String, Codable, Equatable, CaseIterable {
 }
 
 enum ProductionKind: String, Codable, Equatable, CaseIterable, Identifiable {
+    case lineInfantryCorps
+    case guardBrigade
+    case cavalryBrigade
+    case siegeArtilleryBattery
+    case supplyConvoy
+
     case infantryDivision
     case panzerDivision
     case motorizedDivision
     case artilleryDivision
     case supplyStockpile
 
+    static let allCases: [ProductionKind] = [
+        .lineInfantryCorps,
+        .guardBrigade,
+        .cavalryBrigade,
+        .siegeArtilleryBattery,
+        .supplyConvoy
+    ]
+
     var id: String {
         rawValue
     }
 
-    var displayName: String {
+    var victorianKind: ProductionKind {
         switch self {
         case .infantryDivision:
-            return "Line Infantry Corps"
+            return .lineInfantryCorps
         case .panzerDivision:
-            return "Guard Brigade"
+            return .guardBrigade
         case .motorizedDivision:
-            return "Cavalry Brigade"
+            return .cavalryBrigade
         case .artilleryDivision:
-            return "Siege Artillery Battery"
+            return .siegeArtilleryBattery
         case .supplyStockpile:
+            return .supplyConvoy
+        case .lineInfantryCorps,
+             .guardBrigade,
+             .cavalryBrigade,
+             .siegeArtilleryBattery,
+             .supplyConvoy:
+            return self
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .lineInfantryCorps,
+             .infantryDivision:
+            return "Line Infantry Corps"
+        case .guardBrigade,
+             .panzerDivision:
+            return "Guard Brigade"
+        case .cavalryBrigade,
+             .motorizedDivision:
+            return "Cavalry Brigade"
+        case .siegeArtilleryBattery,
+             .artilleryDivision:
+            return "Siege Artillery Battery"
+        case .supplyConvoy,
+             .supplyStockpile:
             return "Supply Convoy"
         }
     }
 
     var cost: EconomyResources {
         switch self {
-        case .infantryDivision:
+        case .lineInfantryCorps,
+             .infantryDivision:
             return EconomyResources(manpower: 90, industry: 35, supplies: 12)
-        case .panzerDivision:
+        case .guardBrigade,
+             .panzerDivision:
             return EconomyResources(manpower: 70, industry: 95, supplies: 24)
-        case .motorizedDivision:
+        case .cavalryBrigade,
+             .motorizedDivision:
             return EconomyResources(manpower: 80, industry: 65, supplies: 18)
-        case .artilleryDivision:
+        case .siegeArtilleryBattery,
+             .artilleryDivision:
             return EconomyResources(manpower: 55, industry: 55, supplies: 14)
-        case .supplyStockpile:
+        case .supplyConvoy,
+             .supplyStockpile:
             return EconomyResources(manpower: 0, industry: 25, supplies: 0)
         }
     }
 
     var buildTurns: Int {
         switch self {
-        case .infantryDivision:
+        case .lineInfantryCorps,
+             .infantryDivision:
             return 2
-        case .panzerDivision:
+        case .guardBrigade,
+             .panzerDivision:
             return 4
-        case .motorizedDivision:
+        case .cavalryBrigade,
+             .motorizedDivision:
             return 3
-        case .artilleryDivision:
+        case .siegeArtilleryBattery,
+             .artilleryDivision:
             return 2
-        case .supplyStockpile:
+        case .supplyConvoy,
+             .supplyStockpile:
             return 1
         }
     }
 
     var supplyOutput: Int {
         switch self {
-        case .supplyStockpile:
+        case .supplyConvoy,
+             .supplyStockpile:
             return 85
-        case .infantryDivision,
+        case .lineInfantryCorps,
+             .guardBrigade,
+             .cavalryBrigade,
+             .siegeArtilleryBattery,
+             .infantryDivision,
              .panzerDivision,
              .motorizedDivision,
              .artilleryDivision:
             return 0
+        }
+    }
+
+    var producesSupplyOnly: Bool {
+        switch self {
+        case .supplyConvoy,
+             .supplyStockpile:
+            return true
+        case .lineInfantryCorps,
+             .guardBrigade,
+             .cavalryBrigade,
+             .siegeArtilleryBattery,
+             .infantryDivision,
+             .panzerDivision,
+             .motorizedDivision,
+             .artilleryDivision:
+            return false
         }
     }
 }
@@ -240,7 +316,11 @@ struct EconomyState: Codable, Equatable {
 
 extension Division {
     var isInfantryHeavy: Bool {
-        components.contains { $0.type == .infantry && $0.weight >= 0.50 }
+        componentWeight(for: .infantry) +
+            componentWeight(for: .lineInfantry) +
+            componentWeight(for: .guardInfantry) +
+            componentWeight(for: .colonialInfantry) +
+            componentWeight(for: .irregulars) >= 0.50
     }
 
     var isMechanizedHeavy: Bool {

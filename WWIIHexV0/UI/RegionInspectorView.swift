@@ -73,7 +73,7 @@ struct RegionInspectorView: View {
             }
 
             LabeledContent("Output") {
-                Text("MP \(state.economicOutput.manpower), IC \(state.economicOutput.industry), SUP \(state.economicOutput.supplies)")
+                Text(state.economicOutput.victorianSummary)
                     .multilineTextAlignment(.trailing)
             }
 

@@ -442,13 +442,21 @@ industry
 supplies
 ```
 
-v5.3 显示适配后，默认经济面板把这些兼容字段显示为维多利亚口径：
+v5.3-v5.4 显示适配后，默认经济面板、region inspector 和经济日志把这些兼容字段显示为维多利亚口径：
 
 - `manpower` -> `Recruits`
 - `industry` -> `Treasury`
 - `supplies` -> `Stores`
 
-`ProductionKind` 的 raw case 仍保留 `infantryDivision`、`panzerDivision`、`motorizedDivision`、`artilleryDivision`、`supplyStockpile` 以兼容旧存档和测试；玩家可见 `displayName` 已映射为 `Line Infantry Corps`、`Guard Brigade`、`Cavalry Brigade`、`Siege Artillery Battery` 和 `Supply Convoy`。这不是完整经济 schema 迁移。
+`ProductionKind.allCases` 默认暴露维多利亚生产项：
+
+- `lineInfantryCorps`
+- `guardBrigade`
+- `cavalryBrigade`
+- `siegeArtilleryBattery`
+- `supplyConvoy`
+
+旧 raw case `infantryDivision`、`panzerDivision`、`motorizedDivision`、`artilleryDivision`、`supplyStockpile` 仍保留以兼容旧存档和测试，并映射到对应维多利亚生产项执行。这只是生产 taxonomy 的兼容迁移，不是完整经济 schema 迁移。
 
 收入算法：
 
@@ -494,7 +502,7 @@ strength < maxStrength
 不与敌军相邻
 ```
 
-每个单位每回合最多恢复 2 strength，并按装甲、摩托化、火炮权重扣 manpower / industry / supplies。v0.8 不恢复 organization。
+每个单位每回合最多恢复 2 strength，并按冲击部队、机动部队、火炮权重扣 recruits / treasury / stores 兼容资源。v0.8 不恢复 organization。
 
 ---
 

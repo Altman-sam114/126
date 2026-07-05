@@ -115,20 +115,25 @@ struct EconomyPanelView: View {
     }
 
     private func resourceSummary(_ resources: EconomyResources) -> String {
-        "REC \(resources.manpower), TRE \(resources.industry), STO \(resources.supplies)"
+        resources.victorianSummary
     }
 
     private func iconName(for kind: ProductionKind) -> String {
         switch kind {
-        case .infantryDivision:
+        case .lineInfantryCorps,
+             .infantryDivision:
             return "figure.walk"
-        case .panzerDivision:
+        case .guardBrigade,
+             .panzerDivision:
             return "shield.lefthalf.filled"
-        case .motorizedDivision:
+        case .cavalryBrigade,
+             .motorizedDivision:
             return "flag"
-        case .artilleryDivision:
+        case .siegeArtilleryBattery,
+             .artilleryDivision:
             return "scope"
-        case .supplyStockpile:
+        case .supplyConvoy,
+             .supplyStockpile:
             return "shippingbox"
         }
     }

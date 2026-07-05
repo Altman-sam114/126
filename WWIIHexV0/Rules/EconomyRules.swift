@@ -303,10 +303,10 @@ struct EconomyRules {
                 continue
             }
 
-            if order.kind == .supplyStockpile {
+            if order.kind.producesSupplyOnly {
                 ledger.stockpile.add(EconomyResources(supplies: order.kind.supplyOutput))
                 state.appendEvent(
-                    "\(faction.displayName) completed \(order.kind.displayName): +\(order.kind.supplyOutput) supplies.",
+                    "\(faction.displayName) completed \(order.kind.displayName): +\(order.kind.supplyOutput) stores.",
                     category: .supply
                 )
                 continue
@@ -443,15 +443,20 @@ struct EconomyRules {
         let name = "\(order.kind.displayName) \(order.createdTurn)-\(index)"
 
         switch order.kind {
-        case .infantryDivision:
+        case .lineInfantryCorps,
+             .infantryDivision:
             return .lineInfantryCorps(id: id, name: name, faction: faction, coord: coord)
-        case .panzerDivision:
+        case .guardBrigade,
+             .panzerDivision:
             return .guardBrigade(id: id, name: name, faction: faction, coord: coord)
-        case .motorizedDivision:
+        case .cavalryBrigade,
+             .motorizedDivision:
             return .cavalryBrigade(id: id, name: name, faction: faction, coord: coord)
-        case .artilleryDivision:
+        case .siegeArtilleryBattery,
+             .artilleryDivision:
             return .siegeArtilleryBattery(id: id, name: name, faction: faction, coord: coord)
-        case .supplyStockpile:
+        case .supplyConvoy,
+             .supplyStockpile:
             return .lineInfantryCorps(id: id, name: name, faction: faction, coord: coord)
         }
     }
@@ -473,6 +478,6 @@ struct EconomyRules {
     }
 
     private func resourceSummary(_ resources: EconomyResources) -> String {
-        "MP \(resources.manpower), IC \(resources.industry), SUP \(resources.supplies)"
+        resources.victorianSummary
     }
 }
