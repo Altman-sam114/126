@@ -42,6 +42,11 @@ struct RegionInspectorView: View {
                 LabeledContent("Hex FrontZone") {
                     Text(state.selectedHexFrontZoneId?.rawValue ?? "None")
                 }
+
+                LabeledContent("Hex Logistics") {
+                    Text(logisticsTags(state.selectedHexLogisticsTags))
+                        .multilineTextAlignment(.trailing)
+                }
             }
 
             LabeledContent("Controller") {
@@ -93,6 +98,11 @@ struct RegionInspectorView: View {
                 Text("\(state.region.infrastructure)")
             }
 
+            LabeledContent("Region Logistics") {
+                Text(logisticsTagCounts(state.regionLogisticsTagCounts))
+                    .multilineTextAlignment(.trailing)
+            }
+
             LabeledContent("Objectives") {
                 Text(state.objectiveNames.isEmpty ? "None" : state.objectiveNames.joined(separator: ", "))
                     .multilineTextAlignment(.trailing)
@@ -119,5 +129,23 @@ struct RegionInspectorView: View {
             return "None"
         }
         return divisions.map(\.name).joined(separator: ", ")
+    }
+
+    private func logisticsTags(_ tags: [LogisticsTag]) -> String {
+        guard !tags.isEmpty else {
+            return "None"
+        }
+        return tags.map(\.displayName).joined(separator: ", ")
+    }
+
+    private func logisticsTagCounts(_ counts: [LogisticsTag: Int]) -> String {
+        let summaries = LogisticsTag.allCases.compactMap { tag -> String? in
+            guard let count = counts[tag], count > 0 else {
+                return nil
+            }
+            return "\(tag.displayName) x\(count)"
+        }
+
+        return summaries.isEmpty ? "None" : summaries.joined(separator: ", ")
     }
 }

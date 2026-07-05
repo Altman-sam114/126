@@ -44,6 +44,8 @@ struct RegionInspectorState: Equatable {
     let selectedHexController: Faction?
     let selectedHexDynamicTheaterId: TheaterId?
     let selectedHexFrontZoneId: FrontZoneId?
+    let selectedHexLogisticsTags: [LogisticsTag]
+    let regionLogisticsTagCounts: [LogisticsTag: Int]
     let theaterId: TheaterId?
     let frontZoneId: FrontZoneId?
     let frontPressure: Double
@@ -207,6 +209,9 @@ struct MapDisplayAdapter {
 
         let cityLevel = EconomyRules().cityLevel(for: region, map: state.map)
         let economicOutput = regionalEconomicOutput(for: region, cityLevel: cityLevel)
+        let selectedHexLogisticsTags = selectedHex
+            .flatMap { state.map.tile(at: $0)?.logisticsTags } ?? []
+        let regionLogisticsTagCounts = logisticsTagCounts(for: region)
 
         return RegionInspectorState(
             region: region,
@@ -214,6 +219,8 @@ struct MapDisplayAdapter {
             selectedHexController: selectedHex.flatMap { state.map.tile(at: $0)?.controller },
             selectedHexDynamicTheaterId: selectedHex.flatMap { state.theaterState.dynamicTheaterId(for: $0, map: state.map) },
             selectedHexFrontZoneId: selectedHex.flatMap { state.warDeploymentState.zoneId(for: $0, map: state.map) },
+            selectedHexLogisticsTags: sortedLogisticsTags(selectedHexLogisticsTags),
+            regionLogisticsTagCounts: regionLogisticsTagCounts,
             theaterId: state.theaterState.dominantDynamicTheaterId(for: regionId, map: state.map),
             frontZoneId: dominantDynamicFrontZoneId(for: regionId),
             frontPressure: state.frontLineState.regionStates[regionId]?.frontLines
@@ -261,6 +268,23 @@ struct MapDisplayAdapter {
         return counts.max {
             $0.value == $1.value ? $0.key.rawValue > $1.key.rawValue : $0.value < $1.value
         }?.key ?? state.warDeploymentState.regionToFrontZone[regionId]
+    }
+
+    private func sortedLogisticsTags(_ tags: Set<LogisticsTag>) -> [LogisticsTag] {
+        LogisticsTag.allCases.filter { tags.contains($0) }
+    }
+
+    private func logisticsTagCounts(for region: RegionNode) -> [LogisticsTag: Int] {
+        var counts: [LogisticsTag: Int] = [:]
+        for hex in region.displayHexes {
+            guard let tile = state.map.tile(at: hex) else {
+                continue
+            }
+            for tag in tile.logisticsTags {
+                counts[tag, default: 0] += 1
+            }
+        }
+        return counts
     }
 
     private func terrain(for hex: HexCoord) -> BaseTerrain {

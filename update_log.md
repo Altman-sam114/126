@@ -122,6 +122,7 @@
 - 新增 `EconomyCommand` 和 `Command.economy(command:)`，首批支持 `raiseWarLoan` 与 `buySupplies` 两个预算动作，经 `CommandValidator`、`CommandExecutor` 和 `EconomyRules` 统一执行。
 - `FactionEconomyLedger` 新增 `warDebt` 兼容字段；战争贷款增加 treasury 和 debt，后续回合通过 debt service 消耗 treasury；购买补给消耗 treasury 并增加 stores。
 - `EconomyPanelView` 新增 Budget 区块，展示 debt / debt service，并将预算按钮接入 `AppContainer.executeEconomyCommand`。
+- `RegionInspectorView` 新增物流只读展示：所选 hex 显示物流标签，region 显示从 hex 聚合得到的标签数量，继续保持 hex 为物流权威。
 - `md/flow/flow.md` 同步记录当前经济/生产兼容边界。
 
 关键文件：
@@ -135,6 +136,7 @@
 - `WWIIHexV0/UI/EconomyPanelView.swift`
 - `WWIIHexV0/UI/RegionInspectorView.swift`
 - `WWIIHexV0/UI/RootGameView.swift`
+- `WWIIHexV0/SpriteKit/MapDisplayAdapter.swift`
 - `md/flow/flow.md`
 
 验证记录：
@@ -142,6 +144,7 @@
 - 本机轻量检查：`swiftc -parse` 覆盖 `EconomyState.swift`、`EconomyRules.swift`、`EconomyPanelView.swift`、`RegionInspectorView.swift` 通过；`git diff --check` 通过；本轮改动文件尾随空白扫描无命中；冲突标记扫描无命中。
 - 云端重验证：run `28734509698` attempt `1` 结果包 `WWIIHexV0-ci-v1-main-aa2935a-run28734509698-attempt1` 已核对，`branch=main`、`commitSha=aa2935a684505ba44ef512eff10aef53bf86f9c3`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
 - `EconomyCommand` 预算动作切片已由 run `28735351078` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-f20f409-run28735351078-attempt1` 核对通过；manifest 显示 `branch=main`、`commitSha=f20f409aafce14846ecf03ae3ed7458e4859caa6`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
+- Region inspector 物流展示切片待本轮新 commit push 后由最新 GitHub Actions 结果包复核，并在后续日志条目补入 run id / artifact。
 
 遗留事项：
 

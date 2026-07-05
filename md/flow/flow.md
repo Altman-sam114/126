@@ -173,6 +173,7 @@ regionId: RegionId?
 - `HexCoord` 是 axial q/r 坐标，移动、攻击、距离、邻接都基于 hex。
 - `HexTile.controller` 是真实占领权威；中立 hex 的 controller 为 `nil`。
 - `HexTile.logisticsTags` 记录 v5.3 起的铁路、港口、海岸、电报、远征 depot、围城 depot 等物流标签；它只提供规则修正和 UI 语义，不替代 hex controller 或 region 聚合。
+- Region inspector 会只读展示所选 hex 的物流标签，并按 region 内 hex 聚合标签数量；该显示层不新增规则权威。
 - `HexTile.regionId` 是聚合标记，不参与寻路/战斗权威判断。
 - `MapState.region(for:)` 优先读 `hexToRegion`，fallback 读 `tile.regionId`。
 - `MapState.supplySources(for:)` 会通过 `controllingFaction(for:)` 判断补给源当前归属，优先看 supply hex 的 controller，再 fallback region controller，再 fallback 原始 supply faction。
