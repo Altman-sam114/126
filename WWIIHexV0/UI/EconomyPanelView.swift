@@ -4,8 +4,10 @@ struct EconomyPanelView: View {
     let gameState: GameState
     let playerFaction: Faction
     let observerModeEnabled: Bool
+    let selectedHex: HexCoord?
     let onQueueProduction: (ProductionKind) -> Void
     let onEconomyCommand: (EconomyCommand) -> Void
+    let onQueueConstruction: (ConstructionKind, HexCoord) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -17,6 +19,10 @@ struct EconomyPanelView: View {
             Divider()
 
             budgetControls
+
+            Divider()
+
+            constructionControls
 
             Divider()
 
@@ -54,7 +60,7 @@ struct EconomyPanelView: View {
                 GridRow {
                     metric("Debt", ledger.warDebt)
                     metric("Debt Service", ledger.lastUpkeep.industry)
-                    metric("Queue", ledger.productionQueue.count)
+                    metric("Orders", ledger.productionQueue.count + ledger.constructionQueue.count)
                 }
             }
         }
@@ -76,6 +82,30 @@ struct EconomyPanelView: View {
                 .disabled(!canApply(command))
 
                 Text(economyCommandSummary(command))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var constructionControls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Construction")
+                .font(.subheadline.weight(.semibold))
+
+            ForEach(ConstructionKind.allCases) { kind in
+                Button {
+                    if let selectedHex {
+                        onQueueConstruction(kind, selectedHex)
+                    }
+                } label: {
+                    Label(constructionButtonTitle(for: kind), systemImage: kind.systemImageName)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.bordered)
+                .disabled(!canQueue(kind))
+
+                Text(constructionSummary(kind))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -105,19 +135,32 @@ struct EconomyPanelView: View {
     }
 
     private func queueSection(for faction: Faction) -> some View {
-        let queue = gameState.economyState.ledger(for: faction).productionQueue
+        let ledger = gameState.economyState.ledger(for: faction)
+        let productionQueue = ledger.productionQueue
+        let constructionQueue = ledger.constructionQueue
 
         return VStack(alignment: .leading, spacing: 6) {
             Text("Orders")
                 .font(.subheadline.weight(.semibold))
 
-            if queue.isEmpty {
+            if productionQueue.isEmpty && constructionQueue.isEmpty {
                 Text("No active orders.")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(queue) { order in
+                ForEach(productionQueue) { order in
                     HStack {
                         Text(order.kind.displayName)
+                            .lineLimit(1)
+                        Spacer()
+                        Text(order.isReady ? "Ready" : "\(order.remainingTurns)")
+                            .foregroundStyle(order.isReady ? .green : .secondary)
+                    }
+                    .font(.caption)
+                }
+
+                ForEach(constructionQueue) { order in
+                    HStack {
+                        Text("\(order.kind.displayName) \(order.target.q),\(order.target.r)")
                             .lineLimit(1)
                         Spacer()
                         Text(order.isReady ? "Ready" : "\(order.remainingTurns)")
@@ -145,6 +188,22 @@ struct EconomyPanelView: View {
             activeFactionIsHumanControlled &&
             gameState.phase.isActionPhase &&
             gameState.economyState.ledger(for: gameState.activeFaction).stockpile.canAfford(kind.cost)
+    }
+
+    private func canQueue(_ kind: ConstructionKind) -> Bool {
+        guard let selectedHex else {
+            return false
+        }
+
+        return !observerModeEnabled &&
+            activeFactionIsHumanControlled &&
+            gameState.phase.isActionPhase &&
+            EconomyRules().canQueueConstruction(
+                kind: kind,
+                target: selectedHex,
+                faction: gameState.activeFaction,
+                in: gameState
+            )
     }
 
     private func canApply(_ command: EconomyCommand) -> Bool {
@@ -176,6 +235,17 @@ struct EconomyPanelView: View {
             parts.append("Debt +\(command.debtIncrease)")
         }
         return parts.joined(separator: " | ")
+    }
+
+    private func constructionButtonTitle(for kind: ConstructionKind) -> String {
+        guard let selectedHex else {
+            return "\(kind.displayName): select hex"
+        }
+        return "\(kind.displayName) at \(selectedHex.q),\(selectedHex.r)"
+    }
+
+    private func constructionSummary(_ kind: ConstructionKind) -> String {
+        "Cost \(resourceSummary(kind.cost)) | \(kind.buildTurns) turn(s)"
     }
 
     private func iconName(for kind: ProductionKind) -> String {

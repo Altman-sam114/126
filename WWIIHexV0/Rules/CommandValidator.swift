@@ -19,6 +19,8 @@ struct CommandValidator {
             return validateProduction(kind: kind, in: state)
         case .economy(let command):
             return validateEconomyCommand(command, in: state)
+        case .queueConstruction(let kind, let target):
+            return validateConstruction(kind: kind, target: target, in: state)
         case .endTurn:
             return validateEndTurn(in: state)
         }
@@ -150,6 +152,39 @@ struct CommandValidator {
         }
 
         guard EconomyRules().canApplyEconomyCommand(command, faction: state.activeFaction, in: state) else {
+            return .invalid(.insufficientResources)
+        }
+
+        return .valid
+    }
+
+    private func validateConstruction(
+        kind: ConstructionKind,
+        target: HexCoord,
+        in state: GameState
+    ) -> CommandValidation {
+        guard phaseAllowsCommands(in: state) else {
+            return .invalid(.wrongPhase)
+        }
+
+        guard let tile = state.map.tile(at: target) else {
+            return .invalid(.destinationOutOfBounds)
+        }
+
+        guard tile.isPassable else {
+            return .invalid(.noPath)
+        }
+
+        guard tile.controller == state.activeFaction else {
+            return .invalid(.wrongFaction)
+        }
+
+        guard EconomyRules().canQueueConstruction(
+            kind: kind,
+            target: target,
+            faction: state.activeFaction,
+            in: state
+        ) else {
             return .invalid(.insufficientResources)
         }
 

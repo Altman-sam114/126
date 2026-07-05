@@ -197,8 +197,10 @@ struct RootGameView: View {
                         gameState: container.gameState,
                         playerFaction: container.playerFaction,
                         observerModeEnabled: container.observerModeEnabled,
+                        selectedHex: container.selectedHex,
                         onQueueProduction: container.queueProduction,
-                        onEconomyCommand: container.executeEconomyCommand
+                        onEconomyCommand: container.executeEconomyCommand,
+                        onQueueConstruction: container.queueConstruction
                     )
                 case .diplomacy:
                     DiplomacyPanelView(

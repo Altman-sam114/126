@@ -264,6 +264,15 @@ final class AppContainer: ObservableObject {
         submit(.economy(command: command))
     }
 
+    func queueConstruction(_ kind: ConstructionKind, target: HexCoord) {
+        guard !observerModeEnabled else {
+            appendInteractionEvent("Construction rejected: observer mode is read-only.")
+            return
+        }
+
+        submit(.queueConstruction(kind: kind, target: target))
+    }
+
     func endTurn() {
         submit(.endTurn)
     }

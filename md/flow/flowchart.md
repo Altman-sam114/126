@@ -218,6 +218,9 @@ flowchart TD
     BUDGET["预算命令<br/>Command.economy<br/>Raise War Loan / Buy Stores"]:::command
     BVALID["预算校验<br/>CommandValidator.validateEconomyCommand<br/>检查 phase、资源和债务上限"]:::rules
     APPLYB["执行预算<br/>EconomyRules.applyEconomyCommand<br/>改 treasury / stores / warDebt"]:::economy
+    BUILD["建设命令<br/>Command.queueConstruction<br/>Railway Works @ selected hex"]:::command
+    BLDVALID["建设校验<br/>CommandValidator.validateConstruction<br/>己控 hex / 未有 rail / 资源足够"]:::rules
+    BLDQUEUE["预付成本并入建设队列<br/>EconomyRules.queueConstruction<br/>constructionQueue"]:::economy
 
     END["结束当前阵营回合<br/>Command.endTurn<br/>CommandExecutor.executeEndTurn"]:::command
     SUPPLY["补给状态刷新<br/>SupplyRules.updateSupplyStates"]:::rules
@@ -226,21 +229,26 @@ flowchart TD
     LOW["战略补给短缺<br/>supplied 单位降为 lowSupply"]:::rules
     REINF["自动补员<br/>安全后方 supplied 非敌邻单位<br/>每回合最多 +2 strength"]:::rules
     PROD["推进生产队列<br/>remainingTurns - 1<br/>ready 后部署或发补给箱"]:::economy
+    CONST["推进建设队列<br/>remainingTurns - 1<br/>ready 后只改目标 hex logisticsTags"]:::economy
     DEPLOY{"有合格后方部署点吗?"}:::decision
     SPAWN["部署新单位<br/>首都/城镇/工厂/高基建/高补给或 supply source<br/>必须己控、空置、非敌邻"]:::rules
     WAIT["保留订单<br/>本回合无安全 hex，等待后续回合"]:::economy
+    RAIL["完成铁路工程<br/>MapState.setTile<br/>target.logisticsTags.insert(.rail)"]:::authority
     NEXT["切换阵营并刷新运行时层<br/>StrategicStateBootstrapper.refreshRuntimeState"]:::rules
 
     BOOT --> LEDGER
     HEX --> REGION --> INCOME --> LEDGER
     UI --> QUEUE --> VALIDATE --> PAY --> LEDGER
     UI --> BUDGET --> BVALID --> APPLYB --> LEDGER
+    UI --> BUILD --> BLDVALID --> BLDQUEUE --> LEDGER
     END --> SUPPLY --> RESOLVE
     LEDGER --> RESOLVE
     RESOLVE --> SHORT
     SHORT -->|不足| LOW --> REINF
     SHORT -->|足够| REINF
-    REINF --> PROD --> DEPLOY
+    REINF --> PROD --> CONST
+    CONST --> RAIL --> DEPLOY
+    CONST --> DEPLOY
     DEPLOY -->|有| SPAWN --> NEXT
     DEPLOY -->|没有| WAIT --> NEXT
     RESOLVE --> LEDGER

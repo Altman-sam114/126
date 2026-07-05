@@ -283,6 +283,49 @@ enum EconomyCommand: String, Codable, Equatable, CaseIterable, Identifiable {
     }
 }
 
+enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
+    case railway
+
+    var id: String {
+        rawValue
+    }
+
+    var displayName: String {
+        switch self {
+        case .railway:
+            return "Railway Works"
+        }
+    }
+
+    var systemImageName: String {
+        switch self {
+        case .railway:
+            return "tram.fill"
+        }
+    }
+
+    var cost: EconomyResources {
+        switch self {
+        case .railway:
+            return EconomyResources(manpower: 20, industry: 65, supplies: 12)
+        }
+    }
+
+    var buildTurns: Int {
+        switch self {
+        case .railway:
+            return 2
+        }
+    }
+
+    var completedLogisticsTag: LogisticsTag {
+        switch self {
+        case .railway:
+            return .rail
+        }
+    }
+}
+
 struct ProductionOrder: Identifiable, Codable, Equatable {
     let id: String
     let faction: Faction
@@ -315,6 +358,38 @@ struct ProductionOrder: Identifiable, Codable, Equatable {
     }
 }
 
+struct ConstructionOrder: Identifiable, Codable, Equatable {
+    let id: String
+    let faction: Faction
+    let kind: ConstructionKind
+    let target: HexCoord
+    var remainingTurns: Int
+    let totalTurns: Int
+    let createdTurn: Int
+
+    init(
+        id: String,
+        faction: Faction,
+        kind: ConstructionKind,
+        target: HexCoord,
+        remainingTurns: Int? = nil,
+        totalTurns: Int? = nil,
+        createdTurn: Int
+    ) {
+        self.id = id
+        self.faction = faction
+        self.kind = kind
+        self.target = target
+        self.remainingTurns = max(0, remainingTurns ?? kind.buildTurns)
+        self.totalTurns = max(1, totalTurns ?? kind.buildTurns)
+        self.createdTurn = max(1, createdTurn)
+    }
+
+    var isReady: Bool {
+        remainingTurns == 0
+    }
+}
+
 struct FactionEconomyLedger: Codable, Equatable {
     let faction: Faction
     var stockpile: EconomyResources
@@ -322,6 +397,7 @@ struct FactionEconomyLedger: Codable, Equatable {
     var lastUpkeep: EconomyResources
     var lastReinforcementSpend: EconomyResources
     var productionQueue: [ProductionOrder]
+    var constructionQueue: [ConstructionOrder]
     var warDebt: Int
     var lastUpdatedTurn: Int
 
@@ -332,6 +408,7 @@ struct FactionEconomyLedger: Codable, Equatable {
         case lastUpkeep
         case lastReinforcementSpend
         case productionQueue
+        case constructionQueue
         case warDebt
         case lastUpdatedTurn
     }
@@ -343,6 +420,7 @@ struct FactionEconomyLedger: Codable, Equatable {
         lastUpkeep: EconomyResources = .zero,
         lastReinforcementSpend: EconomyResources = .zero,
         productionQueue: [ProductionOrder] = [],
+        constructionQueue: [ConstructionOrder] = [],
         warDebt: Int = 0,
         lastUpdatedTurn: Int = 1
     ) {
@@ -352,6 +430,7 @@ struct FactionEconomyLedger: Codable, Equatable {
         self.lastUpkeep = lastUpkeep
         self.lastReinforcementSpend = lastReinforcementSpend
         self.productionQueue = productionQueue
+        self.constructionQueue = constructionQueue
         self.warDebt = max(0, warDebt)
         self.lastUpdatedTurn = max(1, lastUpdatedTurn)
     }
@@ -367,6 +446,10 @@ struct FactionEconomyLedger: Codable, Equatable {
             forKey: .lastReinforcementSpend
         )
         self.productionQueue = try container.decode([ProductionOrder].self, forKey: .productionQueue)
+        self.constructionQueue = try container.decodeIfPresent(
+            [ConstructionOrder].self,
+            forKey: .constructionQueue
+        ) ?? []
         self.warDebt = max(0, try container.decodeIfPresent(Int.self, forKey: .warDebt) ?? 0)
         self.lastUpdatedTurn = max(1, try container.decode(Int.self, forKey: .lastUpdatedTurn))
     }

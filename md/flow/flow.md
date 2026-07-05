@@ -512,6 +512,23 @@ EconomyPanelView
 
 这些预算动作只改 faction 级经济账本，不改变 hex 占领、region controller、动态战区或前线。
 
+铁路建设由 `Command.queueConstruction(kind:target:)` 进入同一规则系统：
+
+```text
+EconomyPanelView selected hex
+  -> AppContainer.queueConstruction
+  -> Command.queueConstruction(kind: .railway, target: HexCoord)
+  -> RuleEngine
+  -> CommandValidator.validateConstruction
+  -> CommandExecutor.executeQueueConstruction
+  -> EconomyRules.queueConstruction
+  -> FactionEconomyLedger.constructionQueue
+  -> EconomyRules.resolveFactionTurn / advanceConstruction
+  -> MapState.setTile(tile with logisticsTags.insert(.rail))
+```
+
+当前 `ConstructionKind` 只包含 `railway` 起步动作。校验要求目标 hex 存在、可通行、由当前行动势力控制、尚无 `.rail`、同一目标未重复排队且账本资源足够。完成时只修改该 hex 的 `logisticsTags`，不改变 `HexTile.controller`、region controller、`regionToTheater`、`hexToTheater`、`hexToFrontZone` 或前线。
+
 自动补员在 active faction 结束回合时发生，只处理：
 
 ```text

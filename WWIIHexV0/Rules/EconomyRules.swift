@@ -80,6 +80,70 @@ struct EconomyRules {
         return true
     }
 
+    func canQueueConstruction(
+        kind: ConstructionKind,
+        target: HexCoord,
+        faction: Faction,
+        in state: GameState
+    ) -> Bool {
+        guard let tile = state.map.tile(at: target),
+              tile.isPassable,
+              tile.controller == faction,
+              !tile.logisticsTags.contains(kind.completedLogisticsTag) else {
+            return false
+        }
+
+        let ledger = state.economyState.ledger(for: faction)
+        guard ledger.stockpile.canAfford(kind.cost) else {
+            return false
+        }
+
+        return !ledger.constructionQueue.contains { order in
+            order.faction == faction &&
+                order.kind == kind &&
+                order.target == target
+        }
+    }
+
+    func queueConstruction(
+        kind: ConstructionKind,
+        target: HexCoord,
+        faction: Faction,
+        in state: inout GameState
+    ) -> Bool {
+        var ledger = state.economyState.ledger(for: faction)
+        guard canQueueConstruction(kind: kind, target: target, faction: faction, in: state) else {
+            state.appendEvent(
+                "\(faction.displayName) cannot queue \(kind.displayName) at \(target.q),\(target.r): site or budget constraints block the order.",
+                category: .supply
+            )
+            return false
+        }
+
+        ledger.stockpile.subtract(kind.cost)
+        let order = ConstructionOrder(
+            id: constructionOrderId(
+                kind: kind,
+                faction: faction,
+                target: target,
+                turn: state.turn,
+                index: ledger.constructionQueue.count
+            ),
+            faction: faction,
+            kind: kind,
+            target: target,
+            createdTurn: state.turn
+        )
+        ledger.constructionQueue.append(order)
+        ledger.lastUpdatedTurn = state.turn
+        state.economyState.updateLedger(ledger)
+        state.appendEvent(
+            "\(faction.displayName) queued \(kind.displayName) at \(target.q),\(target.r): cost \(resourceSummary(kind.cost)), \(kind.buildTurns) turn(s).",
+            category: .supply
+        )
+        return true
+    }
+
     func canApplyEconomyCommand(_ command: EconomyCommand, faction: Faction, in state: GameState) -> Bool {
         let ledger = state.economyState.ledger(for: faction)
         guard ledger.stockpile.canAfford(command.cost) else {
@@ -145,6 +209,7 @@ struct EconomyRules {
         ledger.lastReinforcementSpend = reinforcementSpend
 
         advanceProduction(for: faction, ledger: &ledger, in: &state)
+        advanceConstruction(for: faction, ledger: &ledger, in: &state)
 
         ledger.lastUpdatedTurn = state.turn
         state.economyState.updateLedger(ledger)
@@ -389,6 +454,65 @@ struct EconomyRules {
         ledger.productionQueue = remainingOrders
     }
 
+    private func advanceConstruction(
+        for faction: Faction,
+        ledger: inout FactionEconomyLedger,
+        in state: inout GameState
+    ) {
+        var remainingOrders: [ConstructionOrder] = []
+
+        for var order in ledger.constructionQueue {
+            guard order.faction == faction else {
+                remainingOrders.append(order)
+                continue
+            }
+
+            if order.remainingTurns > 0 {
+                order.remainingTurns -= 1
+            }
+
+            guard order.isReady else {
+                remainingOrders.append(order)
+                continue
+            }
+
+            if completeConstruction(order, faction: faction, in: &state) {
+                state.appendEvent(
+                    "\(faction.displayName) completed \(order.kind.displayName) at \(order.target.q),\(order.target.r).",
+                    category: .supply
+                )
+            } else {
+                remainingOrders.append(order)
+                state.appendEvent(
+                    "\(order.kind.displayName) at \(order.target.q),\(order.target.r) is ready, but the site is not under \(faction.displayName) control.",
+                    category: .supply
+                )
+            }
+        }
+
+        ledger.constructionQueue = remainingOrders
+    }
+
+    private func completeConstruction(
+        _ order: ConstructionOrder,
+        faction: Faction,
+        in state: inout GameState
+    ) -> Bool {
+        guard var tile = state.map.tile(at: order.target),
+              tile.isPassable,
+              tile.controller == faction else {
+            return false
+        }
+
+        if tile.logisticsTags.contains(order.kind.completedLogisticsTag) {
+            return true
+        }
+
+        tile.logisticsTags.insert(order.kind.completedLogisticsTag)
+        state.map.setTile(tile)
+        return true
+    }
+
     private func deploymentHex(
         for faction: Faction,
         preferredRegionId: RegionId?,
@@ -527,6 +651,16 @@ struct EconomyRules {
 
     private func productionOrderId(kind: ProductionKind, faction: Faction, turn: Int, index: Int) -> String {
         "order_\(faction.rawValue)_\(kind.rawValue)_\(turn)_\(index)"
+    }
+
+    private func constructionOrderId(
+        kind: ConstructionKind,
+        faction: Faction,
+        target: HexCoord,
+        turn: Int,
+        index: Int
+    ) -> String {
+        "construction_\(faction.rawValue)_\(kind.rawValue)_\(target.q)_\(target.r)_\(turn)_\(index)"
     }
 
     private func resourceSummary(_ resources: EconomyResources) -> String {

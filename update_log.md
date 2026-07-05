@@ -123,6 +123,7 @@
 - `FactionEconomyLedger` 新增 `warDebt` 兼容字段；战争贷款增加 treasury 和 debt，后续回合通过 debt service 消耗 treasury；购买补给消耗 treasury 并增加 stores。
 - `EconomyPanelView` 新增 Budget 区块，展示 debt / debt service，并将预算按钮接入 `AppContainer.executeEconomyCommand`。
 - `RegionInspectorView` 新增物流只读展示：所选 hex 显示物流标签，region 显示从 hex 聚合得到的标签数量，继续保持 hex 为物流权威。
+- 新增 `ConstructionKind.railway`、`ConstructionOrder` 和 `Command.queueConstruction(kind:target:)` 起步切片；铁路工程从经济面板选中 hex 后经 `RuleEngine` 扣费入队，回合结算完成时只给目标 hex 添加 `.rail` 物流标签，不改占领、region、theater、front 或 deploy 权威。
 - `md/flow/flow.md` 同步记录当前经济/生产兼容边界。
 
 关键文件：
@@ -138,6 +139,7 @@
 - `WWIIHexV0/UI/RootGameView.swift`
 - `WWIIHexV0/SpriteKit/MapDisplayAdapter.swift`
 - `md/flow/flow.md`
+- `md/flow/flowchart.md`
 
 验证记录：
 
@@ -145,11 +147,12 @@
 - 云端重验证：run `28734509698` attempt `1` 结果包 `WWIIHexV0-ci-v1-main-aa2935a-run28734509698-attempt1` 已核对，`branch=main`、`commitSha=aa2935a684505ba44ef512eff10aef53bf86f9c3`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
 - `EconomyCommand` 预算动作切片已由 run `28735351078` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-f20f409-run28735351078-attempt1` 核对通过；manifest 显示 `branch=main`、`commitSha=f20f409aafce14846ecf03ae3ed7458e4859caa6`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
 - Region inspector 物流展示切片已由 run `28735908770` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-51e1e46-run28735908770-attempt1` 核对通过；manifest 显示 `branch=main`、`commitSha=51e1e46e2d1ba05d935b0ec217aba4cfedf662b6`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
+- 铁路工程建设命令切片待本轮新 commit push 后由最新 GitHub Actions 结果包复核，并在后续日志条目补入 run id / artifact。
 
 遗留事项：
 
-- `EconomyResources.manpower/industry/supplies` 内部字段仍保留作兼容；完整国库、工业产能、铁路运输力、船运量、战争支持和建设命令仍待后续 v5.4-v5.7 切片。
-- 本轮未引入铁路建设、港口扩建、舰队整备或完整财政/舆论状态机；`warDebt` 仅是最小财政压力字段，不等同完整债务/议会系统。
+- `EconomyResources.manpower/industry/supplies` 内部字段仍保留作兼容；完整国库、工业产能、铁路运输力、船运量和战争支持仍待后续 v5.4-v5.7 切片。
+- 本轮只引入单 hex 铁路工程起步动作，未引入港口扩建、舰队整备、铁路运输力、建设上限或完整财政/舆论状态机；`warDebt` 仅是最小财政压力字段，不等同完整债务/议会系统。
 
 ## v0 - 六角格测试板
 
