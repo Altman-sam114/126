@@ -1153,6 +1153,13 @@ struct MarshalBattlefieldSummarizer {
         }
     }
 
+    private func isEnemyControlled(_ regionId: RegionId, for faction: Faction, in state: GameState) -> Bool {
+        guard let controller = state.map.regions[regionId]?.controller else {
+            return false
+        }
+        return state.diplomacyState.canAttack(attacker: faction, target: controller)
+    }
+
     private func objectiveNames(controlledBy faction: Faction, state: GameState) -> [String] {
         state.map.objectives
             .filter { state.map.tile(at: $0.coord)?.controller == faction }
