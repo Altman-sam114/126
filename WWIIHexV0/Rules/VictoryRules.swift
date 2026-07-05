@@ -6,6 +6,11 @@ struct VictoryRules {
             return
         }
 
+        if !state.victoryConditions.isEmpty {
+            updateScenarioVictoryState(in: &state)
+            return
+        }
+
         let bastogneController = state.map.controllerOfObjective(named: "Bastogne")
         let stVithController = state.map.controllerOfObjective(named: "St. Vith")
 
@@ -58,5 +63,99 @@ struct VictoryRules {
             state.victoryState.winner = .allies
             state.victoryState.reason = .bastogneHeldByAlliesAtFinalTurn
         }
+    }
+
+    private func updateScenarioVictoryState(in state: inout GameState) {
+        for condition in state.victoryConditions where condition.status == "win" {
+            guard isScenarioConditionSatisfied(condition, in: state) else {
+                state.victoryState.conditionSatisfiedSinceTurn[condition.id] = nil
+                continue
+            }
+
+            switch condition.type {
+            case "controlObjective", "controlObjectives":
+                resolve(condition, reason: reason(for: condition), in: &state)
+                return
+            case "holdObjectives":
+                let heldSince = state.victoryState.conditionSatisfiedSinceTurn[condition.id] ?? state.turn
+                state.victoryState.conditionSatisfiedSinceTurn[condition.id] = heldSince
+                if holdThresholdMet(condition, heldSince: heldSince, turn: state.turn) {
+                    resolve(condition, reason: .scenarioObjectivesHeld, in: &state)
+                    return
+                }
+            default:
+                continue
+            }
+        }
+    }
+
+    private func isScenarioConditionSatisfied(_ condition: VictoryCondition, in state: GameState) -> Bool {
+        guard !condition.objectiveIds.isEmpty else {
+            return false
+        }
+
+        switch condition.type {
+        case "controlObjective", "controlObjectives", "holdObjectives":
+            return condition.objectiveIds.allSatisfy { objectiveId in
+                guard let controller = state.map.controllerOfObjective(id: objectiveId) else {
+                    return false
+                }
+                return countsAsObjectiveControl(
+                    controller: controller,
+                    for: condition.faction,
+                    diplomacyState: state.diplomacyState
+                )
+            }
+        default:
+            return false
+        }
+    }
+
+    private func countsAsObjectiveControl(
+        controller: Faction,
+        for faction: Faction,
+        diplomacyState: DiplomacyState
+    ) -> Bool {
+        guard controller != .neutral, faction != .neutral else {
+            return controller == faction
+        }
+        if controller == faction {
+            return true
+        }
+
+        switch diplomacyState.relationStatus(between: faction, and: controller) {
+        case .allied, .coBelligerent:
+            return true
+        case .neutral, .hostile, .atWar, .truce, .militaryAccess, .blockaded:
+            return false
+        }
+    }
+
+    private func holdThresholdMet(_ condition: VictoryCondition, heldSince: Int, turn: Int) -> Bool {
+        if let targetTurn = condition.turn {
+            return turn >= targetTurn
+        }
+
+        let requiredTurns = max(1, condition.turns ?? 1)
+        return turn >= heldSince + requiredTurns - 1
+    }
+
+    private func reason(for condition: VictoryCondition) -> VictoryReason {
+        switch condition.type {
+        case "controlObjective":
+            return .scenarioObjectiveControlled
+        case "controlObjectives":
+            return .scenarioObjectivesControlled
+        case "holdObjectives":
+            return .scenarioObjectivesHeld
+        default:
+            return .scenarioObjectivesControlled
+        }
+    }
+
+    private func resolve(_ condition: VictoryCondition, reason: VictoryReason, in state: inout GameState) {
+        state.victoryState.winner = condition.faction
+        state.victoryState.reason = reason
+        state.victoryState.resolvedConditionId = condition.id
     }
 }

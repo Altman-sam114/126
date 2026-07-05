@@ -1162,6 +1162,8 @@ StrategicStateBootstrapper.refreshRuntimeState
 appendEvent("Turn advanced ...")
 ```
 
+`VictoryRules` 当前先读 `GameState.victoryConditions`。黑海危机等 v5 数据局会使用 scenario JSON 中的 `controlObjective`、`controlObjectives`、`holdObjectives` 条件，并按 `DiplomacyState` 将 allied / coBelligerent 控制计入同一战争目标侧；没有数据条件的 legacy 阿登局才回退到 Bastogne / St. Vith / German armor 旧规则。
+
 ---
 
 ## 6. AI / 战争指令流程

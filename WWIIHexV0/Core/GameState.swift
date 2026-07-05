@@ -16,6 +16,7 @@ struct GameState: Codable, Equatable {
     var diplomacyState: DiplomacyState
     var divisions: [Division]
     var victoryState: VictoryState
+    var victoryConditions: [VictoryCondition]
     var selectedUnitSummary: String?
     var eventLog: [GameLogEntry]
     var warDirectiveRecords: [WarDirectiveRecord]
@@ -37,6 +38,7 @@ struct GameState: Codable, Equatable {
         diplomacyState: DiplomacyState = .empty,
         divisions: [Division],
         victoryState: VictoryState,
+        victoryConditions: [VictoryCondition] = [],
         selectedUnitSummary: String?,
         eventLog: [GameLogEntry],
         warDirectiveRecords: [WarDirectiveRecord] = [],
@@ -65,6 +67,7 @@ struct GameState: Codable, Equatable {
         self.diplomacyState = diplomacyState
         self.divisions = divisions
         self.victoryState = victoryState
+        self.victoryConditions = victoryConditions
         self.selectedUnitSummary = selectedUnitSummary
         self.eventLog = eventLog
         self.warDirectiveRecords = warDirectiveRecords
@@ -167,6 +170,7 @@ struct GameState: Codable, Equatable {
         case diplomacyState
         case divisions
         case victoryState
+        case victoryConditions
         case selectedUnitSummary
         case eventLog
         case warDirectiveRecords
@@ -191,6 +195,7 @@ struct GameState: Codable, Equatable {
             diplomacyState: try container.decodeIfPresent(DiplomacyState.self, forKey: .diplomacyState) ?? .empty,
             divisions: try container.decode([Division].self, forKey: .divisions),
             victoryState: try container.decode(VictoryState.self, forKey: .victoryState),
+            victoryConditions: try container.decodeIfPresent([VictoryCondition].self, forKey: .victoryConditions) ?? [],
             selectedUnitSummary: try container.decodeIfPresent(String.self, forKey: .selectedUnitSummary),
             eventLog: try container.decode([GameLogEntry].self, forKey: .eventLog),
             warDirectiveRecords: try container.decodeIfPresent([WarDirectiveRecord].self, forKey: .warDirectiveRecords) ?? [],

@@ -182,6 +182,7 @@ struct DataLoader {
             diplomacyState: diplomacyState,
             divisions: divisions,
             victoryState: .ongoing,
+            victoryConditions: makeVictoryConditions(from: scenario.victoryConditions),
             selectedUnitSummary: nil,
             eventLog: [
                 GameLogEntry(
@@ -542,6 +543,37 @@ struct DataLoader {
             supplySources: supplySources,
             objectives: objectives
         )
+    }
+
+    private func makeVictoryConditions(from definitions: [VictoryConditionDefinition]) -> [VictoryCondition] {
+        definitions.compactMap { definition in
+            guard let faction = Faction(rawValue: definition.faction) else {
+                return nil
+            }
+            let objectiveIds = stableUnique(
+                [definition.objectiveId].compactMap { $0 } + (definition.objectiveIds ?? [])
+            )
+            return VictoryCondition(
+                id: definition.id,
+                type: definition.type,
+                faction: faction,
+                objectiveIds: objectiveIds,
+                turns: definition.turns,
+                turn: definition.turn,
+                status: definition.status,
+                description: definition.description
+            )
+        }
+    }
+
+    private func stableUnique(_ values: [String]) -> [String] {
+        var seen: Set<String> = []
+        var result: [String] = []
+        for value in values where !seen.contains(value) {
+            seen.insert(value)
+            result.append(value)
+        }
+        return result
     }
 
     private func apply(_ regionData: RegionDataSet, to map: inout MapState) throws {

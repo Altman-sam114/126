@@ -644,6 +644,35 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertEqual(state.victoryState.reason, .germanArmorUnsupplied)
     }
 
+    func testBlackSeaVictoryConditionsLoadIntoGameState() {
+        let state = DataLoader().loadInitialGameState()
+
+        XCTAssertEqual(state.scenarioId, "black_sea_crisis_1853")
+        XCTAssertEqual(state.victoryConditions.count, 3)
+        XCTAssertTrue(state.victoryConditions.contains { $0.id == "victory_allied_sevastopol" })
+    }
+
+    func testBlackSeaCoalitionControlCanSatisfyScenarioVictory() throws {
+        var state = DataLoader().loadInitialGameState()
+        let sevastopol = try XCTUnwrap(state.map.objective(id: "obj_sevastopol")?.coord)
+        let varna = try XCTUnwrap(state.map.objective(id: "obj_varna")?.coord)
+
+        if var sevastopolTile = state.map.tile(at: sevastopol) {
+            sevastopolTile.controller = .france
+            state.map.setTile(sevastopolTile)
+        }
+        if var varnaTile = state.map.tile(at: varna) {
+            varnaTile.controller = .ottoman
+            state.map.setTile(varnaTile)
+        }
+
+        VictoryRules().updateVictoryState(in: &state)
+
+        XCTAssertEqual(state.victoryState.winner, .britain)
+        XCTAssertEqual(state.victoryState.reason, .scenarioObjectivesControlled)
+        XCTAssertEqual(state.victoryState.resolvedConditionId, "victory_allied_sevastopol")
+    }
+
     func testInvalidCommandDoesNotModifyGameState() {
         let state = Self.testState(
             activeFaction: .allies,

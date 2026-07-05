@@ -43,13 +43,14 @@
 遗留事项：
 
 - 铁路、港口、煤站、电报等 v5.2 语义本轮仅通过道路、城市/要塞、region infrastructure 和 `dataNotes` 表达；正式规则仍留 v5.3-v5.4。
-- UI、胜利规则、经济/生产和测试夹具仍有 legacy 二战语义，需要后续 v5.3-v5.9 继续清理。
+- UI、legacy 胜利 fallback、经济/生产和测试夹具仍有 legacy 二战语义，需要后续 v5.3-v5.9 继续清理。
 
 后续迭代：
 
 - 2026-07-05：补齐黑海危机默认外交关系。`DiplomacyState.initial(... scenarioId:)` 对 `black_sea_crisis_1853` 生成场景化关系：Britain / France / Ottoman / Sardinia 对 Russia 为 `atWar`，联军内部为 `coBelligerent`，Austria 对 Russia 为 `hostile`、对 Ottoman 为 `militaryAccess`，其余保持 neutral；`DataLoader` 和 `StrategicStateBootstrapper` 均传入 `scenarioId`，避免默认新局和空外交兜底把黑海危机退回全中立。
 - 2026-07-05：补齐前线层多国家外交敌我判断。`FrontLineManager` 的初始构建、dirty update、动态 hex 接触、包围候选和补给影响可接收 `DiplomacyState`，运行时 `DataLoader`、`StrategicStateBootstrapper`、`StrategicStateSynchronizer` 和 `WarCommandExecutor` 均传入真实外交状态；缺省 nil 保留旧测试和 Probe fixture 兼容，避免黑海危机中非交战但不同国家、共同作战方或 neutral 被误画为前线。
 - 2026-07-05：根据 run `28730699270` 结果包修复前线层外交补线的云端构建问题。该 run 的 manifest 显示 `staticChecksOutcome=success`、`buildOutcome=failure`，xcodebuild 报 `WWIIHexV0/Rules/FrontLineManager.swift` 中 `isOperationalOpponent` 的 legacy fallback 分支缺少 `return`；本轮补回返回值，不改变外交状态优先判断逻辑。
+- 2026-07-05：补齐黑海危机数据驱动胜利条件。`GameState` 保存 scenario `victoryConditions`，`VictoryRules` 优先执行 `controlObjective`、`controlObjectives`、`holdObjectives` 数据条件，并按外交关系把 allied / coBelligerent 控制计入同一战争目标侧；legacy 阿登无数据条件时继续使用 Bastogne / St. Vith / German armor fallback。新增 `RuleEngineCoreTests` 覆盖黑海条件加载和联军目标控制胜利路径。
 
 ## v0 - 六角格测试板
 

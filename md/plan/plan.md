@@ -42,6 +42,7 @@ MapEditor / JSON 数据
 - v5.2 已开始把默认入口切到 `black_sea_crisis_1853`：新增黑海危机 scenario / regions、`victorian_powers.json`、`victorian_unit_templates.json`、`victorian_personas.json`、`victorian_terrain_rules.json`，并保留阿登为 legacy fallback。
 - `Faction.opponent` 已不应再作为主路径敌我判断；后续新代码必须继续通过 `DiplomacyState` 或后续外交规则判断可攻击/可通行。
 - `FrontLineManager` 运行时路径已接入 `DiplomacyState`，前线接触、包围候选和补给影响不再仅凭不同 faction 判断敌我；旧测试/Probe fixture 仍可通过缺省 nil 保持 legacy 兼容。
+- `VictoryRules` 已接入 `GameState.victoryConditions`，黑海危机可按 scenario JSON 的控制/坚守目标触发胜利；无数据条件的 legacy 阿登局仍回退 Bastogne / German armor 旧规则。
 - `Division`、`tank`、`motorizedInfantry`、`Panzer Division`、阿登、Germany、Allies、Bastogne、Guderian、Montgomery、Manpower、Industry、Supplies 等二战语义仍存在于 legacy 数据、UI 或源码兼容名中。
 - `RegionDataSet.toRegions()` 的 nil owner/controller fallback 已改为 `.neutral`；后续迁移仍不得把 nil / neutral fallback 到 legacy 双方。
 - project 文件和文档已多轮多分支修改；任何合并或迁移前必须做文件/API/schema/project/文档冲突审查。
@@ -362,11 +363,11 @@ Bottom Strip:
 
 当前 v5.0 / v5.1 审计结论：
 
-- `Faction.germany/allies`、`Faction.opponent`、`GamePhase.germanAI/alliedPlayer`、`CommandValidator.phaseAllowsCommands` 和 `CommandExecutor.executeEndTurn` 的主路径已在本地 v5.1 切片中开始迁移；后续仍要清理测试、UI、胜利条件和 legacy 数据残留。
+- `Faction.germany/allies`、`Faction.opponent`、`GamePhase.germanAI/alliedPlayer`、`CommandValidator.phaseAllowsCommands` 和 `CommandExecutor.executeEndTurn` 的主路径已在本地 v5.1 切片中开始迁移；后续仍要清理测试、UI 和 legacy 数据残留。
 - `DataLoader` 默认资源已开始切到黑海危机；`DiplomacyState` 对 `black_sea_crisis_1853` 有场景化初始关系，英法奥斯曼撒丁对俄开战，奥地利保持武装中立压力；Guderian 专项校验只限 legacy 阿登数据，旧 `playerFaction` / `aiFaction` 字段仍保留作 schema 兼容。
 - `ComponentType.tank/motorizedInfantry`、`ProductionKind.panzerDivision`、`EconomyResources.manpower/industry/supplies` 和默认 `unit_templates.json` 是 v5.3-v5.4 必修点。
 - `DiplomacyState` 已有 `CountryProfile` 基础，并开始支持 Black Sea Crisis 多国家默认关系；后续仍需把外交危机、战争目标、后援方、升级和谈判迁入规则状态。
-- `VictoryRules` 仍绑定 Bastogne / St. Vith / German armor，后续要改成数据驱动战争目标。
+- `VictoryRules` 对黑海危机已改为读取 scenario `victoryConditions`，但外交危机、谈判结果、威望和战争支持仍未接入完整战争目标系统。
 
 ## 7. 多 Agent 分工大纲
 
