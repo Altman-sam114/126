@@ -827,13 +827,23 @@ struct WarCommandExecutor {
             + zone.frontSegments.map(\.regionId)
         )
         let movementRange = MovementRules().movementRange(for: division, in: state)
-        let candidateHexes = preferredRegionIds
-            .compactMap { state.map.region(id: $0) }
-            .flatMap { stableUnique([$0.representativeHex] + $0.displayHexes) }
-            .filter { $0 != division.coord }
-            .filter { movementRange.contains($0) }
-            .filter { state.map.tile(at: $0)?.isPassable == true }
-            .filter { state.division(at: $0) == nil }
+        var candidateHexes: [HexCoord] = []
+        for regionId in preferredRegionIds {
+            guard let region = state.map.region(id: regionId) else {
+                continue
+            }
+
+            let regionHexes = stableUnique([region.representativeHex] + region.displayHexes)
+            for coord in regionHexes {
+                guard coord != division.coord,
+                      movementRange.contains(coord),
+                      state.map.tile(at: coord)?.isPassable == true,
+                      state.division(at: coord) == nil else {
+                    continue
+                }
+                candidateHexes.append(coord)
+            }
+        }
 
         return candidateHexes.sorted {
             let lhsDefense = state.map.tile(at: $0)?.baseTerrain.defenseBonus ?? 0
