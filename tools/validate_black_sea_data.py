@@ -34,6 +34,8 @@ def main() -> int:
         errors.append("scenario.id must be black_sea_crisis_1853.")
     if regions.get("scenarioId") != scenario.get("id"):
         errors.append("regions.scenarioId must match scenario.id.")
+    if templates.get("schemaVersion") != 2:
+        errors.append("victorian_unit_templates.schemaVersion must be 2.")
 
     factions = set(scenario.get("factions", []))
     turn_order = set(scenario.get("turnOrder", []))
@@ -146,7 +148,16 @@ def main() -> int:
     if len(template_ids) != len(set(template_ids)):
         errors.append("victorian_unit_templates contains duplicate ids.")
     template_id_set = set(template_ids)
-    allowed_components = {"tank", "motorizedInfantry", "infantry", "artillery"}
+    allowed_components = {
+        "lineInfantry",
+        "guardInfantry",
+        "cavalry",
+        "artillery",
+        "engineers",
+        "irregulars",
+        "colonialInfantry",
+        "supplyTrain",
+    }
     for template in templates.get("templates", []):
         total_weight = sum(component["weight"] for component in template.get("components", []))
         if abs(total_weight - 1.0) > 0.0001:

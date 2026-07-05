@@ -72,7 +72,7 @@ final class UnitNode: SKNode {
             circle.fillColor = .clear
             circle.zPosition = 1
             addChild(circle)
-        } else if division.isArmor {
+        } else if division.isShockFormation {
             // 近卫/突击部队：椭圆
             let ellipse = SKShapeNode(ellipseOf: CGSize(width: width - inset * 1.4, height: height - inset * 1.4))
             ellipse.strokeColor = lineColor
@@ -82,7 +82,8 @@ final class UnitNode: SKNode {
             addChild(ellipse)
         } else {
             // 步骑兵系：骑兵单斜线（\），线列步兵双斜线（X）
-            let isCavalryProxy = division.components.contains { $0.type == .motorizedInfantry && $0.weight >= 0.40 }
+            let isCavalryProxy = division.componentWeight(for: .motorizedInfantry) +
+                division.componentWeight(for: .cavalry) >= 0.40
             let halfW = width / 2 - inset
             let halfH = height / 2 - inset
 

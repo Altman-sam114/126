@@ -60,10 +60,10 @@ struct CombatRules {
         }
 
         var multiplier = 1.0
-        if attacker.isArmor && defenderTile.baseTerrain == .plain {
+        if attacker.isShockFormation && defenderTile.baseTerrain == .plain {
             multiplier += 0.2
         }
-        if attacker.isArmor && defenderTile.baseTerrain.armorSlowdownCost > 0 {
+        if attacker.isShockFormation && defenderTile.baseTerrain.armorSlowdownCost > 0 {
             multiplier -= 0.1
         }
         if attacker.isArtillery {

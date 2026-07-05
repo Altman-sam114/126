@@ -59,8 +59,8 @@ MapEditor / JSON 数据
 - `hexToFrontZone` 是部署层动态归属权威。
 - 玩家、AI、聊天命令和 MockAI 都必须落到 `Command` / `ZoneDirective`，再经 `WarCommandExecutor`、`CommandValidator`、`RuleEngine` 执行。
 - Legacy Agent D 管线保留作回归参考，默认战争 AI 主路径不得退回旧管线。
-- v5.1 切片已把 `Faction` 扩展为 legacy Germany / Allies 加 Britain、France、Russia、Ottoman、Austria、Sardinia、Neutral，并新增通用 `humanAction` / `aiAction` / `diplomacyResolution`、`turnOrder`、`humanControlledFactions` 和 `DiplomacyState.canAttack` / `canEnterTerritory` 入口；v5.2 已把默认数据入口切到黑海危机；v5.3 已开始接入 typed `logisticsTags`、铁路移动、同盟港口补给锚点、炮兵攻城修正和第一层单位/生产显示 adapter。默认数据和部分 UI/测试仍保留 legacy Germany / Allies。
-- 当前单位模型叫 `Division`，兵种仍是 `tank/motorizedInfantry/infantry/artillery`。
+- v5.1 切片已把 `Faction` 扩展为 legacy Germany / Allies 加 Britain、France、Russia、Ottoman、Austria、Sardinia、Neutral，并新增通用 `humanAction` / `aiAction` / `diplomacyResolution`、`turnOrder`、`humanControlledFactions` 和 `DiplomacyState.canAttack` / `canEnterTerritory` 入口；v5.2 已把默认数据入口切到黑海危机；v5.3 已开始接入 typed `logisticsTags`、铁路移动、同盟港口补给锚点、炮兵攻城修正、维多利亚 `ComponentType` case、黑海单位模板 schema 和第一层单位/生产显示 adapter。默认数据和部分 UI/测试仍保留 legacy Germany / Allies。
+- 当前单位模型叫 `Division`；`ComponentType` 同时保留 legacy `tank/motorizedInfantry/infantry` 和维多利亚 `lineInfantry/guardInfantry/cavalry/engineers/irregulars/colonialInfantry/supplyTrain`。
 - 当前经济模型仍是 `manpower/industry/supplies`，生产项仍有 `panzerDivision` 等二战语义。
 - 当前 legacy 数据、测试夹具、源码兼容名和部分 UI 仍有阿登、Germany、Allies、Bastogne、Panzer、Division、German AI、Allied Player、Manpower、Industry、Supplies 等残留；主游戏单位详情、tooltip、兵牌显示语义和经济/生产面板已开始映射到维多利亚口径。
 - 当前工作树可能混有 v0.4、v0.5、v0.7、v0.8、v0.9、v1.0、v1.1、三国迁移、拿战迁移、隋唐迁移、明末迁移等未提交改动。任何实现前必须做分支和文件冲突审查，不能回滚他人改动。
@@ -975,7 +975,7 @@ MapEditor 迁移：
   - `irregulars`
   - `colonialInfantry`
   - `supplyTrain`
-- 当前已先建立第一层 display adapter，把旧 `infantry/artillery/motorized/tank` 映射为维多利亚显示语义；v5.4 仍需继续迁移 schema 和规则语义，不能把 adapter 当作完整兵种模型。
+- 当前已先建立第一层 display adapter，并补入维多利亚 `ComponentType` case；黑海默认 `victorian_unit_templates.json` 已使用维多利亚组件。v5.4 仍需继续迁移生产 kind、经济资源 schema 和更完整规则语义，不能把组件 schema 切片当作完整军事模型。
 
 规则建议：
 

@@ -244,6 +244,6 @@ extension Division {
     }
 
     var isMechanizedHeavy: Bool {
-        isArmor || components.contains { $0.type == .motorizedInfantry && $0.weight >= 0.50 }
+        isMobileFormation
     }
 }

@@ -4,7 +4,14 @@ enum ComponentType: String, Codable, Equatable, CaseIterable {
     case tank
     case motorizedInfantry
     case infantry
+    case lineInfantry
+    case guardInfantry
+    case cavalry
     case artillery
+    case engineers
+    case irregulars
+    case colonialInfantry
+    case supplyTrain
 
     var baseStats: EffectiveStats {
         switch self {
@@ -12,10 +19,23 @@ enum ComponentType: String, Codable, Equatable, CaseIterable {
             return EffectiveStats(attack: 8, defense: 5, movement: 5, range: 1, vision: 2)
         case .motorizedInfantry:
             return EffectiveStats(attack: 5, defense: 4, movement: 5, range: 1, vision: 3)
-        case .infantry:
+        case .infantry,
+             .lineInfantry:
             return EffectiveStats(attack: 4, defense: 5, movement: 3, range: 1, vision: 2)
+        case .guardInfantry:
+            return EffectiveStats(attack: 7, defense: 6, movement: 3, range: 1, vision: 2)
+        case .cavalry:
+            return EffectiveStats(attack: 5, defense: 3, movement: 5, range: 1, vision: 4)
         case .artillery:
             return EffectiveStats(attack: 7, defense: 2, movement: 2, range: 2, vision: 2)
+        case .engineers:
+            return EffectiveStats(attack: 4, defense: 4, movement: 3, range: 1, vision: 2)
+        case .irregulars:
+            return EffectiveStats(attack: 3, defense: 3, movement: 4, range: 1, vision: 3)
+        case .colonialInfantry:
+            return EffectiveStats(attack: 4, defense: 4, movement: 3, range: 1, vision: 2)
+        case .supplyTrain:
+            return EffectiveStats(attack: 1, defense: 2, movement: 3, range: 1, vision: 1)
         }
     }
 }
@@ -23,27 +43,49 @@ enum ComponentType: String, Codable, Equatable, CaseIterable {
 extension ComponentType {
     var victorianDisplayName: String {
         switch self {
-        case .tank:
+        case .tank,
+             .guardInfantry:
             return "Guards"
-        case .motorizedInfantry:
+        case .motorizedInfantry,
+             .cavalry:
             return "Cavalry"
-        case .infantry:
+        case .infantry,
+             .lineInfantry:
             return "Line Infantry"
         case .artillery:
             return "Artillery"
+        case .engineers:
+            return "Engineers"
+        case .irregulars:
+            return "Irregulars"
+        case .colonialInfantry:
+            return "Colonial Infantry"
+        case .supplyTrain:
+            return "Supply Train"
         }
     }
 
     var victorianDisplayCode: String {
         switch self {
-        case .tank:
+        case .tank,
+             .guardInfantry:
             return "GRD"
-        case .motorizedInfantry:
+        case .motorizedInfantry,
+             .cavalry:
             return "CAV"
-        case .infantry:
+        case .infantry,
+             .lineInfantry:
             return "LINE"
         case .artillery:
             return "ART"
+        case .engineers:
+            return "ENG"
+        case .irregulars:
+            return "IRR"
+        case .colonialInfantry:
+            return "COL"
+        case .supplyTrain:
+            return "SUP"
         }
     }
 }
@@ -335,6 +377,16 @@ struct Division: Identifiable, Codable, Equatable {
         components.contains { $0.type == .tank && $0.weight >= 0.25 }
     }
 
+    var isShockFormation: Bool {
+        componentWeight(for: .tank) + componentWeight(for: .guardInfantry) >= 0.25
+    }
+
+    var isMobileFormation: Bool {
+        isShockFormation ||
+            movement >= 5 ||
+            componentWeight(for: .motorizedInfantry) + componentWeight(for: .cavalry) >= 0.25
+    }
+
     var isArtillery: Bool {
         components.contains { $0.type == .artillery && $0.weight >= 0.50 }
     }
@@ -349,11 +401,23 @@ struct Division: Identifiable, Codable, Equatable {
         if isArtillery {
             return "Siege Artillery"
         }
-        if componentWeight(for: .tank) >= 0.25 {
+        if componentWeight(for: .tank) + componentWeight(for: .guardInfantry) >= 0.25 {
             return "Guard Corps"
         }
-        if componentWeight(for: .motorizedInfantry) >= 0.40 {
+        if componentWeight(for: .motorizedInfantry) + componentWeight(for: .cavalry) >= 0.40 {
             return "Cavalry Column"
+        }
+        if componentWeight(for: .engineers) >= 0.25 {
+            return "Engineer Detachment"
+        }
+        if componentWeight(for: .irregulars) >= 0.40 {
+            return "Irregular Force"
+        }
+        if componentWeight(for: .colonialInfantry) >= 0.40 {
+            return "Colonial Infantry"
+        }
+        if componentWeight(for: .supplyTrain) >= 0.40 {
+            return "Supply Train"
         }
         return "Line Infantry"
     }
@@ -362,11 +426,23 @@ struct Division: Identifiable, Codable, Equatable {
         if isArtillery {
             return "ART"
         }
-        if componentWeight(for: .tank) >= 0.25 {
+        if componentWeight(for: .tank) + componentWeight(for: .guardInfantry) >= 0.25 {
             return "GRD"
         }
-        if componentWeight(for: .motorizedInfantry) >= 0.40 {
+        if componentWeight(for: .motorizedInfantry) + componentWeight(for: .cavalry) >= 0.40 {
             return "CAV"
+        }
+        if componentWeight(for: .engineers) >= 0.25 {
+            return "ENG"
+        }
+        if componentWeight(for: .irregulars) >= 0.40 {
+            return "IRR"
+        }
+        if componentWeight(for: .colonialInfantry) >= 0.40 {
+            return "COL"
+        }
+        if componentWeight(for: .supplyTrain) >= 0.40 {
+            return "SUP"
         }
         return "LINE"
     }
@@ -448,6 +524,66 @@ extension Division {
                 DivisionComponent(type: .motorizedInfantry, weight: 0.10),
                 DivisionComponent(type: .infantry, weight: 0.30),
                 DivisionComponent(type: .artillery, weight: 0.60)
+            ]
+        )
+    }
+
+    static func lineInfantryCorps(id: String, name: String, faction: Faction, coord: HexCoord) -> Division {
+        Division(
+            id: id,
+            name: name,
+            faction: faction,
+            coord: coord,
+            facing: faction == .germany ? .west : .east,
+            components: [
+                DivisionComponent(type: .lineInfantry, weight: 0.75),
+                DivisionComponent(type: .artillery, weight: 0.15),
+                DivisionComponent(type: .engineers, weight: 0.10)
+            ]
+        )
+    }
+
+    static func guardBrigade(id: String, name: String, faction: Faction, coord: HexCoord) -> Division {
+        Division(
+            id: id,
+            name: name,
+            faction: faction,
+            coord: coord,
+            facing: faction == .germany ? .west : .east,
+            components: [
+                DivisionComponent(type: .guardInfantry, weight: 0.75),
+                DivisionComponent(type: .lineInfantry, weight: 0.10),
+                DivisionComponent(type: .artillery, weight: 0.15)
+            ]
+        )
+    }
+
+    static func cavalryBrigade(id: String, name: String, faction: Faction, coord: HexCoord) -> Division {
+        Division(
+            id: id,
+            name: name,
+            faction: faction,
+            coord: coord,
+            facing: faction == .germany ? .west : .east,
+            components: [
+                DivisionComponent(type: .cavalry, weight: 0.60),
+                DivisionComponent(type: .lineInfantry, weight: 0.20),
+                DivisionComponent(type: .artillery, weight: 0.20)
+            ]
+        )
+    }
+
+    static func siegeArtilleryBattery(id: String, name: String, faction: Faction, coord: HexCoord) -> Division {
+        Division(
+            id: id,
+            name: name,
+            faction: faction,
+            coord: coord,
+            facing: faction == .germany ? .west : .east,
+            components: [
+                DivisionComponent(type: .artillery, weight: 0.70),
+                DivisionComponent(type: .lineInfantry, weight: 0.20),
+                DivisionComponent(type: .engineers, weight: 0.10)
             ]
         )
     }

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "templates": [
     {
       "id": "line_infantry_corps",
@@ -7,20 +7,16 @@
       "maxHP": 10,
       "components": [
         {
-          "type": "infantry",
-          "weight": 0.7
+          "type": "lineInfantry",
+          "weight": 0.75
         },
         {
           "type": "artillery",
-          "weight": 0.2
+          "weight": 0.15
         },
         {
-          "type": "motorizedInfantry",
+          "type": "engineers",
           "weight": 0.1
-        },
-        {
-          "type": "tank",
-          "weight": 0
         }
       ]
     },
@@ -30,20 +26,16 @@
       "maxHP": 10,
       "components": [
         {
-          "type": "infantry",
+          "type": "guardInfantry",
           "weight": 0.75
+        },
+        {
+          "type": "lineInfantry",
+          "weight": 0.1
         },
         {
           "type": "artillery",
           "weight": 0.15
-        },
-        {
-          "type": "motorizedInfantry",
-          "weight": 0.1
-        },
-        {
-          "type": "tank",
-          "weight": 0
         }
       ]
     },
@@ -53,20 +45,16 @@
       "maxHP": 9,
       "components": [
         {
-          "type": "motorizedInfantry",
-          "weight": 0.55
+          "type": "cavalry",
+          "weight": 0.6
         },
         {
-          "type": "infantry",
-          "weight": 0.25
+          "type": "lineInfantry",
+          "weight": 0.2
         },
         {
           "type": "artillery",
           "weight": 0.2
-        },
-        {
-          "type": "tank",
-          "weight": 0
         }
       ]
     },
@@ -80,16 +68,12 @@
           "weight": 0.7
         },
         {
-          "type": "infantry",
+          "type": "lineInfantry",
           "weight": 0.2
         },
         {
-          "type": "motorizedInfantry",
+          "type": "engineers",
           "weight": 0.1
-        },
-        {
-          "type": "tank",
-          "weight": 0
         }
       ]
     },
@@ -99,20 +83,16 @@
       "maxHP": 11,
       "components": [
         {
-          "type": "infantry",
-          "weight": 0.8
+          "type": "lineInfantry",
+          "weight": 0.7
         },
         {
           "type": "artillery",
           "weight": 0.2
         },
         {
-          "type": "motorizedInfantry",
-          "weight": 0
-        },
-        {
-          "type": "tank",
-          "weight": 0
+          "type": "engineers",
+          "weight": 0.1
         }
       ]
     }

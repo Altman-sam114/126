@@ -196,7 +196,7 @@ struct EconomyRules {
         let upkeep = state.divisions
             .filter { $0.faction == faction && !$0.isDestroyed }
             .reduce(0) { partial, division in
-                partial + 2 + (division.isArmor ? 2 : 0) + (division.isArtillery ? 1 : 0)
+                partial + 2 + (division.isShockFormation ? 2 : 0) + (division.isArtillery ? 1 : 0)
             }
         return EconomyResources(supplies: upkeep)
     }
@@ -268,19 +268,15 @@ struct EconomyRules {
     }
 
     private func reinforcementCostPerStrength(for division: Division) -> EconomyResources {
-        let armorWeight = division.components
-            .filter { $0.type == .tank }
-            .reduce(0.0) { $0 + $1.weight }
-        let motorizedWeight = division.components
-            .filter { $0.type == .motorizedInfantry }
-            .reduce(0.0) { $0 + $1.weight }
+        let shockWeight = division.componentWeight(for: .tank) + division.componentWeight(for: .guardInfantry)
+        let mobileWeight = division.componentWeight(for: .motorizedInfantry) + division.componentWeight(for: .cavalry)
         let artilleryWeight = division.components
             .filter { $0.type == .artillery }
             .reduce(0.0) { $0 + $1.weight }
 
         return EconomyResources(
-            manpower: max(4, Int((8 + 6 * (1 - armorWeight)).rounded())),
-            industry: max(1, Int((1 + armorWeight * 5 + motorizedWeight * 2 + artilleryWeight * 3).rounded())),
+            manpower: max(4, Int((8 + 6 * (1 - shockWeight)).rounded())),
+            industry: max(1, Int((1 + shockWeight * 5 + mobileWeight * 2 + artilleryWeight * 3).rounded())),
             supplies: 1
         )
     }
@@ -448,15 +444,15 @@ struct EconomyRules {
 
         switch order.kind {
         case .infantryDivision:
-            return .infantry(id: id, name: name, faction: faction, coord: coord)
+            return .lineInfantryCorps(id: id, name: name, faction: faction, coord: coord)
         case .panzerDivision:
-            return .panzer(id: id, name: name, faction: faction, coord: coord)
+            return .guardBrigade(id: id, name: name, faction: faction, coord: coord)
         case .motorizedDivision:
-            return .motorized(id: id, name: name, faction: faction, coord: coord)
+            return .cavalryBrigade(id: id, name: name, faction: faction, coord: coord)
         case .artilleryDivision:
-            return .artillery(id: id, name: name, faction: faction, coord: coord)
+            return .siegeArtilleryBattery(id: id, name: name, faction: faction, coord: coord)
         case .supplyStockpile:
-            return .infantry(id: id, name: name, faction: faction, coord: coord)
+            return .lineInfantryCorps(id: id, name: name, faction: faction, coord: coord)
         }
     }
 

@@ -43,7 +43,7 @@ MapEditor / JSON 数据
 - `Faction.opponent` 已不应再作为主路径敌我判断；后续新代码必须继续通过 `DiplomacyState` 或后续外交规则判断可攻击/可通行。
 - `FrontLineManager` 运行时路径已接入 `DiplomacyState`，前线接触、包围候选和补给影响不再仅凭不同 faction 判断敌我；旧测试/Probe fixture 仍可通过缺省 nil 保持 legacy 兼容。
 - `VictoryRules` 已接入 `GameState.victoryConditions`，黑海危机可按 scenario JSON 的控制/坚守目标触发胜利；无数据条件的 legacy 阿登局仍回退 Bastogne / German armor 旧规则。
-- `Division`、`tank`、`motorizedInfantry`、`Panzer Division`、阿登、Germany、Allies、Bastogne、Guderian、Montgomery、Manpower、Industry、Supplies 等二战语义仍存在于 legacy 数据、测试或源码兼容名中；主游戏单位详情、tooltip、兵牌显示语义和经济/生产面板已开始通过 v5.3 显示 adapter 转成维多利亚口径。
+- `Division`、`tank`、`motorizedInfantry`、`Panzer Division`、阿登、Germany、Allies、Bastogne、Guderian、Montgomery、Manpower、Industry、Supplies 等二战语义仍存在于 legacy 数据、测试或源码兼容名中；黑海默认单位模板已开始使用 `lineInfantry/guardInfantry/cavalry/engineers` 等维多利亚组件，主游戏单位详情、tooltip、兵牌显示语义和经济/生产面板已通过 v5.3 显示 adapter 转成维多利亚口径。
 - `RegionDataSet.toRegions()` 的 nil owner/controller fallback 已改为 `.neutral`；后续迁移仍不得把 nil / neutral fallback 到 legacy 双方。
 - project 文件和文档已多轮多分支修改；任何合并或迁移前必须做文件/API/schema/project/文档冲突审查。
 
@@ -353,7 +353,7 @@ Bottom Strip:
 | v5.0 | 迁移审计、产品合同和维多利亚术语层 | 已形成 `md/prompt/v5.0-维多利亚迁移/v5.0_audit_and_contract.md`：二战硬编码审计、术语表、首发剧本、版本边界、并发方案 | 不做大范围重命名，不实现完整维多利亚玩法 |
 | v5.1 | 多国家、通用回合、外交关系和敌我判断 | 已形成 `md/prompt/v5.0-维多利亚迁移/v5.1_powers_turns_diplomacy_prompt.md`；多国家 `Faction`、通用 action phase、turn order、人控势力集合、集中外交可攻击/可通行判断、neutral fallback 已通过 commit `2919c49` 云端验收 | 后续仍要清理测试、UI、胜利条件和 legacy 数据残留 |
 | v5.2 | 黑海危机地图、剧本数据和地图编辑器迁移 | 已接入 `black_sea_crisis_1853` 默认入口、维多利亚 regions、powers、unit templates、personas、terrain rules，并保留 legacy 阿登加载入口 | MapEditor 新字段编辑能力仍需后续补齐 |
-| v5.3 | 维多利亚军队、铁路补给、港口远征和围城规则 | 已开始接入 typed `logisticsTags`、铁路移动成本、己方/同盟港口补给锚点、炮兵攻城修正，以及单位/生产玩家可见显示 adapter | 兵种 enum raw value、完整围城状态、海权封锁和港口/铁路 UI 可视化仍未完成 |
+| v5.3 | 维多利亚军队、铁路补给、港口远征和围城规则 | 已开始接入 typed `logisticsTags`、铁路移动成本、己方/同盟港口补给锚点、炮兵攻城修正、维多利亚 `ComponentType` case、黑海单位模板 schema 和单位/生产玩家可见显示 adapter | 完整围城状态、海权封锁、港口/铁路 UI 可视化和旧生产 kind raw value 仍未完成 |
 | v5.4 | 工业经济、预算、动员和建设命令 | 国库、工业、补给、铁路运输力、船运量、威望、战争支持，建设/动员命令 | 不做完整全球市场 |
 | v5.5 | 外交危机、战争目标、列强干预和舆论压力 | DiplomaticPlay、warGoal、backers、escalation、战争支持和谈判 | 外交不直接占领 hex |
 | v5.6 | 维多利亚 Agent 指挥链和结构化 JSON 合同 | HeadOfState / Cabinet / Foreign / War / Treasury / Admiralty / GeneralStaff / Theater Agent | 真实 LLM 单独版本，不硬编码密钥 |
@@ -366,7 +366,7 @@ Bottom Strip:
 - `Faction.germany/allies`、`Faction.opponent`、`GamePhase.germanAI/alliedPlayer`、`CommandValidator.phaseAllowsCommands` 和 `CommandExecutor.executeEndTurn` 的主路径已在本地 v5.1 切片中开始迁移；后续仍要清理测试、UI 和 legacy 数据残留。
 - `DataLoader` 默认资源已开始切到黑海危机；`DiplomacyState` 对 `black_sea_crisis_1853` 有场景化初始关系，英法奥斯曼撒丁对俄开战，奥地利保持武装中立压力；Guderian 专项校验只限 legacy 阿登数据，旧 `playerFaction` / `aiFaction` 字段仍保留作 schema 兼容。
 - `HexTile.logisticsTags` 已开始承载铁路、港口、电报、远征 depot 和围城 depot；`SupplyRules` 可把本方或 allied / coBelligerent 控制的港口作为补给锚点，单纯 `militaryAccess` 不算共同补给。
-- `ComponentType.tank/motorizedInfantry`、`ProductionKind.panzerDivision`、`EconomyResources.manpower/industry/supplies` 仍是源码兼容名；默认 UI 已做第一层显示映射，完整数据 schema 与规则语义迁移仍是 v5.3-v5.4 必修点。
+- `ComponentType.tank/motorizedInfantry` 仍作为 legacy 兼容 case 保留；黑海默认 `victorian_unit_templates.json` 已使用维多利亚组件，规则和 AI 新增 `isShockFormation` / `isMobileFormation` 作为兼容判断。`ProductionKind.panzerDivision`、`EconomyResources.manpower/industry/supplies` 仍是源码兼容名；完整生产 kind 和经济资源 schema 迁移仍是 v5.4 必修点。
 - `DiplomacyState` 已有 `CountryProfile` 基础，并开始支持 Black Sea Crisis 多国家默认关系；后续仍需把外交危机、战争目标、后援方、升级和谈判迁入规则状态。
 - `VictoryRules` 对黑海危机已改为读取 scenario `victoryConditions`，但外交危机、谈判结果、威望和战争支持仍未接入完整战争目标系统。
 

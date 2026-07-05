@@ -167,7 +167,7 @@ struct GeneralCommandPanelView: View {
     }
 
     private func unitIcon(for division: Division) -> String {
-        if division.isArmor {
+        if division.isShockFormation {
             return "shield.lefthalf.filled"
         }
         if division.isArtillery {

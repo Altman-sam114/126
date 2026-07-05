@@ -670,10 +670,19 @@ struct DataLoader {
             let components: [DivisionComponent]
             let maxHP: Int
             if let template = templates.first(where: { $0.id == definition.templateId }) {
-                components = template.components.compactMap { component in
-                    guard let type = ComponentType(rawValue: component.type) else { return nil }
-                    return DivisionComponent(type: type, weight: component.weight)
+                var resolvedComponents: [DivisionComponent] = []
+                for component in template.components {
+                    guard let type = ComponentType(rawValue: component.type) else {
+                        errors.append(
+                            DataValidationError(
+                                message: "Template \(template.id) has unknown component type \(component.type)."
+                            )
+                        )
+                        continue
+                    }
+                    resolvedComponents.append(DivisionComponent(type: type, weight: component.weight))
                 }
+                components = resolvedComponents
                 maxHP = template.maxHP
             } else {
                 components = fallbackComponents(for: definition.templateId)

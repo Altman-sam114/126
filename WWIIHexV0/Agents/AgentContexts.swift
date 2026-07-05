@@ -217,7 +217,7 @@ struct AgentContextBuilder {
             hasActed: division.hasActed,
             movement: division.movement,
             range: division.range,
-            isArmor: division.isArmor,
+            isArmor: division.isShockFormation,
             isArtillery: division.isArtillery
         )
     }

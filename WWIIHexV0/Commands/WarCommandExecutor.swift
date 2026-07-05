@@ -869,9 +869,7 @@ struct WarCommandExecutor {
     }
 
     private func isMobile(_ division: Division) -> Bool {
-        division.isArmor
-            || division.movement >= 5
-            || division.components.contains { $0.type == .motorizedInfantry && $0.weight >= 0.25 }
+        division.isMobileFormation
     }
 
     private func enemyRegions(

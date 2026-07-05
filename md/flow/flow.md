@@ -573,6 +573,13 @@ loadUnitTemplates(for: scenario)
 
 DEBUG 下资源读取优先源码目录 `WWIIHexV0/Data/*.json`，不是旧 bundle。旧 simulator 进程不会自动重载，改默认地图后需要重新运行 app。
 
+v5.3 组件 schema 状态：
+
+- `ComponentType` 同时保留 legacy `tank/motorizedInfantry/infantry` 和维多利亚 `lineInfantry/guardInfantry/cavalry/engineers/irregulars/colonialInfantry/supplyTrain`。
+- `victorian_unit_templates.json` schemaVersion 为 2，默认使用维多利亚组件；legacy `unit_templates.json` 和旧测试夹具仍可使用旧组件 raw value。
+- `DataLoader` 遇到未知 template component type 会记录 validation error，而不是静默丢弃该 component。
+- `Division.isShockFormation` / `isMobileFormation` 是 v5.3 后规则和 AI 的维多利亚兼容判断；旧 `isArmor` 继续服务 legacy 装甲地形惩罚和阿登 fallback 胜利逻辑。
+
 ### 2.3 StrategicStateBootstrapper
 
 源码：`WWIIHexV0/Core/StrategicStateBootstrapper.swift`
@@ -859,9 +866,9 @@ handleBoardTap(coord)
 
 v5.3 显示适配：
 
-- `ComponentType.tank/motorizedInfantry/infantry/artillery` 的 raw value 仍保留给 JSON、旧存档和规则数值使用。
-- `ComponentType.victorianDisplayName` / `victorianDisplayCode` 把旧兼容类型显示为 `Guards` / `Cavalry` / `Line Infantry` / `Artillery`。
-- `Division.victorianFormationDisplayName` / `victorianFormationDisplayCode` 根据部队 composition 显示 `Guard Corps`、`Cavalry Column`、`Line Infantry` 或 `Siege Artillery`。
+- `ComponentType.tank/motorizedInfantry/infantry` 的 raw value 仍保留给 legacy JSON、旧存档和测试夹具使用；黑海默认模板已改用 `lineInfantry/guardInfantry/cavalry/engineers` 等维多利亚组件。
+- `ComponentType.victorianDisplayName` / `victorianDisplayCode` 把新旧兼容类型都显示为 `Guards` / `Cavalry` / `Line Infantry` / `Artillery` / `Engineers` 等维多利亚口径。
+- `Division.victorianFormationDisplayName` / `victorianFormationDisplayCode` 根据部队 composition 显示 `Guard Corps`、`Cavalry Column`、`Engineer Detachment`、`Line Infantry` 或 `Siege Artillery`。
 - `HUDView`、`UnitInspectorView`、`UnitTooltipView` 和 `UnitNode` 默认读取这些显示适配，不再在玩家可见路径输出 `ARM`、`MOT`、`Panzer` 或 `Motorized`；HUD 默认黑海剧本标题显示为 `Black Sea Crisis 1853`。
 - MapEditor 模板选择显示为线列步兵军、近卫旅、骑兵旅、攻城炮兵，但导出的 template id 暂不改名。
 
