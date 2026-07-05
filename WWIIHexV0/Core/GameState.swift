@@ -234,7 +234,7 @@ struct GameState: Codable, Equatable {
                 return .alliedPlayer
             }
         }
-        GamePhase.actionPhase(for: faction, humanControlledFactions: humanControlledFactions)
+        return GamePhase.actionPhase(for: faction, humanControlledFactions: humanControlledFactions)
     }
 
     static func normalizedTurnOrder(
