@@ -98,15 +98,15 @@ enum ProductionKind: String, Codable, Equatable, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .infantryDivision:
-            return "Infantry Division"
+            return "Line Infantry Corps"
         case .panzerDivision:
-            return "Panzer Division"
+            return "Guard Brigade"
         case .motorizedDivision:
-            return "Motorized Division"
+            return "Cavalry Brigade"
         case .artilleryDivision:
-            return "Artillery Group"
+            return "Siege Artillery Battery"
         case .supplyStockpile:
-            return "Supply Stockpile"
+            return "Supply Convoy"
         }
     }
 

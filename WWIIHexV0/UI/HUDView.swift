@@ -14,7 +14,7 @@ struct HUDView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Ardennes V0")
+                Text(scenarioTitle)
                     .font(.headline)
 
                 Spacer()
@@ -44,13 +44,13 @@ struct HUDView: View {
                 }
 
                 GridRow {
-                    metric("Manpower", "\(activeLedger.stockpile.manpower)")
-                    metric("Industry", "\(activeLedger.stockpile.industry)")
+                    metric("Recruits", "\(activeLedger.stockpile.manpower)")
+                    metric("Treasury", "\(activeLedger.stockpile.industry)")
                 }
 
                 GridRow {
-                    metric("Supplies", "\(activeLedger.stockpile.supplies)")
-                    metric("Queue", "\(activeLedger.productionQueue.count)")
+                    metric("Stores", "\(activeLedger.stockpile.supplies)")
+                    metric("Orders", "\(activeLedger.productionQueue.count)")
                 }
             }
         }
@@ -82,5 +82,16 @@ struct HUDView: View {
 
     private var activeLedger: FactionEconomyLedger {
         gameState.economyState.ledger(for: gameState.activeFaction)
+    }
+
+    private var scenarioTitle: String {
+        switch gameState.scenarioId {
+        case "black_sea_crisis_1853":
+            return "Black Sea Crisis 1853"
+        case "ardennes_v0":
+            return "Legacy Ardennes"
+        default:
+            return gameState.scenarioId
+        }
     }
 }

@@ -64,6 +64,9 @@
 - `MovementRules` 对相邻双 `rail` hex 使用铁路通行成本；`SupplyRules` 把正式 supply source 与可用港口合并为补给锚点；`CombatRules` 给炮兵攻击城市/要塞增加轻量攻城修正。
 - `MapEditorExporter` 对新增可选 `logisticsTags` 字段显式导出 `nil`，保持当前编辑器旧字段导出兼容；正式可编辑港口/铁路字段留后续切片。
 - 黑海危机数据标注 Constantinople、Odessa、Varna、Sevastopol、Danube Forts、Balaklava、Bucharest 等关键港口、铁路、电报和围城节点。
+- 新增维多利亚单位显示适配：`ComponentType.tank/motorizedInfantry/infantry/artillery` raw value 暂不改名，但玩家可见的 HUD、inspector、tooltip 和 SpriteKit 兵牌语义映射为黑海危机、近卫、骑兵、线列步兵和炮兵口径。
+- 经济/生产显示开始脱离二战口径：`EconomyPanelView` 将 `manpower/industry/supplies` 显示为 `Recruits`、`Treasury`、`Stores`，`ProductionKind.displayName` 将 Panzer / Motorized 等兼容 case 显示为近卫旅、骑兵旅、攻城炮兵和补给车队。
+- MapEditor 单位模板 picker 改为线列步兵军、近卫旅、骑兵旅、攻城炮兵；导出的 template id 仍保持旧兼容值。
 
 关键文件：
 
@@ -75,18 +78,27 @@
 - `WWIIHexV0/Rules/MovementRules.swift`
 - `WWIIHexV0/Rules/SupplyRules.swift`
 - `WWIIHexV0/Rules/CombatRules.swift`
+- `WWIIHexV0/UI/UnitInspectorView.swift`
+- `WWIIHexV0/UI/UnitTooltipView.swift`
+- `WWIIHexV0/UI/EconomyPanelView.swift`
+- `WWIIHexV0/UI/HUDView.swift`
+- `WWIIHexV0/UI/RootGameView.swift`
+- `WWIIHexV0/SpriteKit/BoardScene.swift`
+- `WWIIHexV0/SpriteKit/UnitNode.swift`
 - `WWIIHexV0/Tests/RuleEngineCoreTests.swift`
+- `MapEditor/MapEditorView.swift`
+- `MapEditor/MapEditorCanvasScene.swift`
 - `MapEditor/MapEditorExporter.swift`
 - `tools/validate_black_sea_data.py`
 
 验证记录：
 
 - 本机轻量检查：`swiftc -parse` 覆盖本轮 Swift 改动文件通过；`jq empty WWIIHexV0/Data/black_sea_crisis_1853_scenario.json` 通过；`python3 tools/validate_black_sea_data.py` 通过，输出 `Black Sea data ok: 120 tiles, 40 regions, 17 units, 6 generals, 4 agents.`。
-- 云端重验证：待本轮 commit / push 到 `origin/main` 后由 `WWIIHexV0 CI Results` 生成结果包并由 Agent C 核对。
+- 云端重验证：物流规则切片已由 run `28732229919` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-70f45c5-run28732229919-attempt1` 核对通过；显示适配切片待本轮 commit / push 到 `origin/main` 后由 `WWIIHexV0 CI Results` 生成结果包并由 Agent C 核对。
 
 遗留事项：
 
-- `ComponentType.tank/motorizedInfantry`、维多利亚兵种 schema、完整围城状态、多回合封锁、海权、铁路建设命令、港口/铁路 UI 图标和 MapEditor 新字段编辑能力仍待 v5.3-v5.7 后续切片。
+- `ComponentType.tank/motorizedInfantry` raw value、维多利亚兵种 schema、完整围城状态、多回合封锁、海权、铁路建设命令、港口/铁路 UI 图标和 MapEditor 新字段编辑能力仍待 v5.3-v5.7 后续切片。
 - 本轮只做规则层最小可观察效果，未引入完整全球市场、完整海军战术或复杂远征状态机。
 
 ## v0 - 六角格测试板

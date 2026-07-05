@@ -8,7 +8,7 @@ struct EconomyPanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Economy")
+            Text("Treasury")
                 .font(.headline)
 
             ledgerSection(for: gameState.activeFaction)
@@ -35,14 +35,14 @@ struct EconomyPanelView: View {
 
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
                 GridRow {
-                    metric("Manpower", ledger.stockpile.manpower)
-                    metric("Industry", ledger.stockpile.industry)
-                    metric("Supplies", ledger.stockpile.supplies)
+                    metric("Recruits", ledger.stockpile.manpower)
+                    metric("Treasury", ledger.stockpile.industry)
+                    metric("Stores", ledger.stockpile.supplies)
                 }
 
                 GridRow {
-                    metric("Income MP", ledger.lastIncome.manpower)
-                    metric("Income IC", ledger.lastIncome.industry)
+                    metric("Income REC", ledger.lastIncome.manpower)
+                    metric("Income TRE", ledger.lastIncome.industry)
                     metric("Upkeep", ledger.lastUpkeep.supplies)
                 }
             }
@@ -51,7 +51,7 @@ struct EconomyPanelView: View {
 
     private var productionControls: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Production")
+            Text("Mobilization")
                 .font(.subheadline.weight(.semibold))
 
             ForEach(ProductionKind.allCases) { kind in
@@ -75,7 +75,7 @@ struct EconomyPanelView: View {
         let queue = gameState.economyState.ledger(for: faction).productionQueue
 
         return VStack(alignment: .leading, spacing: 6) {
-            Text("Queue")
+            Text("Orders")
                 .font(.subheadline.weight(.semibold))
 
             if queue.isEmpty {
@@ -115,7 +115,7 @@ struct EconomyPanelView: View {
     }
 
     private func resourceSummary(_ resources: EconomyResources) -> String {
-        "MP \(resources.manpower), IC \(resources.industry), SUP \(resources.supplies)"
+        "REC \(resources.manpower), TRE \(resources.industry), STO \(resources.supplies)"
     }
 
     private func iconName(for kind: ProductionKind) -> String {
@@ -125,7 +125,7 @@ struct EconomyPanelView: View {
         case .panzerDivision:
             return "shield.lefthalf.filled"
         case .motorizedDivision:
-            return "truck.box"
+            return "flag"
         case .artilleryDivision:
             return "scope"
         case .supplyStockpile:

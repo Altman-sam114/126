@@ -38,10 +38,10 @@ final class UnitNode: SKNode {
         body.zPosition = 0
         addChild(body)
 
-        // v0.21: NATO APP-6 兵牌内部图形（替代纯文字 markerCode）
+        // 兵牌内部图形沿用轻量几何符号，显示语义由维多利亚 adapter 提供。
         addNATOSymbol(for: division, width: width, height: height)
 
-        // 兵力数字（移至底部，NATO symbol 占中央）
+        // 兵力数字置于底部，中央保留兵种符号。
         addLabel(
             text: division.markerReadinessText,
             y: -height * 0.28,
@@ -57,8 +57,7 @@ final class UnitNode: SKNode {
         fatalError("init(coder:) has not been implemented")
     }
 
-    /// v0.21: NATO APP-6 兵牌内部图形。
-    /// armor=椭圆、motorized=单斜线、infantry=X、artillery=圆。
+    /// 维多利亚显示层：近卫/突击=椭圆、骑兵=单斜线、线列步兵=X、炮兵=圆。
     private func addNATOSymbol(for division: Division, width: CGFloat, height: CGFloat) {
         let lineColor = SKColor(white: 0.97, alpha: 0.95)
         let lineWidth = max(1.5, min(width, height) * 0.08)
@@ -74,7 +73,7 @@ final class UnitNode: SKNode {
             circle.zPosition = 1
             addChild(circle)
         } else if division.isArmor {
-            // 装甲：椭圆
+            // 近卫/突击部队：椭圆
             let ellipse = SKShapeNode(ellipseOf: CGSize(width: width - inset * 1.4, height: height - inset * 1.4))
             ellipse.strokeColor = lineColor
             ellipse.lineWidth = lineWidth
@@ -82,8 +81,8 @@ final class UnitNode: SKNode {
             ellipse.zPosition = 1
             addChild(ellipse)
         } else {
-            // 步兵系：斜线。motorized 单斜线（\），infantry 双斜线（X）
-            let isMotorized = division.components.contains { $0.type == .motorizedInfantry && $0.weight >= 0.40 }
+            // 步骑兵系：骑兵单斜线（\），线列步兵双斜线（X）
+            let isCavalryProxy = division.components.contains { $0.type == .motorizedInfantry && $0.weight >= 0.40 }
             let halfW = width / 2 - inset
             let halfH = height / 2 - inset
 
@@ -97,8 +96,8 @@ final class UnitNode: SKNode {
             slash1.zPosition = 1
             addChild(slash1)
 
-            if !isMotorized {
-                // 步兵：第二条斜线（/）成 X
+            if !isCavalryProxy {
+                // 线列步兵：第二条斜线（/）成 X
                 let slash2 = SKShapeNode()
                 let path2 = CGMutablePath()
                 path2.move(to: CGPoint(x: -halfW, y: -halfH))
@@ -176,16 +175,7 @@ final class UnitNode: SKNode {
 
 private extension Division {
     var markerCode: String {
-        if isArtillery {
-            return "ART"
-        }
-        if isArmor {
-            return "ARM"
-        }
-        if components.contains(where: { $0.type == .motorizedInfantry && $0.weight >= 0.40 }) {
-            return "MOT"
-        }
-        return "INF"
+        victorianFormationDisplayCode
     }
 
     var markerReadinessText: String {
@@ -197,7 +187,7 @@ private extension RetreatMode {
     var markerCode: String {
         switch self {
         case .retreatable:
-            return "R"
+            return "W"
         case .hold:
             return "H"
         }

@@ -442,6 +442,14 @@ industry
 supplies
 ```
 
+v5.3 显示适配后，默认经济面板把这些兼容字段显示为维多利亚口径：
+
+- `manpower` -> `Recruits`
+- `industry` -> `Treasury`
+- `supplies` -> `Stores`
+
+`ProductionKind` 的 raw case 仍保留 `infantryDivision`、`panzerDivision`、`motorizedDivision`、`artilleryDivision`、`supplyStockpile` 以兼容旧存档和测试；玩家可见 `displayName` 已映射为 `Line Infantry Corps`、`Guard Brigade`、`Cavalry Brigade`、`Siege Artillery Battery` 和 `Supply Convoy`。这不是完整经济 schema 迁移。
+
 收入算法：
 
 ```text
@@ -848,6 +856,14 @@ handleBoardTap(coord)
   - Log
   - AI
 - `UnitTooltipView`。
+
+v5.3 显示适配：
+
+- `ComponentType.tank/motorizedInfantry/infantry/artillery` 的 raw value 仍保留给 JSON、旧存档和规则数值使用。
+- `ComponentType.victorianDisplayName` / `victorianDisplayCode` 把旧兼容类型显示为 `Guards` / `Cavalry` / `Line Infantry` / `Artillery`。
+- `Division.victorianFormationDisplayName` / `victorianFormationDisplayCode` 根据部队 composition 显示 `Guard Corps`、`Cavalry Column`、`Line Infantry` 或 `Siege Artillery`。
+- `HUDView`、`UnitInspectorView`、`UnitTooltipView` 和 `UnitNode` 默认读取这些显示适配，不再在玩家可见路径输出 `ARM`、`MOT`、`Panzer` 或 `Motorized`；HUD 默认黑海剧本标题显示为 `Black Sea Crisis 1853`。
+- MapEditor 模板选择显示为线列步兵军、近卫旅、骑兵旅、攻城炮兵，但导出的 template id 暂不改名。
 
 当前开局不会在 `RootGameView` 自动 `.task { runAIIfNeeded() }`。AI 行动由 `advanceOrRunAI()` 或命令提交后的 `runAIIfNeeded()` 触发。
 

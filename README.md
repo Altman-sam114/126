@@ -1,6 +1,6 @@
 # WWIIHexV0 / Steam & Empire Agent — iOS / macOS AI 战略战棋工程
 
-> **当前状态：代码基线仍是 WWIIHexV0 二战 hex 战棋工程，已沉淀 Hex / Region / Theater / FrontLine / WarDeployment / Command / AI Agent 管线。项目路线按 v5.0-v5.9 维多利亚时代历史策略迁移规划推进，目标产品暂定为 `蒸汽帝国 Agent` / `Steam & Empire Agent Strategy`。v5.1 多国家 / 通用回合 / 外交敌我判断基础切片已推送并通过 GitHub Actions 结果包验收；v5.2 已接入默认 `black_sea_crisis_1853` / `黑海危机 1853` 数据入口、维多利亚势力/模板/人物/地形 JSON、MapEditor 默认资源桥和 scenario 数据驱动胜利条件；v5.3 已开始接入 typed logistics tags、铁路移动、港口补给锚点和炮兵攻城修正。源码命名、UI、经济/生产和部分兼容数据仍保留阿登、Germany / Allies、Division、Panzer 等二战语义。当前工作流默认不跑本机 Xcode / XCTest / 模拟器测试，只按 `md/test/test.md` 做轻量检查，重验证交给 GitHub Actions。**
+> **当前状态：代码基线仍是 WWIIHexV0 二战 hex 战棋工程，已沉淀 Hex / Region / Theater / FrontLine / WarDeployment / Command / AI Agent 管线。项目路线按 v5.0-v5.9 维多利亚时代历史策略迁移规划推进，目标产品暂定为 `蒸汽帝国 Agent` / `Steam & Empire Agent Strategy`。v5.1 多国家 / 通用回合 / 外交敌我判断基础切片已推送并通过 GitHub Actions 结果包验收；v5.2 已接入默认 `black_sea_crisis_1853` / `黑海危机 1853` 数据入口、维多利亚势力/模板/人物/地形 JSON、MapEditor 默认资源桥和 scenario 数据驱动胜利条件；v5.3 已开始接入 typed logistics tags、铁路移动、港口补给锚点、炮兵攻城修正，以及单位/生产玩家可见显示适配。源码命名、测试夹具和部分兼容数据仍保留阿登、Germany / Allies、Division、Panzer 等二战语义。当前工作流默认不跑本机 Xcode / XCTest / 模拟器测试，只按 `md/test/test.md` 做轻量检查，重验证交给 GitHub Actions。**
 
 ---
 

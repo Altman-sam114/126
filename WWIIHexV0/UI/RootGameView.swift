@@ -95,7 +95,7 @@ struct RootGameView: View {
             renderState: BoardSceneAdapter.renderState(from: container),
             onHexTapped: container.handleBoardTap
         )
-        .accessibilityLabel("Ardennes V0 hex board")
+        .accessibilityLabel("Strategy hex board")
     }
 
     private func infoOverlay(isLandscape: Bool, size: CGSize) -> some View {

@@ -20,6 +20,34 @@ enum ComponentType: String, Codable, Equatable, CaseIterable {
     }
 }
 
+extension ComponentType {
+    var victorianDisplayName: String {
+        switch self {
+        case .tank:
+            return "Guards"
+        case .motorizedInfantry:
+            return "Cavalry"
+        case .infantry:
+            return "Line Infantry"
+        case .artillery:
+            return "Artillery"
+        }
+    }
+
+    var victorianDisplayCode: String {
+        switch self {
+        case .tank:
+            return "GRD"
+        case .motorizedInfantry:
+            return "CAV"
+        case .infantry:
+            return "LINE"
+        case .artillery:
+            return "ART"
+        }
+    }
+}
+
 struct DivisionComponent: Codable, Equatable {
     let type: ComponentType
     let weight: Double
@@ -309,6 +337,38 @@ struct Division: Identifiable, Codable, Equatable {
 
     var isArtillery: Bool {
         components.contains { $0.type == .artillery && $0.weight >= 0.50 }
+    }
+
+    func componentWeight(for type: ComponentType) -> Double {
+        components
+            .filter { $0.type == type }
+            .reduce(0) { $0 + $1.weight }
+    }
+
+    var victorianFormationDisplayName: String {
+        if isArtillery {
+            return "Siege Artillery"
+        }
+        if componentWeight(for: .tank) >= 0.25 {
+            return "Guard Corps"
+        }
+        if componentWeight(for: .motorizedInfantry) >= 0.40 {
+            return "Cavalry Column"
+        }
+        return "Line Infantry"
+    }
+
+    var victorianFormationDisplayCode: String {
+        if isArtillery {
+            return "ART"
+        }
+        if componentWeight(for: .tank) >= 0.25 {
+            return "GRD"
+        }
+        if componentWeight(for: .motorizedInfantry) >= 0.40 {
+            return "CAV"
+        }
+        return "LINE"
     }
 
     private func weightedStat(_ keyPath: KeyPath<EffectiveStats, Int>) -> Int {

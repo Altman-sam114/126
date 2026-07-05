@@ -12,19 +12,19 @@ struct UnitTooltipView: View {
 
                 Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 4) {
                     GridRow {
-                        label("Type")
-                        value(division.tooltipTypeCode)
+                        label("Formation")
+                        value(division.victorianFormationDisplayCode)
                     }
                     GridRow {
                         label("Strength")
                         value("\(division.strength)/\(division.maxStrength)")
                     }
                     GridRow {
-                        label("Supply")
+                        label("Logistics")
                         value(division.supplyState.tooltipDisplayName)
                     }
                     GridRow {
-                        label("Retreat")
+                        label("Orders")
                         value(division.retreatMode.tooltipDisplayName)
                     }
                     GridRow {
@@ -42,7 +42,7 @@ struct UnitTooltipView: View {
             }
             .padding(10)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(division.name), \(division.tooltipTypeCode), strength \(division.strength) of \(division.maxStrength)")
+            .accessibilityLabel("\(division.name), \(division.victorianFormationDisplayName), strength \(division.strength) of \(division.maxStrength)")
         }
     }
 
@@ -60,26 +60,11 @@ struct UnitTooltipView: View {
     }
 }
 
-private extension Division {
-    var tooltipTypeCode: String {
-        if isArtillery {
-            return "ART"
-        }
-        if isArmor {
-            return "ARM"
-        }
-        if components.contains(where: { $0.type == .motorizedInfantry && $0.weight >= 0.40 }) {
-            return "MOT"
-        }
-        return "INF"
-    }
-}
-
 private extension RetreatMode {
     var tooltipDisplayName: String {
         switch self {
         case .retreatable:
-            return "Retreatable"
+            return "Withdraw"
         case .hold:
             return "Hold"
         }
@@ -90,11 +75,11 @@ private extension SupplyState {
     var tooltipDisplayName: String {
         switch self {
         case .supplied:
-            return "Supplied"
+            return "Ready"
         case .lowSupply:
-            return "Low"
+            return "Strained"
         case .encircled:
-            return "Encircled"
+            return "Cut Off"
         }
     }
 }

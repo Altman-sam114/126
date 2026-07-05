@@ -7,13 +7,13 @@ struct UnitInspectorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Unit Details")
+            Text("Formation Details")
                 .font(.headline)
 
             if let division {
                 unitDetails(division)
             } else {
-                Text("No unit selected.")
+                Text("No formation selected.")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -28,12 +28,16 @@ struct UnitInspectorView: View {
             Text(division.name)
                 .font(.subheadline.weight(.semibold))
 
-            LabeledContent("Faction") {
+            LabeledContent("Power") {
                 Text(division.faction.displayName)
             }
 
-            LabeledContent("Mode") {
-                Text(division.faction == playerFaction ? "Player" : "Read-only")
+            LabeledContent("Command") {
+                Text(division.faction == playerFaction ? "Direct" : "Observer")
+            }
+
+            LabeledContent("Type") {
+                Text(division.victorianFormationDisplayName)
             }
 
             if let strategicState {
@@ -49,7 +53,7 @@ struct UnitInspectorView: View {
                     Text(strategicState.dynamicTheaterId?.rawValue ?? "None")
                 }
 
-                LabeledContent("FrontZone") {
+                LabeledContent("Front Zone") {
                     Text(strategicState.frontZoneId?.rawValue ?? "None")
                 }
 
@@ -57,7 +61,7 @@ struct UnitInspectorView: View {
                     Text(strategicState.deploymentRole.displayName)
                 }
 
-                LabeledContent("FrontLine") {
+                LabeledContent("Front Line") {
                     Text(frontLineSummary(strategicState.frontLineIds))
                         .multilineTextAlignment(.trailing)
                 }
@@ -67,11 +71,11 @@ struct UnitInspectorView: View {
                 Text(division.inspectorStrengthText)
             }
 
-            LabeledContent("Retreat Mode") {
+            LabeledContent("Orders") {
                 Text(division.retreatMode.displayName)
             }
 
-            LabeledContent("Supply") {
+            LabeledContent("Logistics") {
                 Text(division.supplyState.displayName)
             }
 
@@ -83,7 +87,7 @@ struct UnitInspectorView: View {
                 Text(division.inspectorStatusText)
             }
 
-            LabeledContent("Components") {
+            LabeledContent("Arms") {
                 Text(componentSummary(for: division))
                     .multilineTextAlignment(.trailing)
             }
@@ -92,7 +96,7 @@ struct UnitInspectorView: View {
 
     private func componentSummary(for division: Division) -> String {
         division.components
-            .map { "\($0.type.displayCode) \(Int(($0.weight * 100).rounded()))%" }
+            .map { "\($0.type.victorianDisplayCode) \(Int(($0.weight * 100).rounded()))%" }
             .joined(separator: " / ")
     }
 
@@ -110,11 +114,11 @@ private extension Division {
         var statuses: [String] = []
 
         if isRetreating {
-            statuses.append("Retreating")
+            statuses.append("Withdrawing")
         }
 
         if isDestroyed {
-            statuses.append("Destroyed")
+            statuses.append("Broken")
         }
 
         return statuses.isEmpty ? "Ready" : statuses.joined(separator: ", ")
@@ -125,24 +129,9 @@ private extension RetreatMode {
     var displayName: String {
         switch self {
         case .retreatable:
-            return "Retreatable"
+            return "Withdraw Allowed"
         case .hold:
-            return "Hold"
-        }
-    }
-}
-
-private extension ComponentType {
-    var displayCode: String {
-        switch self {
-        case .tank:
-            return "ARM"
-        case .motorizedInfantry:
-            return "MOT"
-        case .infantry:
-            return "INF"
-        case .artillery:
-            return "ART"
+            return "Hold Ground"
         }
     }
 }
@@ -151,11 +140,11 @@ private extension SupplyState {
     var displayName: String {
         switch self {
         case .supplied:
-            return "Supplied"
+            return "Provisioned"
         case .lowSupply:
-            return "Low Supply"
+            return "Strained"
         case .encircled:
-            return "Encircled"
+            return "Cut Off"
         }
     }
 }
@@ -164,11 +153,11 @@ private extension UnitDeploymentRole {
     var displayName: String {
         switch self {
         case .frontUnit:
-            return "FRONT"
+            return "Line"
         case .depthUnit:
-            return "DEPTH"
+            return "Reserve"
         case .garrisonUnit:
-            return "GARRISON"
+            return "Garrison"
         }
     }
 }
