@@ -568,7 +568,7 @@ struct FrontLineManager {
         if let diplomacyState {
             return diplomacyState.canAttack(attacker: lhs, target: rhs)
         }
-        lhs != rhs && lhs.participatesInTurnOrder && rhs.participatesInTurnOrder
+        return lhs != rhs && lhs.participatesInTurnOrder && rhs.participatesInTurnOrder
     }
 
     private func isOperationalContact(
