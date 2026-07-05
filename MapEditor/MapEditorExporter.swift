@@ -127,6 +127,7 @@ enum MapEditorExporter {
                         isSupplySource: hex.isSupplySource,
                         supplyFaction: hex.supplyFaction?.rawValue,
                         objectiveId: hex.objectiveId,
+                        logisticsTags: nil,
                         regionId: hex.regionId?.rawValue
                     )
                 }

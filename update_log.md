@@ -62,6 +62,7 @@
 - `DataLoader` 读取 scenario `logisticsTags`，并可从 `keyLocations.kind == port` 派生港口标签；`tools/validate_black_sea_data.py` 增加物流标签白名单检查。
 - `MapState` 增加物流标签查询和港口补给锚点查询；只有本方、allied 或 coBelligerent 控制的港口可作为补给锚点，单纯 `militaryAccess` 不算共同补给。
 - `MovementRules` 对相邻双 `rail` hex 使用铁路通行成本；`SupplyRules` 把正式 supply source 与可用港口合并为补给锚点；`CombatRules` 给炮兵攻击城市/要塞增加轻量攻城修正。
+- `MapEditorExporter` 对新增可选 `logisticsTags` 字段显式导出 `nil`，保持当前编辑器旧字段导出兼容；正式可编辑港口/铁路字段留后续切片。
 - 黑海危机数据标注 Constantinople、Odessa、Varna、Sevastopol、Danube Forts、Balaklava、Bucharest 等关键港口、铁路、电报和围城节点。
 
 关键文件：
@@ -75,6 +76,7 @@
 - `WWIIHexV0/Rules/SupplyRules.swift`
 - `WWIIHexV0/Rules/CombatRules.swift`
 - `WWIIHexV0/Tests/RuleEngineCoreTests.swift`
+- `MapEditor/MapEditorExporter.swift`
 - `tools/validate_black_sea_data.py`
 
 验证记录：
