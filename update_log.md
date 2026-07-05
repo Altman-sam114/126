@@ -124,12 +124,16 @@
 - `EconomyPanelView` 新增 Budget 区块，展示 debt / debt service，并将预算按钮接入 `AppContainer.executeEconomyCommand`。
 - `RegionInspectorView` 新增物流只读展示：所选 hex 显示物流标签，region 显示从 hex 聚合得到的标签数量，继续保持 hex 为物流权威。
 - 新增 `ConstructionKind.railway`、`ConstructionOrder` 和 `Command.queueConstruction(kind:target:)` 起步切片；铁路工程从经济面板选中 hex 后经 `RuleEngine` 扣费入队，回合结算完成时只给目标 hex 添加 `.rail` 物流标签，不改占领、region、theater、front 或 deploy 权威。
+- 新增 `ConstructionKind.fieldWorks` 与 `LogisticsTag.fieldWorks`；野战工事同样从经济面板选中 hex 后经 `RuleEngine` 扣费入队，完成时只给目标 hex 添加 `.fieldWorks` 标签，并由 `CombatRules.terrainDefenseBonus` 提供轻量防御加成，不改任何地图控制权威。
 - `md/flow/flow.md` 同步记录当前经济/生产兼容边界。
 
 关键文件：
 
 - `WWIIHexV0/Core/EconomyState.swift`
+- `WWIIHexV0/Core/Terrain.swift`
+- `WWIIHexV0/Data/DataLoader.swift`
 - `WWIIHexV0/Rules/EconomyRules.swift`
+- `WWIIHexV0/Rules/CombatRules.swift`
 - `WWIIHexV0/Commands/Command.swift`
 - `WWIIHexV0/Rules/CommandValidator.swift`
 - `WWIIHexV0/Rules/CommandExecutor.swift`
@@ -138,6 +142,7 @@
 - `WWIIHexV0/UI/RegionInspectorView.swift`
 - `WWIIHexV0/UI/RootGameView.swift`
 - `WWIIHexV0/SpriteKit/MapDisplayAdapter.swift`
+- `tools/validate_black_sea_data.py`
 - `md/flow/flow.md`
 - `md/flow/flowchart.md`
 
@@ -152,7 +157,7 @@
 遗留事项：
 
 - `EconomyResources.manpower/industry/supplies` 内部字段仍保留作兼容；完整国库、工业产能、铁路运输力、船运量和战争支持仍待后续 v5.4-v5.7 切片。
-- 本轮只引入单 hex 铁路工程起步动作，未引入港口扩建、舰队整备、铁路运输力、建设上限或完整财政/舆论状态机；`warDebt` 仅是最小财政压力字段，不等同完整债务/议会系统。
+- 本轮只引入单 hex 铁路工程与野战工事起步动作，未引入港口扩建、舰队整备、铁路运输力、建设上限或完整财政/舆论状态机；`warDebt` 仅是最小财政压力字段，不等同完整债务/议会系统。
 
 ## v0 - 六角格测试板
 

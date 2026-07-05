@@ -584,6 +584,8 @@ struct DataLoader {
             return .telegraph
         case "expeditionaryDepot", "expeditionary_depot":
             return .expeditionaryDepot
+        case "fieldWorks", "field_works", "earthworks", "entrenchment":
+            return .fieldWorks
         case "siegeDepot", "siege_depot":
             return .siegeDepot
         default:

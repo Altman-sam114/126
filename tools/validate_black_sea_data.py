@@ -75,6 +75,7 @@ def main() -> int:
         "coalStation",
         "telegraph",
         "expeditionaryDepot",
+        "fieldWorks",
         "siegeDepot",
     }
 

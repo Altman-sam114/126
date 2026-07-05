@@ -99,6 +99,7 @@ enum LogisticsTag: String, Codable, Equatable, Hashable, CaseIterable {
     case coalStation
     case telegraph
     case expeditionaryDepot
+    case fieldWorks
     case siegeDepot
 
     var displayName: String {
@@ -115,6 +116,8 @@ enum LogisticsTag: String, Codable, Equatable, Hashable, CaseIterable {
             return "Telegraph"
         case .expeditionaryDepot:
             return "Expeditionary Depot"
+        case .fieldWorks:
+            return "Field Works"
         case .siegeDepot:
             return "Siege Depot"
         }

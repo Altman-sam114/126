@@ -512,22 +512,22 @@ EconomyPanelView
 
 这些预算动作只改 faction 级经济账本，不改变 hex 占领、region controller、动态战区或前线。
 
-铁路建设由 `Command.queueConstruction(kind:target:)` 进入同一规则系统：
+铁路与野战工事建设由 `Command.queueConstruction(kind:target:)` 进入同一规则系统：
 
 ```text
 EconomyPanelView selected hex
   -> AppContainer.queueConstruction
-  -> Command.queueConstruction(kind: .railway, target: HexCoord)
+  -> Command.queueConstruction(kind: .railway / .fieldWorks, target: HexCoord)
   -> RuleEngine
   -> CommandValidator.validateConstruction
   -> CommandExecutor.executeQueueConstruction
   -> EconomyRules.queueConstruction
   -> FactionEconomyLedger.constructionQueue
   -> EconomyRules.resolveFactionTurn / advanceConstruction
-  -> MapState.setTile(tile with logisticsTags.insert(.rail))
+  -> MapState.setTile(tile with logisticsTags.insert(.rail / .fieldWorks))
 ```
 
-当前 `ConstructionKind` 只包含 `railway` 起步动作。校验要求目标 hex 存在、可通行、由当前行动势力控制、尚无 `.rail`、同一目标未重复排队且账本资源足够。完成时只修改该 hex 的 `logisticsTags`，不改变 `HexTile.controller`、region controller、`regionToTheater`、`hexToTheater`、`hexToFrontZone` 或前线。
+当前 `ConstructionKind` 包含 `railway` 与 `fieldWorks` 起步动作。校验要求目标 hex 存在、可通行、由当前行动势力控制、尚无对应完成物流标签、同一目标未重复排队且账本资源足够。完成时只修改该 hex 的 `logisticsTags`，不改变 `HexTile.controller`、region controller、`regionToTheater`、`hexToTheater`、`hexToFrontZone` 或前线。`.fieldWorks` 是轻量野战工事标签，防守方在该 hex 上通过 `CombatRules.terrainDefenseBonus` 获得防御加成。
 
 自动补员在 active faction 结束回合时发生，只处理：
 
@@ -1210,7 +1210,7 @@ resolveCombatResult
   attacker 也可能撤退/毁灭
 ```
 
-v5.3 起，炮兵进攻城市和要塞时获得轻量攻城修正，用来表达围城火力准备；该修正只影响 `CombatRules.effectiveAttack`，不直接占领 hex。
+v5.3 起，炮兵进攻城市和要塞时获得轻量攻城修正，用来表达围城火力准备；v5.4 起，建设完成的 `.fieldWorks` 物流标签会给防守方提供轻量地形防御加成。这些修正只影响 `CombatRules` 数值，不直接占领 hex。
 
 移动与物流：
 

@@ -285,6 +285,7 @@ enum EconomyCommand: String, Codable, Equatable, CaseIterable, Identifiable {
 
 enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
     case railway
+    case fieldWorks
 
     var id: String {
         rawValue
@@ -294,6 +295,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
         switch self {
         case .railway:
             return "Railway Works"
+        case .fieldWorks:
+            return "Field Works"
         }
     }
 
@@ -301,6 +304,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
         switch self {
         case .railway:
             return "tram.fill"
+        case .fieldWorks:
+            return "shield.lefthalf.filled"
         }
     }
 
@@ -308,6 +313,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
         switch self {
         case .railway:
             return EconomyResources(manpower: 20, industry: 65, supplies: 12)
+        case .fieldWorks:
+            return EconomyResources(manpower: 14, industry: 35, supplies: 18)
         }
     }
 
@@ -315,6 +322,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
         switch self {
         case .railway:
             return 2
+        case .fieldWorks:
+            return 1
         }
     }
 
@@ -322,6 +331,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
         switch self {
         case .railway:
             return .rail
+        case .fieldWorks:
+            return .fieldWorks
         }
     }
 }

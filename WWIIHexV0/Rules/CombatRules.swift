@@ -17,6 +17,9 @@ struct CombatRules {
         if hasRiverBetween(attacker.coord, defender.coord, in: state) {
             bonus += 2
         }
+        if defenderTile.logisticsTags.contains(.fieldWorks) {
+            bonus += 2
+        }
         return bonus
     }
 
