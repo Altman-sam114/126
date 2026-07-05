@@ -68,6 +68,7 @@ struct DataLoader {
                 map: state.map,
                 theaterState: state.theaterState,
                 divisions: state.divisions,
+                diplomacyState: state.diplomacyState,
                 turn: state.turn
             )
             let deploymentState = WarDeploymentManager().makeInitialState(
@@ -149,6 +150,7 @@ struct DataLoader {
             map: map,
             theaterState: theaterState,
             divisions: divisions,
+            diplomacyState: diplomacyState,
             turn: turn
         )
         let deploymentState = WarDeploymentManager().makeInitialState(

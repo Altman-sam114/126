@@ -1164,6 +1164,7 @@ struct WarCommandExecutor {
                 map: state.map,
                 theaterState: state.theaterState,
                 divisions: state.divisions,
+                diplomacyState: state.diplomacyState,
                 turn: state.turn,
                 events: syncResult.affectedRegionIds.map { regionId in
                     changedRegionIds.contains(regionId)

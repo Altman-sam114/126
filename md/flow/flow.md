@@ -315,7 +315,8 @@ isEncirclementCandidate
     只看该 region 内 dynamicTheaterId == theater.id 的 hex
     扫描这些 hex 的六向邻接 hex
     如果邻接 hex 属于另一个 dynamic theater
-       且对方 theater 的 sourceFaction 不是 friendlyFaction:
+       且对方 theater sourceFaction / hex controller / region controller
+       按 DiplomacyState.canAttack 判定可攻击:
          形成 enemy region 接触
          生成 FrontSegment(regionA: friendly region, regionB: enemy region)
 ```
@@ -326,6 +327,7 @@ isEncirclementCandidate
 - 前线不是 initial theater 边界。
 - 前线不是 `regionToTheater` 的邻接。
 - 前线是真实动态战区 hex 接触。
+- v5.2 起运行时初始化和同步会把 `GameState.diplomacyState` 传入 `FrontLineManager`；非交战但不同国家、共同作战方和 neutral 不再仅因 faction 不同形成前线。
 - 同一个 region 被两个动态战区切开时，允许出现 `regionA == regionB` 的突破前线。这是 v0.358 后确认的合法状态。
 - `FrontLine.type == .breakthrough` 的一个来源是：segment 的 `regionA` 仍由敌方 region controller 控制，但已有我方动态 theater hex 突入。
 

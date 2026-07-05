@@ -48,6 +48,7 @@
 后续迭代：
 
 - 2026-07-05：补齐黑海危机默认外交关系。`DiplomacyState.initial(... scenarioId:)` 对 `black_sea_crisis_1853` 生成场景化关系：Britain / France / Ottoman / Sardinia 对 Russia 为 `atWar`，联军内部为 `coBelligerent`，Austria 对 Russia 为 `hostile`、对 Ottoman 为 `militaryAccess`，其余保持 neutral；`DataLoader` 和 `StrategicStateBootstrapper` 均传入 `scenarioId`，避免默认新局和空外交兜底把黑海危机退回全中立。
+- 2026-07-05：补齐前线层多国家外交敌我判断。`FrontLineManager` 的初始构建、dirty update、动态 hex 接触、包围候选和补给影响可接收 `DiplomacyState`，运行时 `DataLoader`、`StrategicStateBootstrapper`、`StrategicStateSynchronizer` 和 `WarCommandExecutor` 均传入真实外交状态；缺省 nil 保留旧测试和 Probe fixture 兼容，避免黑海危机中非交战但不同国家、共同作战方或 neutral 被误画为前线。
 
 ## v0 - 六角格测试板
 

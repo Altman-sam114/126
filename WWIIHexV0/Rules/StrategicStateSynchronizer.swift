@@ -44,6 +44,7 @@ struct StrategicStateSynchronizer {
             map: state.map,
             theaterState: state.theaterState,
             divisions: state.divisions,
+            diplomacyState: state.diplomacyState,
             turn: syncTurn,
             events: frontEvents
         )

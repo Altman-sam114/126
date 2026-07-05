@@ -41,6 +41,7 @@ MapEditor / JSON 数据
 - v5.1 已把 `Faction` 扩展到 legacy Germany / Allies 加 Britain、France、Russia、Ottoman、Austria、Sardinia、Neutral，并新增 `humanAction` / `aiAction`、`turnOrder`、`humanControlledFactions` 和 `DiplomacyState.canAttack` / `canEnterTerritory` 入口；commit `2919c49` 已通过 GitHub Actions 结果包验收。
 - v5.2 已开始把默认入口切到 `black_sea_crisis_1853`：新增黑海危机 scenario / regions、`victorian_powers.json`、`victorian_unit_templates.json`、`victorian_personas.json`、`victorian_terrain_rules.json`，并保留阿登为 legacy fallback。
 - `Faction.opponent` 已不应再作为主路径敌我判断；后续新代码必须继续通过 `DiplomacyState` 或后续外交规则判断可攻击/可通行。
+- `FrontLineManager` 运行时路径已接入 `DiplomacyState`，前线接触、包围候选和补给影响不再仅凭不同 faction 判断敌我；旧测试/Probe fixture 仍可通过缺省 nil 保持 legacy 兼容。
 - `Division`、`tank`、`motorizedInfantry`、`Panzer Division`、阿登、Germany、Allies、Bastogne、Guderian、Montgomery、Manpower、Industry、Supplies 等二战语义仍存在于 legacy 数据、UI 或源码兼容名中。
 - `RegionDataSet.toRegions()` 的 nil owner/controller fallback 已改为 `.neutral`；后续迁移仍不得把 nil / neutral fallback 到 legacy 双方。
 - project 文件和文档已多轮多分支修改；任何合并或迁移前必须做文件/API/schema/project/文档冲突审查。

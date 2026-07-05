@@ -5,12 +5,14 @@ struct FrontLineManager {
         map: MapState,
         theaterState: TheaterState,
         divisions: [Division],
+        diplomacyState: DiplomacyState? = nil,
         turn: Int? = nil
     ) -> FrontLineState {
         rebuildAll(
             map: map,
             theaterState: theaterState,
             divisions: divisions,
+            diplomacyState: diplomacyState,
             turn: turn,
             mode: .turnRebuild
         )
@@ -21,6 +23,7 @@ struct FrontLineManager {
         map: MapState,
         theaterState: TheaterState,
         divisions: [Division],
+        diplomacyState: DiplomacyState? = nil,
         turn: Int,
         mode: FrontLineUpdateMode = .turnRebuild,
         events: [FrontLineEvent] = []
@@ -31,6 +34,7 @@ struct FrontLineManager {
                 map: map,
                 theaterState: theaterState,
                 divisions: divisions,
+                diplomacyState: diplomacyState,
                 turn: turn,
                 events: events
             )
@@ -44,6 +48,7 @@ struct FrontLineManager {
             map: map,
             theaterState: theaterState,
             divisions: divisions,
+            diplomacyState: diplomacyState,
             turn: turn,
             mode: .turnRebuild
         )
@@ -54,6 +59,7 @@ struct FrontLineManager {
         map: MapState,
         theaterState: TheaterState,
         divisions: [Division],
+        diplomacyState: DiplomacyState? = nil,
         turn: Int,
         events: [FrontLineEvent]
     ) -> FrontLineState {
@@ -70,6 +76,7 @@ struct FrontLineManager {
             map: map,
             theaterState: theaterState,
             divisions: divisions,
+            diplomacyState: diplomacyState,
             turn: turn
         )
     }
@@ -101,6 +108,7 @@ struct FrontLineManager {
         map: MapState,
         theaterState: TheaterState,
         divisions: [Division],
+        diplomacyState: DiplomacyState?,
         turn: Int?,
         mode: FrontLineUpdateMode
     ) -> FrontLineState {
@@ -117,6 +125,7 @@ struct FrontLineManager {
                 map: map,
                 theaterState: theaterState,
                 strengths: strengths,
+                diplomacyState: diplomacyState,
                 cache: &cache,
                 scannedRegionIds: &scannedRegionIds,
                 scannedNeighborLinkCount: &scannedNeighborLinkCount
@@ -124,7 +133,12 @@ struct FrontLineManager {
             segmentsByTheater[theater.id, default: []].append(contentsOf: segments)
         }
 
-        let frontLines = makeFrontLines(from: segmentsByTheater, map: map, theaterState: theaterState)
+        let frontLines = makeFrontLines(
+            from: segmentsByTheater,
+            map: map,
+            theaterState: theaterState,
+            diplomacyState: diplomacyState
+        )
         let regionStates = makeRegionStates(
             frontLines: frontLines,
             includedEmptyRegionIds: scannedRegionIds,
@@ -154,6 +168,7 @@ struct FrontLineManager {
         map: MapState,
         theaterState: TheaterState,
         divisions: [Division],
+        diplomacyState: DiplomacyState?,
         turn: Int
     ) -> FrontLineState {
         let touchedRegions = touchedRegions(from: dirtyRegions, map: map)
@@ -188,6 +203,7 @@ struct FrontLineManager {
                 map: map,
                 theaterState: theaterState,
                 strengths: strengths,
+                diplomacyState: diplomacyState,
                 cache: &cache,
                 scannedRegionIds: &scannedRegionIds,
                 scannedNeighborLinkCount: &scannedNeighborLinkCount
@@ -195,7 +211,12 @@ struct FrontLineManager {
             segmentsByTheater[theaterId, default: []].append(contentsOf: segments)
         }
 
-        let frontLines = makeFrontLines(from: segmentsByTheater, map: map, theaterState: theaterState)
+        let frontLines = makeFrontLines(
+            from: segmentsByTheater,
+            map: map,
+            theaterState: theaterState,
+            diplomacyState: diplomacyState
+        )
         let regionStates = makeRegionStates(
             frontLines: frontLines,
             includedEmptyRegionIds: touchedRegions,
@@ -225,6 +246,7 @@ struct FrontLineManager {
         map: MapState,
         theaterState: TheaterState,
         strengths: [RegionId: [Faction: Int]],
+        diplomacyState: DiplomacyState?,
         cache: inout [RegionId: [RegionId]],
         scannedRegionIds: inout Set<RegionId>,
         scannedNeighborLinkCount: inout Int
@@ -247,7 +269,8 @@ struct FrontLineManager {
                 sourceTheaterId: theaterId,
                 sourceFaction: sourceFaction,
                 map: map,
-                theaterState: theaterState
+                theaterState: theaterState,
+                diplomacyState: diplomacyState
             )
             scannedNeighborLinkCount += neighbors.count
             let enemyNeighbors = neighbors
@@ -260,7 +283,8 @@ struct FrontLineManager {
                     friendlyFaction: sourceFaction,
                     map: map,
                     theaterState: theaterState,
-                    strengths: strengths
+                    strengths: strengths,
+                    diplomacyState: diplomacyState
                 ) else {
                     continue
                 }
@@ -282,7 +306,8 @@ struct FrontLineManager {
         sourceFaction: Faction,
         map: MapState,
         theaterState: TheaterState,
-        neighbors: [RegionId]
+        neighbors: [RegionId],
+        diplomacyState: DiplomacyState?
     ) -> [RegionId] {
         guard map.regions[regionId] != nil else {
             return []
@@ -295,14 +320,16 @@ struct FrontLineManager {
                       theaterState.theaters[neighborTheaterId]?.status != .inactive else {
                     return false
                 }
-                if let neighborFaction = theaterState.theaters[neighborTheaterId]?.controllingFaction,
-                   isOperationalOpponent(sourceFaction, neighborFaction) {
+                let neighborTheaterFaction = theaterState.theaters[neighborTheaterId]?.controllingFaction
+                let neighborRegionController = map.regions[neighborId]?.controller
+                if isOperationalContact(
+                    sourceFaction,
+                    candidates: [neighborTheaterFaction, neighborRegionController],
+                    diplomacyState: diplomacyState
+                ) {
                     return true
                 }
-                guard let controller = map.regions[neighborId]?.controller else {
-                    return false
-                }
-                return isOperationalOpponent(sourceFaction, controller)
+                return false
             }
             .sorted { $0.rawValue < $1.rawValue }
     }
@@ -312,7 +339,8 @@ struct FrontLineManager {
         sourceTheaterId: TheaterId,
         sourceFaction friendlyFaction: Faction,
         map: MapState,
-        theaterState: TheaterState
+        theaterState: TheaterState,
+        diplomacyState: DiplomacyState?
     ) -> [RegionId] {
         guard let region = map.region(id: regionId) else {
             return []
@@ -326,8 +354,17 @@ struct FrontLineManager {
                       let neighborTheaterId = theaterState.dynamicTheaterId(for: neighborHex, map: map),
                       neighborTheaterId != sourceTheaterId,
                       let neighborTheater = theaterState.theaters[neighborTheaterId],
-                      neighborTheater.status != .inactive,
-                      sourceFaction(for: neighborTheater, theaterState: theaterState, map: map) != friendlyFaction else {
+                      neighborTheater.status != .inactive else {
+                    continue
+                }
+                let neighborTheaterFaction = sourceFaction(for: neighborTheater, theaterState: theaterState, map: map)
+                let neighborHexController = map.tile(at: neighborHex)?.controller
+                let neighborRegionController = map.regions[neighborRegionId]?.controller
+                guard isOperationalContact(
+                    friendlyFaction,
+                    candidates: [neighborTheaterFaction, neighborHexController, neighborRegionController],
+                    diplomacyState: diplomacyState
+                ) else {
                     continue
                 }
                 enemyRegions.insert(neighborRegionId)
@@ -343,7 +380,8 @@ struct FrontLineManager {
         friendlyFaction: Faction,
         map: MapState,
         theaterState: TheaterState,
-        strengths: [RegionId: [Faction: Int]]
+        strengths: [RegionId: [Faction: Int]],
+        diplomacyState: DiplomacyState?
     ) -> FrontSegment? {
         guard let enemyRegion = map.regions[regionB] else {
             return nil
@@ -354,7 +392,8 @@ struct FrontLineManager {
             enemyRegionId: regionB,
             friendlyFaction: friendlyFaction,
             enemyFaction: enemyFaction,
-            map: map
+            map: map,
+            diplomacyState: diplomacyState
         )
         let pressure = pressureLevel(
             regionA: regionA,
@@ -370,7 +409,8 @@ struct FrontLineManager {
             enemyFaction: enemyFaction,
             pressureLevel: pressure,
             encirclementCandidate: encirclementCandidate,
-            map: map
+            map: map,
+            diplomacyState: diplomacyState
         )
 
         return FrontSegment(
@@ -386,7 +426,8 @@ struct FrontLineManager {
     private func makeFrontLines(
         from segmentsByTheater: [TheaterId: [FrontSegment]],
         map: MapState,
-        theaterState: TheaterState
+        theaterState: TheaterState,
+        diplomacyState: DiplomacyState?
     ) -> [FrontLine] {
         segmentsByTheater.compactMap { theaterId, segments in
             guard let theater = theaterState.theaters[theaterId],
@@ -416,11 +457,16 @@ struct FrontLineManager {
                 guard let controller = map.regions[segment.regionA]?.controller else {
                     return false
                 }
-                return isOperationalOpponent(factionA, controller)
+                return isOperationalOpponent(factionA, controller, diplomacyState: diplomacyState)
             }
             let type: FrontLineType = hasEncirclement ? .encirclement : (hasBreakthrough ? .breakthrough : .normal)
             let state = operationalState(maxPressure: maxPressure, hasEncirclement: hasEncirclement)
-            let factionB = opposingFaction(for: finalSegments, factionA: factionA, map: map)
+            let factionB = opposingFaction(
+                for: finalSegments,
+                factionA: factionA,
+                map: map,
+                diplomacyState: diplomacyState
+            )
 
             return FrontLine(
                 id: frontLineId(theaterId: theaterId, factionA: factionA, factionB: factionB),
@@ -496,11 +542,16 @@ struct FrontLineManager {
         return Faction.allCases.max { (counts[$0] ?? 0) < (counts[$1] ?? 0) }
     }
 
-    private func opposingFaction(for segments: [FrontSegment], factionA: Faction, map: MapState) -> Faction {
+    private func opposingFaction(
+        for segments: [FrontSegment],
+        factionA: Faction,
+        map: MapState,
+        diplomacyState: DiplomacyState?
+    ) -> Faction {
         var counts: [Faction: Int] = [:]
         for segment in segments {
             guard let controller = map.regions[segment.regionB]?.controller,
-                  isOperationalOpponent(factionA, controller) else {
+                  isOperationalOpponent(factionA, controller, diplomacyState: diplomacyState) else {
                 continue
             }
             counts[controller, default: 0] += 1
@@ -513,8 +564,24 @@ struct FrontLineManager {
         }.first?.key ?? factionA.legacyOpponent ?? .neutral
     }
 
-    private func isOperationalOpponent(_ lhs: Faction, _ rhs: Faction) -> Bool {
+    private func isOperationalOpponent(_ lhs: Faction, _ rhs: Faction, diplomacyState: DiplomacyState?) -> Bool {
+        if let diplomacyState {
+            return diplomacyState.canAttack(attacker: lhs, target: rhs)
+        }
         lhs != rhs && lhs.participatesInTurnOrder && rhs.participatesInTurnOrder
+    }
+
+    private func isOperationalContact(
+        _ faction: Faction,
+        candidates: [Faction?],
+        diplomacyState: DiplomacyState?
+    ) -> Bool {
+        candidates.contains { candidate in
+            guard let candidate else {
+                return false
+            }
+            return isOperationalOpponent(faction, candidate, diplomacyState: diplomacyState)
+        }
     }
 
     private func frontLineId(theaterId: TheaterId, factionA: Faction, factionB: Faction) -> FrontLineId {
@@ -554,17 +621,25 @@ struct FrontLineManager {
         enemyFaction: Faction,
         pressureLevel: Double,
         encirclementCandidate: Bool,
-        map: MapState
+        map: MapState,
+        diplomacyState: DiplomacyState?
     ) -> FrontSupplyImpact {
         guard let enemyRegion = map.regions[enemyRegionId] else {
             return .none
         }
 
         let hasLocalSupply = enemyRegion.supplyValue > 0 || map.neighbors(of: enemyRegionId).contains {
-            map.regions[$0]?.controller == enemyFaction && (map.regions[$0]?.supplyValue ?? 0) > 0
+            guard let region = map.regions[$0], region.supplyValue > 0 else {
+                return false
+            }
+            return canUseTerritory(faction: enemyFaction, controller: region.controller, diplomacyState: diplomacyState)
         }
         let friendlyContacts = map.neighbors(of: enemyRegionId).count {
-            map.regions[$0]?.controller == friendlyFaction
+            guard let controller = map.regions[$0]?.controller else {
+                return false
+            }
+            return controller == friendlyFaction ||
+                isOperationalOpponent(controller, enemyFaction, diplomacyState: diplomacyState)
         }
 
         if encirclementCandidate || (!hasLocalSupply && friendlyContacts >= 2) {
@@ -580,20 +655,42 @@ struct FrontLineManager {
         enemyRegionId: RegionId,
         friendlyFaction: Faction,
         enemyFaction: Faction,
-        map: MapState
+        map: MapState,
+        diplomacyState: DiplomacyState?
     ) -> Bool {
         let neighbors = map.neighbors(of: enemyRegionId)
         let friendlyContacts = neighbors.count {
-            map.regions[$0]?.controller == friendlyFaction
+            guard let controller = map.regions[$0]?.controller else {
+                return false
+            }
+            return controller == friendlyFaction ||
+                isOperationalOpponent(controller, enemyFaction, diplomacyState: diplomacyState)
         }
         let escapeRoutes = neighbors.count {
-            map.regions[$0]?.controller == enemyFaction && map.regions[$0]?.isPassable == true
+            guard let region = map.regions[$0], region.isPassable else {
+                return false
+            }
+            return canUseTerritory(faction: enemyFaction, controller: region.controller, diplomacyState: diplomacyState)
         }
         let hasSupplyPath = (map.regions[enemyRegionId]?.supplyValue ?? 0) > 0 || neighbors.contains {
-            map.regions[$0]?.controller == enemyFaction && (map.regions[$0]?.supplyValue ?? 0) > 0
+            guard let region = map.regions[$0], region.supplyValue > 0 else {
+                return false
+            }
+            return canUseTerritory(faction: enemyFaction, controller: region.controller, diplomacyState: diplomacyState)
         }
 
         return friendlyContacts >= 2 && (escapeRoutes < 2 || !hasSupplyPath)
+    }
+
+    private func canUseTerritory(
+        faction: Faction,
+        controller: Faction,
+        diplomacyState: DiplomacyState?
+    ) -> Bool {
+        if let diplomacyState {
+            return diplomacyState.canEnterTerritory(faction: faction, controller: controller)
+        }
+        return controller == faction
     }
 
     private func operationalState(
