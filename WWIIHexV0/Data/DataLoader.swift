@@ -137,7 +137,7 @@ struct DataLoader {
         let phase = initialPhase(for: scenario, activeFaction: activeFaction)
         let turnOrder = initialTurnOrder(for: scenario, activeFaction: activeFaction, divisions: divisions)
         let humanControlledFactions = initialHumanControlledFactions(for: scenario)
-        let diplomacyState = DiplomacyState.initial(from: scenario.factions, turn: turn)
+        let diplomacyState = DiplomacyState.initial(from: scenario.factions, scenarioId: scenario.id, turn: turn)
 
         let theaterState = makeTheaterState(
             map: map,

@@ -7,6 +7,7 @@ struct StrategicStateBootstrapper {
             let factions = next.turnOrder + next.divisions.map(\.faction)
             next.diplomacyState = DiplomacyState.initial(
                 for: factions.isEmpty ? Faction.legacyTurnOrder : factions,
+                scenarioId: next.scenarioId,
                 turn: next.turn
             )
             next.appendEvent("Diplomacy state bootstrapped with countries, blocs, and initial war relations.")

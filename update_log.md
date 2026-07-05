@@ -45,6 +45,10 @@
 - 铁路、港口、煤站、电报等 v5.2 语义本轮仅通过道路、城市/要塞、region infrastructure 和 `dataNotes` 表达；正式规则仍留 v5.3-v5.4。
 - UI、胜利规则、经济/生产和测试夹具仍有 legacy 二战语义，需要后续 v5.3-v5.9 继续清理。
 
+后续迭代：
+
+- 2026-07-05：补齐黑海危机默认外交关系。`DiplomacyState.initial(... scenarioId:)` 对 `black_sea_crisis_1853` 生成场景化关系：Britain / France / Ottoman / Sardinia 对 Russia 为 `atWar`，联军内部为 `coBelligerent`，Austria 对 Russia 为 `hostile`、对 Ottoman 为 `militaryAccess`，其余保持 neutral；`DataLoader` 和 `StrategicStateBootstrapper` 均传入 `scenarioId`，避免默认新局和空外交兜底把黑海危机退回全中立。
+
 ## v0 - 六角格测试板
 
 完成日期：2026-06-14 至 2026-06-15

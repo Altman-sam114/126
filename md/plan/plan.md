@@ -362,9 +362,9 @@ Bottom Strip:
 当前 v5.0 / v5.1 审计结论：
 
 - `Faction.germany/allies`、`Faction.opponent`、`GamePhase.germanAI/alliedPlayer`、`CommandValidator.phaseAllowsCommands` 和 `CommandExecutor.executeEndTurn` 的主路径已在本地 v5.1 切片中开始迁移；后续仍要清理测试、UI、胜利条件和 legacy 数据残留。
-- `DataLoader` 默认资源已开始切到黑海危机；Guderian 专项校验只限 legacy 阿登数据，旧 `playerFaction` / `aiFaction` 字段仍保留作 schema 兼容。
+- `DataLoader` 默认资源已开始切到黑海危机；`DiplomacyState` 对 `black_sea_crisis_1853` 有场景化初始关系，英法奥斯曼撒丁对俄开战，奥地利保持武装中立压力；Guderian 专项校验只限 legacy 阿登数据，旧 `playerFaction` / `aiFaction` 字段仍保留作 schema 兼容。
 - `ComponentType.tank/motorizedInfantry`、`ProductionKind.panzerDivision`、`EconomyResources.manpower/industry/supplies` 和默认 `unit_templates.json` 是 v5.3-v5.4 必修点。
-- `DiplomacyState` 已有 `CountryProfile` 基础，但默认仍是 German Reich / Allied Coalition，后续必须改为 Black Sea Crisis 多国家关系。
+- `DiplomacyState` 已有 `CountryProfile` 基础，并开始支持 Black Sea Crisis 多国家默认关系；后续仍需把外交危机、战争目标、后援方、升级和谈判迁入规则状态。
 - `VictoryRules` 仍绑定 Bastogne / St. Vith / German armor，后续要改成数据驱动战争目标。
 
 ## 7. 多 Agent 分工大纲
@@ -450,8 +450,8 @@ Bottom Strip:
 - `Faction` 二元模型是最大风险点，强改会影响 AI、补给、前线、部署、UI 和数据加载。
 - 新增代码若重新调用 `Faction.opponent`，会破坏多方、中立和外交危机。
 - `GamePhase.germanAI/alliedPlayer` 残留会让新势力控制权表现错误。
-- `RegionDataSet.toRegions()` 的 nil fallback 已改为 `.neutral`，仍需云端构建和旧数据加载确认。
-- `DataLoader` 默认资源、fallback components、validation 仍硬编码阿登和 Guderian。
+- `RegionDataSet.toRegions()` 的 nil fallback 已改为 `.neutral`，后续仍需持续防止 neutral / nil 回落到 legacy 双方。
+- `DataLoader` fallback components 和部分 legacy validation 仍保留阿登/Guderian 兼容路径，新场景不得重新依赖它们。
 - `project.pbxproj` 只能由一个 Agent 处理。
 - UI/SpriteKit 改动需要视觉验证，但当前规范禁止主动启动 app。
 - 外交、经济、事件、海权如果直接改状态，会绕过命令权威。

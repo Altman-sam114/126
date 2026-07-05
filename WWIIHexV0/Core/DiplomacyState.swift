@@ -244,7 +244,7 @@ struct DiplomacyState: Codable, Equatable {
         DiplomacyState()
     }
 
-    static func initial(for factions: [Faction], turn: Int) -> DiplomacyState {
+    static func initial(for factions: [Faction], scenarioId: String? = nil, turn: Int) -> DiplomacyState {
         var countries: [CountryProfile] = []
         var blocs: [DiplomaticBloc] = []
 
@@ -306,18 +306,21 @@ struct DiplomacyState: Codable, Equatable {
         }
 
         appendVictorianCountryProfiles(for: factions, countries: &countries, blocs: &blocs)
+        let relations = scenarioId == "black_sea_crisis_1853"
+            ? makeBlackSeaCrisisRelations(countries: countries, turn: turn)
+            : makeInitialRelations(countries: countries, turn: turn)
 
         return DiplomacyState(
             countries: countries,
             blocs: blocs,
-            relations: makeInitialRelations(countries: countries, turn: turn),
+            relations: relations,
             lastUpdatedTurn: turn
         )
     }
 
-    static func initial(from factionStrings: [String], turn: Int) -> DiplomacyState {
+    static func initial(from factionStrings: [String], scenarioId: String? = nil, turn: Int) -> DiplomacyState {
         let factions = factionStrings.compactMap(Faction.init(rawValue:))
-        return initial(for: factions.isEmpty ? Faction.legacyTurnOrder : factions, turn: turn)
+        return initial(for: factions.isEmpty ? Faction.legacyTurnOrder : factions, scenarioId: scenarioId, turn: turn)
     }
 
     var latestRulerRecord: RulerDecisionRecord? {
@@ -467,6 +470,72 @@ struct DiplomacyState: Codable, Equatable {
             }
         }
         return relations
+    }
+
+    private static func makeBlackSeaCrisisRelations(countries: [CountryProfile], turn: Int) -> [DiplomaticRelation] {
+        var relations: [DiplomaticRelation] = []
+        for lhsIndex in countries.indices {
+            for rhsIndex in countries.indices where rhsIndex > lhsIndex {
+                let lhs = countries[lhsIndex]
+                let rhs = countries[rhsIndex]
+                let status = blackSeaCrisisStatus(lhs: lhs.faction, rhs: rhs.faction)
+                relations.append(
+                    DiplomaticRelation(
+                        firstCountryId: lhs.id,
+                        secondCountryId: rhs.id,
+                        status: status,
+                        tension: tension(for: status),
+                        sinceTurn: turn
+                    )
+                )
+            }
+        }
+        return relations
+    }
+
+    private static func blackSeaCrisisStatus(lhs: Faction, rhs: Faction) -> DiplomaticStatus {
+        if lhs == rhs {
+            return lhs.isNeutral ? .neutral : .allied
+        }
+        if lhs.isNeutral || rhs.isNeutral {
+            return .neutral
+        }
+        if lhs.isLegacyPower && rhs.isLegacyPower {
+            return .atWar
+        }
+
+        let coalition: Set<Faction> = [.britain, .france, .ottoman, .sardinia]
+        if lhs == .russia && coalition.contains(rhs) ||
+            rhs == .russia && coalition.contains(lhs) {
+            return .atWar
+        }
+        if coalition.contains(lhs) && coalition.contains(rhs) {
+            return .coBelligerent
+        }
+        if (lhs == .austria && rhs == .russia) || (lhs == .russia && rhs == .austria) {
+            return .hostile
+        }
+        if (lhs == .austria && rhs == .ottoman) || (lhs == .ottoman && rhs == .austria) {
+            return .militaryAccess
+        }
+        return .neutral
+    }
+
+    private static func tension(for status: DiplomaticStatus) -> Int {
+        switch status {
+        case .atWar:
+            return 100
+        case .blockaded, .hostile:
+            return 75
+        case .truce:
+            return 45
+        case .militaryAccess, .coBelligerent:
+            return 25
+        case .allied:
+            return 15
+        case .neutral:
+            return 10
+        }
     }
 
     private static func initialStatus(lhs: Faction, rhs: Faction) -> DiplomaticStatus {

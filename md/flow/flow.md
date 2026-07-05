@@ -551,9 +551,10 @@ loadUnitTemplates(for: scenario)
   -> assignGenerals(...)
      - black_sea_crisis_1853 使用 victorian_personas
      - legacy 场景使用 generals
-  -> DiplomacyState.initial(from: scenario.factions, turn:)
+  -> DiplomacyState.initial(from: scenario.factions, scenarioId: scenario.id, turn:)
      - legacy Germany / Allies 默认 atWar
-     - Britain / France / Russia / Ottoman / Austria / Sardinia / Neutral 默认 neutral
+     - black_sea_crisis_1853 默认英法奥斯曼撒丁共同参战，对俄罗斯 atWar
+     - 奥地利默认对俄 hostile、对奥斯曼 militaryAccess，其余维持 neutral
   -> GameState(...)
 ```
 
