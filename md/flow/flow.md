@@ -1807,7 +1807,7 @@ MapEditorGameResourceBridge.loadDefaultDocument
 默认允许的检查方向：
 
 - 文档改动：尾随空白、旧测试口径残留、人工阅读一致性。
-- JSON 改动：对改动文件运行 `jq empty`。
+- JSON 改动：对改动文件运行 `jq empty`；黑海危机数据还要运行 `python3 tools/validate_black_sea_data.py` 检查 scenario / regions / templates / personas / powers 交叉引用。
 - Xcode project / scheme 改动：运行 `plutil -lint` 或 `xmllint --noout`。
 - 少量 Swift 改动：仅在不会触发全项目构建时，对直接改动文件做单文件语法检查。
 

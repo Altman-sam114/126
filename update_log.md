@@ -37,7 +37,8 @@
 验证记录：
 
 - 本机轻量检查：新增 JSON `jq empty` 通过；黑海数据一致性脚本通过；`plutil -lint WWIIHexV0.xcodeproj/project.pbxproj` 通过；`swiftc -parse` 已覆盖 `DataLoader.swift` 和 `MapEditorGameResourceBridge.swift`。
-- 云端重验证：待 push 到 `origin/main` 后由 GitHub Actions `WWIIHexV0 CI Results` 生成结果包。
+- 云端重验证：run `28729942914` attempt `1` 结果包 `WWIIHexV0-ci-v1-main-5d0fca4-run28729942914-attempt1` 已核对，`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`。
+- 后续补强：新增 `tools/validate_black_sea_data.py`，并把黑海危机 / 维多利亚 JSON 的 `jq empty` 与交叉引用检查加入 `.github/workflows/ci-results.yml`；后续 push 会由云端结果包复核该补强。
 
 遗留事项：
 

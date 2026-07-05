@@ -76,6 +76,13 @@ jobs:
           run_static_check "general registry JSON" jq empty WWIIHexV0/Data/generals.json
           run_static_check "terrain JSON" jq empty WWIIHexV0/Data/terrain_rules.json
           run_static_check "unit template JSON" jq empty WWIIHexV0/Data/unit_templates.json
+          run_static_check "black sea scenario JSON" jq empty WWIIHexV0/Data/black_sea_crisis_1853_scenario.json
+          run_static_check "black sea region JSON" jq empty WWIIHexV0/Data/black_sea_crisis_1853_regions.json
+          run_static_check "victorian powers JSON" jq empty WWIIHexV0/Data/victorian_powers.json
+          run_static_check "victorian unit template JSON" jq empty WWIIHexV0/Data/victorian_unit_templates.json
+          run_static_check "victorian personas JSON" jq empty WWIIHexV0/Data/victorian_personas.json
+          run_static_check "victorian terrain JSON" jq empty WWIIHexV0/Data/victorian_terrain_rules.json
+          run_static_check "black sea data references" python3 tools/validate_black_sea_data.py
 
           if [ "${static_rc}" -eq 0 ]; then
             static_outcome="success"

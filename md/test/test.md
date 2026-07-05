@@ -77,6 +77,13 @@ jq empty WWIIHexV0/Data/general_agents.json
 jq empty WWIIHexV0/Data/generals.json
 jq empty WWIIHexV0/Data/terrain_rules.json
 jq empty WWIIHexV0/Data/unit_templates.json
+jq empty WWIIHexV0/Data/black_sea_crisis_1853_scenario.json
+jq empty WWIIHexV0/Data/black_sea_crisis_1853_regions.json
+jq empty WWIIHexV0/Data/victorian_powers.json
+jq empty WWIIHexV0/Data/victorian_unit_templates.json
+jq empty WWIIHexV0/Data/victorian_personas.json
+jq empty WWIIHexV0/Data/victorian_terrain_rules.json
+python3 tools/validate_black_sea_data.py
 ```
 
 ### 2.5 Swift 单文件语法
@@ -103,7 +110,8 @@ swiftc -parse path/to/ChangedFile.swift
 - `git diff --check`
 - `plutil -lint WWIIHexV0.xcodeproj/project.pbxproj`
 - `xmllint --noout` 检查共享 scheme
-- `jq empty` 检查核心 JSON 数据
+- `jq empty` 检查核心 JSON 数据，包括 legacy 阿登数据和 v5.2 黑海 / 维多利亚数据
+- `python3 tools/validate_black_sea_data.py` 检查黑海危机 scenario、regions、unit templates、personas、powers 的交叉引用
 - `xcodebuild build`，工程 `WWIIHexV0.xcodeproj`，scheme `WWIIHexV0`，configuration `Debug`，destination `generic/platform=iOS`，`CODE_SIGNING_ALLOWED=NO`
 - XCTest / Probe 默认在 workflow manifest 中标记 `skipped`，直到项目明确选择稳定的云端模拟器矩阵
 
