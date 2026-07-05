@@ -103,7 +103,7 @@ enum MapEditorGameResourceBridge {
             MapEditorUnitDraft(
                 id: unit.id,
                 name: unit.name,
-                faction: Faction(rawValue: unit.faction) ?? .allies,
+                faction: Faction(rawValue: unit.faction) ?? .neutral,
                 templateId: unit.templateId,
                 coord: HexCoord(q: unit.coord.q, r: unit.coord.r),
                 facing: HexDirection(rawValue: unit.facing) ?? .west,

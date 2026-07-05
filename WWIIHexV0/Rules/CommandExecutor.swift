@@ -299,6 +299,7 @@ struct CommandExecutor {
                 state: state.warDeploymentState,
                 map: state.map,
                 divisions: state.divisions,
+                diplomacyState: state.diplomacyState,
                 turn: state.turn
             )
         }

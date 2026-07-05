@@ -52,6 +52,7 @@ struct StrategicStateBootstrapper {
                 from: next.theaterState,
                 map: next.map,
                 divisions: next.divisions,
+                diplomacyState: next.diplomacyState,
                 turn: next.turn
             )
             next.appendEvent(
@@ -91,6 +92,7 @@ struct StrategicStateBootstrapper {
             from: next.theaterState,
             map: next.map,
             divisions: next.divisions,
+            diplomacyState: next.diplomacyState,
             turn: next.turn
         )
         next.warDeploymentState = rebuiltDeployment.preservingGeneralAssignments(from: state.warDeploymentState)

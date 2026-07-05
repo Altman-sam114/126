@@ -55,6 +55,7 @@ struct DataLoader {
                 map: state.map,
                 theaterState: state.theaterState,
                 divisions: state.divisions,
+                diplomacyState: state.diplomacyState,
                 turn: state.turn
             )
             state.warDeploymentState = assignGenerals(
@@ -104,6 +105,7 @@ struct DataLoader {
         let phase = initialPhase(for: scenario, activeFaction: activeFaction)
         let turnOrder = initialTurnOrder(for: scenario, activeFaction: activeFaction, divisions: divisions)
         let humanControlledFactions = initialHumanControlledFactions(for: scenario)
+        let diplomacyState = DiplomacyState.initial(from: scenario.factions, turn: turn)
 
         let theaterState = makeTheaterState(
             map: map,
@@ -115,6 +117,7 @@ struct DataLoader {
             map: map,
             theaterState: theaterState,
             divisions: divisions,
+            diplomacyState: diplomacyState,
             turn: turn
         )
         let deploymentState = WarDeploymentManager().makeInitialState(
@@ -141,7 +144,7 @@ struct DataLoader {
             theaterState: theaterState,
             frontLineState: frontLineState,
             warDeploymentState: warDeploymentState,
-            diplomacyState: DiplomacyState.initial(from: scenario.factions, turn: turn),
+            diplomacyState: diplomacyState,
             divisions: divisions,
             victoryState: .ongoing,
             selectedUnitSummary: nil,
@@ -160,12 +163,21 @@ struct DataLoader {
         let phase = GamePhase(rawValue: scenario.initialPhase) ?? .alliedPlayer
         switch phase {
         case .alliedPlayer, .humanAction:
-            return Faction(rawValue: scenario.playerFaction) ?? .allies
+            return faction(from: scenario.playerFaction, in: scenario) ?? .neutral
         case .germanAI, .aiAction:
-            return Faction(rawValue: scenario.aiFaction) ?? .germany
+            return faction(from: scenario.aiFaction, in: scenario) ?? .neutral
         case .resolution, .diplomacyResolution:
-            return Faction(rawValue: scenario.playerFaction) ?? .allies
+            return faction(from: scenario.playerFaction, in: scenario) ?? .neutral
         }
+    }
+
+    private func faction(from rawValue: String, in scenario: ScenarioDefinition) -> Faction? {
+        if let faction = Faction(rawValue: rawValue) {
+            return faction
+        }
+        return scenario.factions
+            .compactMap(Faction.init(rawValue:))
+            .first { $0.participatesInTurnOrder && !$0.isNeutral }
     }
 
     private func initialPhase(for scenario: ScenarioDefinition, activeFaction: Faction) -> GamePhase {

@@ -53,6 +53,7 @@ struct StrategicStateSynchronizer {
             state: state.warDeploymentState,
             map: state.map,
             divisions: state.divisions,
+            diplomacyState: state.diplomacyState,
             turn: syncTurn,
             events: deploymentEvents
         )

@@ -1178,6 +1178,7 @@ struct WarCommandExecutor {
                 state: state.warDeploymentState,
                 map: state.map,
                 divisions: state.divisions,
+                diplomacyState: state.diplomacyState,
                 turn: state.turn,
                 events: deploymentEvents
             )
@@ -1216,13 +1217,17 @@ struct WarCommandExecutor {
             return nil
         }
 
+        guard let advancingFaction = state.warDeploymentState.frontZones[advancingZoneId]?.faction else {
+            return nil
+        }
+
         let expansion = TheaterSystem().expandDynamicTheater(
             state: state.theaterState,
             map: state.map,
             divisions: state.divisions,
             breakthroughHex: hex,
             advancingTheaterId: advancingTheaterId,
-            faction: state.warDeploymentState.frontZones[advancingZoneId]?.faction ?? .germany
+            faction: advancingFaction
         )
         state.theaterState = expansion.state
 
@@ -1235,6 +1240,7 @@ struct WarCommandExecutor {
                 state: state.warDeploymentState,
                 map: state.map,
                 divisions: state.divisions,
+                diplomacyState: state.diplomacyState,
                 turn: state.turn
             )
         }
