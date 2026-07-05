@@ -101,7 +101,7 @@
 验证记录：
 
 - 本机轻量检查：`swiftc -parse` 覆盖本轮 Swift 改动文件通过；`jq empty WWIIHexV0/Data/victorian_unit_templates.json` 通过；`python3 -m py_compile tools/validate_black_sea_data.py` 通过；`python3 tools/validate_black_sea_data.py` 通过，输出 `Black Sea data ok: 120 tiles, 40 regions, 17 units, 6 generals, 4 agents.`。
-- 云端重验证：物流规则切片已由 run `28732229919` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-70f45c5-run28732229919-attempt1` 核对通过；显示适配切片已由 run `28732813059` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-5fc74de-run28732813059-attempt1` 核对通过；组件 schema 切片待本轮 commit / push 到 `origin/main` 后由 `WWIIHexV0 CI Results` 生成结果包并由 Agent C 核对。
+- 云端重验证：物流规则切片已由 run `28732229919` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-70f45c5-run28732229919-attempt1` 核对通过；显示适配切片已由 run `28732813059` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-5fc74de-run28732813059-attempt1` 核对通过；组件 schema 切片已由 run `28733588844` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-3647145-run28733588844-attempt1` 核对通过。
 
 遗留事项：
 
