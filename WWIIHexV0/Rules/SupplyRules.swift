@@ -98,8 +98,8 @@ struct SupplyRules {
     }
 
     func hasSupplyLine(for division: Division, in state: GameState) -> Bool {
-        state.map.supplySources(for: division.faction).contains { source in
-            supplyPathCost(from: division.coord, to: source.coord, for: division.faction, in: state) <= maxSupplyPathCost
+        supplyAnchorCoords(for: division.faction, in: state).contains { coord in
+            supplyPathCost(from: division.coord, to: coord, for: division.faction, in: state) <= maxSupplyPathCost
         }
     }
 
@@ -235,12 +235,12 @@ struct SupplyRules {
     }
 
     private func retreatSortKey(for coord: HexCoord, faction: Faction, in state: GameState) -> RetreatSortKey {
-        let supplySources = state.map.supplySources(for: faction)
-        let pathCost = supplySources
-            .map { supplyPathCost(from: coord, to: $0.coord, for: faction, in: state) }
+        let supplyAnchors = supplyAnchorCoords(for: faction, in: state)
+        let pathCost = supplyAnchors
+            .map { supplyPathCost(from: coord, to: $0, for: faction, in: state) }
             .min() ?? Int.max
-        let sourceDistance = supplySources
-            .map { coord.distance(to: $0.coord) }
+        let sourceDistance = supplyAnchors
+            .map { coord.distance(to: $0) }
             .min() ?? Int.max
         let tileCost = state.map.tile(at: coord).map(supplyCost(entering:)) ?? Int.max
 
@@ -255,6 +255,13 @@ struct SupplyRules {
 
     private func recoverDivision(at index: Int, hp: Int, in state: inout GameState) {
         state.divisions[index].reinforceStrength(hp)
+    }
+
+    private func supplyAnchorCoords(for faction: Faction, in state: GameState) -> [HexCoord] {
+        stableUniqueCoords(
+            state.map.supplySources(for: faction).map(\.coord) +
+                state.map.logisticsAnchorCoords(with: .port, for: faction, diplomacyState: state.diplomacyState)
+        )
     }
 
     private func advanceRetreatStatusIfNeeded(for divisionId: String, in state: inout GameState) -> Bool {
@@ -277,12 +284,27 @@ struct SupplyRules {
             return 1
         }
 
+        if tile.logisticsTags.contains(.rail) {
+            return 1
+        }
+
         switch tile.baseTerrain {
         case .mountain:
             return 3
         default:
             return 2
         }
+    }
+
+    private func stableUniqueCoords(_ coords: [HexCoord]) -> [HexCoord] {
+        var seen: Set<HexCoord> = []
+        var result: [HexCoord] = []
+        for coord in coords {
+            if seen.insert(coord).inserted {
+                result.append(coord)
+            }
+        }
+        return result
     }
 }
 

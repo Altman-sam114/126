@@ -104,6 +104,60 @@ struct MapState: Codable, Equatable {
         return tile(at: coord)?.controller
     }
 
+    func hasLogisticsTag(_ tag: LogisticsTag, at coord: HexCoord) -> Bool {
+        tile(at: coord)?.logisticsTags.contains(tag) ?? false
+    }
+
+    func logisticsCoords(with tag: LogisticsTag) -> [HexCoord] {
+        tiles.values
+            .filter { $0.logisticsTags.contains(tag) }
+            .map(\.coord)
+            .sorted { lhs, rhs in
+                if lhs.q != rhs.q {
+                    return lhs.q < rhs.q
+                }
+                return lhs.r < rhs.r
+            }
+    }
+
+    func logisticsAnchorCoords(
+        with tag: LogisticsTag,
+        for faction: Faction,
+        diplomacyState: DiplomacyState
+    ) -> [HexCoord] {
+        tiles.values.compactMap { tile in
+            guard tile.logisticsTags.contains(tag),
+                  let controller = tile.controller,
+                  canUseLogisticsAnchor(controlledBy: controller, for: faction, diplomacyState: diplomacyState) else {
+                return nil
+            }
+            return tile.coord
+        }
+        .sorted { lhs, rhs in
+            if lhs.q != rhs.q {
+                return lhs.q < rhs.q
+            }
+            return lhs.r < rhs.r
+        }
+    }
+
+    private func canUseLogisticsAnchor(
+        controlledBy controller: Faction,
+        for faction: Faction,
+        diplomacyState: DiplomacyState
+    ) -> Bool {
+        guard controller != faction else {
+            return true
+        }
+
+        switch diplomacyState.relationStatus(between: faction, and: controller) {
+        case .allied, .coBelligerent:
+            return true
+        case .neutral, .hostile, .atWar, .truce, .militaryAccess, .blockaded:
+            return false
+        }
+    }
+
     // MARK: - v0.2 Province 查询（战略层叠加）
     // 所有查询委托给 regionGraph 视图。province 默认空时不影响现有 hex 规则。
 

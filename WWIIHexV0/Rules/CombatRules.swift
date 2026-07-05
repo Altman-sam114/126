@@ -66,6 +66,16 @@ struct CombatRules {
         if attacker.isArmor && defenderTile.baseTerrain.armorSlowdownCost > 0 {
             multiplier -= 0.1
         }
+        if attacker.isArtillery {
+            switch defenderTile.baseTerrain {
+            case .fortress:
+                multiplier += 0.35
+            case .city:
+                multiplier += 0.15
+            case .plain, .forest, .mountain, .hill:
+                break
+            }
+        }
 
         return max(1, Int((Double(attacker.attack) * multiplier).rounded()))
     }

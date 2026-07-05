@@ -164,6 +164,7 @@ riverEdges
 controller: Faction?
 cityName / fortressName
 isPassable
+logisticsTags: Set<LogisticsTag>
 regionId: RegionId?
 ```
 
@@ -171,9 +172,11 @@ regionId: RegionId?
 
 - `HexCoord` 是 axial q/r 坐标，移动、攻击、距离、邻接都基于 hex。
 - `HexTile.controller` 是真实占领权威；中立 hex 的 controller 为 `nil`。
+- `HexTile.logisticsTags` 记录 v5.3 起的铁路、港口、海岸、电报、远征 depot、围城 depot 等物流标签；它只提供规则修正和 UI 语义，不替代 hex controller 或 region 聚合。
 - `HexTile.regionId` 是聚合标记，不参与寻路/战斗权威判断。
 - `MapState.region(for:)` 优先读 `hexToRegion`，fallback 读 `tile.regionId`。
 - `MapState.supplySources(for:)` 会通过 `controllingFaction(for:)` 判断补给源当前归属，优先看 supply hex 的 controller，再 fallback region controller，再 fallback 原始 supply faction。
+- `MapState.logisticsAnchorCoords(with:for:diplomacyState:)` 可把己方或 allied / coBelligerent 控制的港口作为补给锚点；单纯 `militaryAccess` 不被视作共同补给。
 
 ### 1.3 Region
 
@@ -1138,6 +1141,14 @@ resolveCombatResult
   attacker 也可能撤退/毁灭
 ```
 
+v5.3 起，炮兵进攻城市和要塞时获得轻量攻城修正，用来表达围城火力准备；该修正只影响 `CombatRules.effectiveAttack`，不直接占领 hex。
+
+移动与物流：
+
+- `MovementRules.movementCost` 仍优先使用 hex 地形、道路和河流。
+- 相邻两格都带 `LogisticsTag.rail` 时，按铁路通行成本处理；只推进移动成本，不改变控制权。
+- 黑海危机 JSON 可显式写 `logisticsTags`，`DataLoader` 也会从 `keyLocations.kind == port` 派生港口标签。
+
 结束回合：
 
 ```text
@@ -1161,6 +1172,8 @@ resetActionsForActiveFaction
 StrategicStateBootstrapper.refreshRuntimeState
 appendEvent("Turn advanced ...")
 ```
+
+`SupplyRules` 当前补给锚点包括正式 `SupplySource` 和受控港口。港口必须由本方、allied 或 coBelligerent 控制才可为某 faction 提供补给路径；militaryAccess 只允许通行，不自动提供港口补给。
 
 `VictoryRules` 当前先读 `GameState.victoryConditions`。黑海危机等 v5 数据局会使用 scenario JSON 中的 `controlObjective`、`controlObjectives`、`holdObjectives` 条件，并按 `DiplomacyState` 将 allied / coBelligerent 控制计入同一战争目标侧；没有数据条件的 legacy 阿登局才回退到 Bastogne / St. Vith / German armor 旧规则。
 

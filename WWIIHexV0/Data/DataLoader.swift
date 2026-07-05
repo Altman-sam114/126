@@ -475,6 +475,7 @@ struct DataLoader {
         var tiles: [HexCoord: HexTile] = [:]
         var supplySources: [SupplySource] = []
         var objectives: [Objective] = []
+        let keyLocationLogisticsTags = logisticsTagsByCoord(from: scenario.keyLocations)
 
         for tileDefinition in scenario.map.tiles {
             let coord = HexCoord(q: tileDefinition.q, r: tileDefinition.r)
@@ -491,6 +492,17 @@ struct DataLoader {
             let controller = Faction(rawValue: tileDefinition.controller)
             let riverEdges = Set(tileDefinition.riverEdges.compactMap(HexDirection.init(rawValue:)))
             let regionId = tileDefinition.regionId.map { RegionId($0) }
+            let explicitLogisticsTags = tileDefinition.logisticsTags ?? []
+            let unknownLogisticsTags = explicitLogisticsTags.filter { LogisticsTag(rawValue: $0) == nil }
+            if !unknownLogisticsTags.isEmpty {
+                errors.append(
+                    DataValidationError(
+                        message: "Unknown logistics tag(s) \(unknownLogisticsTags.sorted()) at \(coord.q),\(coord.r)."
+                    )
+                )
+            }
+            var logisticsTags = Set(explicitLogisticsTags.compactMap(LogisticsTag.init(rawValue:)))
+            logisticsTags.formUnion(keyLocationLogisticsTags[coord] ?? [])
             let tile = HexTile(
                 coord: coord,
                 baseTerrain: terrain,
@@ -500,6 +512,7 @@ struct DataLoader {
                 cityName: tileDefinition.cityName,
                 fortressName: tileDefinition.fortressName,
                 isPassable: true,
+                logisticsTags: logisticsTags,
                 regionId: regionId
             )
             tiles[coord] = tile
@@ -543,6 +556,39 @@ struct DataLoader {
             supplySources: supplySources,
             objectives: objectives
         )
+    }
+
+    private func logisticsTagsByCoord(from keyLocations: [KeyLocationDefinition]) -> [HexCoord: Set<LogisticsTag>] {
+        var result: [HexCoord: Set<LogisticsTag>] = [:]
+        for keyLocation in keyLocations {
+            let coord = HexCoord(q: keyLocation.coord.q, r: keyLocation.coord.r)
+            guard let tag = logisticsTag(forKeyLocationKind: keyLocation.kind) else {
+                continue
+            }
+            result[coord, default: []].insert(tag)
+        }
+        return result
+    }
+
+    private func logisticsTag(forKeyLocationKind kind: String) -> LogisticsTag? {
+        switch kind {
+        case "port":
+            return .port
+        case "rail", "railhead", "railway":
+            return .rail
+        case "coast":
+            return .coast
+        case "coal", "coalStation", "coal_station":
+            return .coalStation
+        case "telegraph":
+            return .telegraph
+        case "expeditionaryDepot", "expeditionary_depot":
+            return .expeditionaryDepot
+        case "siegeDepot", "siege_depot":
+            return .siegeDepot
+        default:
+            return nil
+        }
     }
 
     private func makeVictoryConditions(from definitions: [VictoryConditionDefinition]) -> [VictoryCondition] {

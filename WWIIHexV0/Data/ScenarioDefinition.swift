@@ -47,6 +47,7 @@ struct ScenarioTileDefinition: Codable, Equatable {
     let isSupplySource: Bool
     let supplyFaction: String?
     let objectiveId: String?
+    let logisticsTags: [String]?
     let regionId: String?
 
     var coord: HexCoordDefinition {

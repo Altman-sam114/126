@@ -202,6 +202,7 @@
         "isSupplySource": false,
         "supplyFaction": null,
         "objectiveId": "obj_constantinople",
+        "logisticsTags": ["port", "coast", "telegraph"],
         "regionId": "region_05"
       },
       {
@@ -244,6 +245,7 @@
         "isSupplySource": true,
         "supplyFaction": "ottoman",
         "objectiveId": null,
+        "logisticsTags": ["rail", "telegraph"],
         "regionId": "region_06"
       },
       {
@@ -314,6 +316,7 @@
         "isSupplySource": false,
         "supplyFaction": null,
         "objectiveId": "obj_odessa",
+        "logisticsTags": ["port", "coast", "rail"],
         "regionId": "region_08"
       },
       {
@@ -412,6 +415,7 @@
         "isSupplySource": false,
         "supplyFaction": null,
         "objectiveId": null,
+        "logisticsTags": ["rail"],
         "regionId": "region_10"
       },
       {
@@ -580,6 +584,7 @@
         "isSupplySource": false,
         "supplyFaction": null,
         "objectiveId": "obj_silistra",
+        "logisticsTags": ["siegeDepot"],
         "regionId": "region_14"
       },
       {
@@ -622,6 +627,7 @@
         "isSupplySource": false,
         "supplyFaction": null,
         "objectiveId": "obj_sevastopol",
+        "logisticsTags": ["port", "coast", "siegeDepot"],
         "regionId": "region_15"
       },
       {
@@ -720,6 +726,7 @@
         "isSupplySource": false,
         "supplyFaction": null,
         "objectiveId": "obj_varna",
+        "logisticsTags": ["port", "coast", "expeditionaryDepot"],
         "regionId": "region_17"
       },
       {
@@ -848,6 +855,7 @@
         "isSupplySource": false,
         "supplyFaction": null,
         "objectiveId": null,
+        "logisticsTags": ["port", "coast"],
         "regionId": "region_20"
       },
       {
@@ -1016,6 +1024,7 @@
         "isSupplySource": false,
         "supplyFaction": null,
         "objectiveId": "obj_danube_mouth",
+        "logisticsTags": ["port", "siegeDepot"],
         "regionId": "region_24"
       },
       {
@@ -1268,6 +1277,7 @@
         "isSupplySource": false,
         "supplyFaction": null,
         "objectiveId": null,
+        "logisticsTags": ["rail", "telegraph"],
         "regionId": "region_30"
       },
       {
@@ -1408,6 +1418,7 @@
         "isSupplySource": true,
         "supplyFaction": "sardinia",
         "objectiveId": null,
+        "logisticsTags": ["port", "coast", "expeditionaryDepot"],
         "regionId": "region_33"
       },
       {
@@ -1436,6 +1447,7 @@
         "isSupplySource": true,
         "supplyFaction": "austria",
         "objectiveId": null,
+        "logisticsTags": ["rail"],
         "regionId": "region_34"
       },
       {
@@ -2153,8 +2165,8 @@
     }
   ],
   "dataNotes": [
-    "v5.2 seed scenario for Steam & Empire Agent migration.",
-    "120 hexes, 40 regions, and six active Victorian powers use existing ScenarioDefinition schema.",
-    "Rail, port, coal station, and telegraph semantics are represented as roads, city/fortress nodes, region infrastructure, and notes until v5.3-v5.4 schema expansion."
+    "v5.2 seed scenario for Steam & Empire Agent migration; v5.3 starts typed logistics tag loading.",
+    "120 hexes, 40 regions, and six active Victorian powers use backwards-compatible ScenarioDefinition schema.",
+    "Rail, port, telegraph, expeditionary depot, and siege depot semantics are represented with optional tile logisticsTags plus existing roads, city/fortress nodes, and region infrastructure."
   ]
 }

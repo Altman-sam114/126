@@ -15,8 +15,8 @@
 | 文档 | 状态 | 用途 |
 |---|---|---|
 | `md/prompt/v5.0-维多利亚迁移/v5.0_audit_and_contract.md` | 已形成审计合同 | 记录硬编码、二元阵营、旧 phase、旧资源、旧单位、旧 UI 和 v5.1-v5.5 风险边界 |
-| `md/prompt/v5.0-维多利亚迁移/v5.1_powers_turns_diplomacy_prompt.md` | 已形成 Agent B 执行提示词，本地工作树已有基础实现切片 | 用于核对多国家、通用回合、外交关系和敌我判断；尚需 commit / push / CI / Agent C 验收 |
-| `md/plan/plan.md`、`README.md`、`AGENTS.md`、`update_log.md` | 已按维多利亚方向同步过口径，但工作树可能仍有未提交改动 | 当前可记录 v5.1 本地落地状态，但不得写成全量 v5 迁移完成 |
+| `md/prompt/v5.0-维多利亚迁移/v5.1_powers_turns_diplomacy_prompt.md` | 历史阶段提示词 | 用于核对多国家、通用回合、外交关系和敌我判断的阶段边界，不代表后续 v5.3+ 已完成 |
+| `md/plan/plan.md`、`README.md`、`AGENTS.md`、`update_log.md` | 已按维多利亚方向持续同步口径 | 当前可记录已落地切片，但不得写成全量 v5 迁移完成 |
 
 当前执行制度：
 
@@ -59,7 +59,7 @@ MapEditor / JSON 数据
 - `hexToFrontZone` 是部署层动态归属权威。
 - 玩家、AI、聊天命令和 MockAI 都必须落到 `Command` / `ZoneDirective`，再经 `WarCommandExecutor`、`CommandValidator`、`RuleEngine` 执行。
 - Legacy Agent D 管线保留作回归参考，默认战争 AI 主路径不得退回旧管线。
-- v5.1 本地切片已把 `Faction` 扩展为 legacy Germany / Allies 加 Britain、France、Russia、Ottoman、Austria、Sardinia、Neutral，并新增通用 `humanAction` / `aiAction` / `diplomacyResolution`、`turnOrder`、`humanControlledFactions` 和 `DiplomacyState.canAttack` / `canEnterTerritory` 入口；但该切片尚未经过 commit / push / GitHub Actions / Agent C 结果包验收，默认数据和大量 UI/测试仍保留 legacy Germany / Allies。
+- v5.1 切片已把 `Faction` 扩展为 legacy Germany / Allies 加 Britain、France、Russia、Ottoman、Austria、Sardinia、Neutral，并新增通用 `humanAction` / `aiAction` / `diplomacyResolution`、`turnOrder`、`humanControlledFactions` 和 `DiplomacyState.canAttack` / `canEnterTerritory` 入口；v5.2 已把默认数据入口切到黑海危机；v5.3 已开始接入 typed `logisticsTags`、铁路移动、同盟港口补给锚点和炮兵攻城修正。默认数据和大量 UI/测试仍保留 legacy Germany / Allies。
 - 当前单位模型叫 `Division`，兵种仍是 `tank/motorizedInfantry/infantry/artillery`。
 - 当前经济模型仍是 `manpower/industry/supplies`，生产项仍有 `panzerDivision` 等二战语义。
 - 当前默认数据和 UI 仍有阿登、Germany、Allies、Bastogne、Panzer、Division、German AI、Allied Player、Manpower、Industry、Supplies 等玩家可见残留。

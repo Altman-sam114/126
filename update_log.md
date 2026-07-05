@@ -52,6 +52,41 @@
 - 2026-07-05：根据 run `28730699270` 结果包修复前线层外交补线的云端构建问题。该 run 的 manifest 显示 `staticChecksOutcome=success`、`buildOutcome=failure`，xcodebuild 报 `WWIIHexV0/Rules/FrontLineManager.swift` 中 `isOperationalOpponent` 的 legacy fallback 分支缺少 `return`；本轮补回返回值，不改变外交状态优先判断逻辑。
 - 2026-07-05：补齐黑海危机数据驱动胜利条件。`GameState` 保存 scenario `victoryConditions`，`VictoryRules` 优先执行 `controlObjective`、`controlObjectives`、`holdObjectives` 数据条件，并按外交关系把 allied / coBelligerent 控制计入同一战争目标侧；legacy 阿登无数据条件时继续使用 Bastogne / St. Vith / German armor fallback。新增 `RuleEngineCoreTests` 覆盖黑海条件加载和联军目标控制胜利路径。
 
+## v5.3 - 维多利亚物流规则起步切片
+
+完成日期：2026-07-05
+
+核心更新：
+
+- 新增 `LogisticsTag` 和 `HexTile.logisticsTags`，黑海危机 scenario tile 可显式标注 `rail`、`port`、`coast`、`telegraph`、`expeditionaryDepot`、`siegeDepot`；旧存档/旧测试夹具缺字段时默认空标签。
+- `DataLoader` 读取 scenario `logisticsTags`，并可从 `keyLocations.kind == port` 派生港口标签；`tools/validate_black_sea_data.py` 增加物流标签白名单检查。
+- `MapState` 增加物流标签查询和港口补给锚点查询；只有本方、allied 或 coBelligerent 控制的港口可作为补给锚点，单纯 `militaryAccess` 不算共同补给。
+- `MovementRules` 对相邻双 `rail` hex 使用铁路通行成本；`SupplyRules` 把正式 supply source 与可用港口合并为补给锚点；`CombatRules` 给炮兵攻击城市/要塞增加轻量攻城修正。
+- 黑海危机数据标注 Constantinople、Odessa、Varna、Sevastopol、Danube Forts、Balaklava、Bucharest 等关键港口、铁路、电报和围城节点。
+
+关键文件：
+
+- `WWIIHexV0/Core/Terrain.swift`
+- `WWIIHexV0/Core/MapState.swift`
+- `WWIIHexV0/Data/ScenarioDefinition.swift`
+- `WWIIHexV0/Data/DataLoader.swift`
+- `WWIIHexV0/Data/black_sea_crisis_1853_scenario.json`
+- `WWIIHexV0/Rules/MovementRules.swift`
+- `WWIIHexV0/Rules/SupplyRules.swift`
+- `WWIIHexV0/Rules/CombatRules.swift`
+- `WWIIHexV0/Tests/RuleEngineCoreTests.swift`
+- `tools/validate_black_sea_data.py`
+
+验证记录：
+
+- 本机轻量检查：`swiftc -parse` 覆盖本轮 Swift 改动文件通过；`jq empty WWIIHexV0/Data/black_sea_crisis_1853_scenario.json` 通过；`python3 tools/validate_black_sea_data.py` 通过，输出 `Black Sea data ok: 120 tiles, 40 regions, 17 units, 6 generals, 4 agents.`。
+- 云端重验证：待本轮 commit / push 到 `origin/main` 后由 `WWIIHexV0 CI Results` 生成结果包并由 Agent C 核对。
+
+遗留事项：
+
+- `ComponentType.tank/motorizedInfantry`、维多利亚兵种 schema、完整围城状态、多回合封锁、海权、铁路建设命令、港口/铁路 UI 图标和 MapEditor 新字段编辑能力仍待 v5.3-v5.7 后续切片。
+- 本轮只做规则层最小可观察效果，未引入完整全球市场、完整海军战术或复杂远征状态机。
+
 ## v0 - 六角格测试板
 
 完成日期：2026-06-14 至 2026-06-15

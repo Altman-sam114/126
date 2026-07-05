@@ -7,8 +7,10 @@ struct MovementPath: Equatable {
 
 struct MovementRules {
     func movementCost(from: HexTile, to: HexTile, direction: HexDirection) -> Int {
-        var cost = from.hasRoad && to.hasRoad ? 1 : to.baseTerrain.movementCost
-        if hasRiverCrossing(from: from, to: to, direction: direction), !(from.hasRoad && to.hasRoad) {
+        let usesRoad = from.hasRoad && to.hasRoad
+        let usesRail = from.logisticsTags.contains(.rail) && to.logisticsTags.contains(.rail)
+        var cost = usesRoad || usesRail ? 1 : to.baseTerrain.movementCost
+        if hasRiverCrossing(from: from, to: to, direction: direction), !usesRoad, !usesRail {
             cost += 2
         }
         return cost

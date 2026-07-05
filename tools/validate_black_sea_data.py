@@ -66,6 +66,15 @@ def main() -> int:
     if len(tile_keys) != len(set(tile_keys)):
         errors.append("scenario.map.tiles contains duplicate coordinates.")
     tile_key_set = set(tile_keys)
+    allowed_logistics_tags = {
+        "rail",
+        "port",
+        "coast",
+        "coalStation",
+        "telegraph",
+        "expeditionaryDepot",
+        "siegeDepot",
+    }
 
     for tile in tiles:
         tile_key = f"{tile['q']},{tile['r']}"
@@ -81,6 +90,9 @@ def main() -> int:
         supply_faction = tile.get("supplyFaction")
         if tile.get("isSupplySource") and supply_faction not in factions:
             errors.append(f"tile {tile_key} has unknown supplyFaction {supply_faction}.")
+        unknown_logistics_tags = set(tile.get("logisticsTags", [])) - allowed_logistics_tags
+        if unknown_logistics_tags:
+            errors.append(f"tile {tile_key} has unknown logisticsTags: {sorted(unknown_logistics_tags)}")
 
     for key, region_id in regions.get("hexToRegion", {}).items():
         if key not in tile_key_set:

@@ -352,8 +352,8 @@ Bottom Strip:
 |---|---|---|---|
 | v5.0 | 迁移审计、产品合同和维多利亚术语层 | 已形成 `md/prompt/v5.0-维多利亚迁移/v5.0_audit_and_contract.md`：二战硬编码审计、术语表、首发剧本、版本边界、并发方案 | 不做大范围重命名，不实现完整维多利亚玩法 |
 | v5.1 | 多国家、通用回合、外交关系和敌我判断 | 已形成 `md/prompt/v5.0-维多利亚迁移/v5.1_powers_turns_diplomacy_prompt.md`；多国家 `Faction`、通用 action phase、turn order、人控势力集合、集中外交可攻击/可通行判断、neutral fallback 已通过 commit `2919c49` 云端验收 | 后续仍要清理测试、UI、胜利条件和 legacy 数据残留 |
-| v5.2 | 黑海危机地图、剧本数据和地图编辑器迁移 | 已开始接入 `black_sea_crisis_1853` 默认入口、维多利亚 regions、powers、unit templates、personas、terrain rules，并保留 legacy 阿登加载入口 | 铁路/港口/煤站/电报暂以 notes、道路、城市/要塞、infrastructure 表达；正式规则留 v5.3-v5.4 |
-| v5.3 | 维多利亚军队、铁路补给、港口远征和围城规则 | 步兵/近卫/骑兵/炮兵/工兵/补给纵队、铁路/港口/要塞规则 | 不追求复杂军事仿真 |
+| v5.2 | 黑海危机地图、剧本数据和地图编辑器迁移 | 已接入 `black_sea_crisis_1853` 默认入口、维多利亚 regions、powers、unit templates、personas、terrain rules，并保留 legacy 阿登加载入口 | MapEditor 新字段编辑能力仍需后续补齐 |
+| v5.3 | 维多利亚军队、铁路补给、港口远征和围城规则 | 已开始接入 typed `logisticsTags`、铁路移动成本、己方/同盟港口补给锚点和炮兵攻城修正 | 兵种 enum、完整围城状态、海权封锁和 UI 可视化仍未完成 |
 | v5.4 | 工业经济、预算、动员和建设命令 | 国库、工业、补给、铁路运输力、船运量、威望、战争支持，建设/动员命令 | 不做完整全球市场 |
 | v5.5 | 外交危机、战争目标、列强干预和舆论压力 | DiplomaticPlay、warGoal、backers、escalation、战争支持和谈判 | 外交不直接占领 hex |
 | v5.6 | 维多利亚 Agent 指挥链和结构化 JSON 合同 | HeadOfState / Cabinet / Foreign / War / Treasury / Admiralty / GeneralStaff / Theater Agent | 真实 LLM 单独版本，不硬编码密钥 |
@@ -365,7 +365,8 @@ Bottom Strip:
 
 - `Faction.germany/allies`、`Faction.opponent`、`GamePhase.germanAI/alliedPlayer`、`CommandValidator.phaseAllowsCommands` 和 `CommandExecutor.executeEndTurn` 的主路径已在本地 v5.1 切片中开始迁移；后续仍要清理测试、UI 和 legacy 数据残留。
 - `DataLoader` 默认资源已开始切到黑海危机；`DiplomacyState` 对 `black_sea_crisis_1853` 有场景化初始关系，英法奥斯曼撒丁对俄开战，奥地利保持武装中立压力；Guderian 专项校验只限 legacy 阿登数据，旧 `playerFaction` / `aiFaction` 字段仍保留作 schema 兼容。
-- `ComponentType.tank/motorizedInfantry`、`ProductionKind.panzerDivision`、`EconomyResources.manpower/industry/supplies` 和默认 `unit_templates.json` 是 v5.3-v5.4 必修点。
+- `HexTile.logisticsTags` 已开始承载铁路、港口、电报、远征 depot 和围城 depot；`SupplyRules` 可把本方或 allied / coBelligerent 控制的港口作为补给锚点，单纯 `militaryAccess` 不算共同补给。
+- `ComponentType.tank/motorizedInfantry`、`ProductionKind.panzerDivision`、`EconomyResources.manpower/industry/supplies` 和完整维多利亚单位显示/生产语义仍是 v5.3-v5.4 必修点。
 - `DiplomacyState` 已有 `CountryProfile` 基础，并开始支持 Black Sea Crisis 多国家默认关系；后续仍需把外交危机、战争目标、后援方、升级和谈判迁入规则状态。
 - `VictoryRules` 对黑海危机已改为读取 scenario `victoryConditions`，但外交危机、谈判结果、威望和战争支持仍未接入完整战争目标系统。
 

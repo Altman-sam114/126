@@ -28,6 +28,10 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertEqual(rules.movementCost(from: plainRoad, to: forest, direction: .east), 2)
         XCTAssertEqual(rules.movementCost(from: riverPlain, to: forest, direction: .east), 4)
         XCTAssertEqual(fortress.baseTerrain.defenseBonus, 4)
+
+        let railStart = HexTile(coord: HexCoord(q: 0, r: 0), baseTerrain: .plain, logisticsTags: [.rail])
+        let railMountain = HexTile(coord: HexCoord(q: 1, r: 0), baseTerrain: .mountain, logisticsTags: [.rail])
+        XCTAssertEqual(rules.movementCost(from: railStart, to: railMountain, direction: .east), 1)
     }
 
     func testLegalMoveChangesCoordFacingAndActedState() {
@@ -652,6 +656,61 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertTrue(state.victoryConditions.contains { $0.id == "victory_allied_sevastopol" })
     }
 
+    func testBlackSeaLogisticsTagsLoadIntoMap() {
+        let state = DataLoader().loadInitialGameState()
+
+        XCTAssertEqual(state.scenarioId, "black_sea_crisis_1853")
+        XCTAssertTrue(state.map.hasLogisticsTag(.port, at: HexCoord(q: 2, r: 4)))
+        XCTAssertTrue(state.map.hasLogisticsTag(.rail, at: HexCoord(q: 4, r: 7)))
+        XCTAssertTrue(state.map.hasLogisticsTag(.siegeDepot, at: HexCoord(q: 7, r: 3)))
+    }
+
+    func testCoalitionPortCanAnchorSupplyButMilitaryAccessDoesNot() {
+        var coalitionMap = Self.basicMap(width: 3, height: 1, supplySources: [])
+        coalitionMap.setTile(
+            HexTile(
+                coord: HexCoord(q: 0, r: 0),
+                controller: .france,
+                logisticsTags: [.port]
+            )
+        )
+        let british = Self.division(id: "british", faction: .britain, coord: HexCoord(q: 2, r: 0))
+        let coalitionState = Self.testState(
+            activeFaction: .britain,
+            map: coalitionMap,
+            diplomacyState: DiplomacyState.initial(
+                for: [.britain, .france, .russia, .ottoman, .austria, .sardinia],
+                scenarioId: "black_sea_crisis_1853",
+                turn: 1
+            ),
+            divisions: [british]
+        )
+
+        XCTAssertTrue(SupplyRules().hasSupplyLine(for: british, in: coalitionState))
+
+        var accessMap = Self.basicMap(width: 3, height: 1, supplySources: [])
+        accessMap.setTile(
+            HexTile(
+                coord: HexCoord(q: 0, r: 0),
+                controller: .ottoman,
+                logisticsTags: [.port]
+            )
+        )
+        let austrian = Self.division(id: "austrian", faction: .austria, coord: HexCoord(q: 2, r: 0))
+        let accessState = Self.testState(
+            activeFaction: .austria,
+            map: accessMap,
+            diplomacyState: DiplomacyState.initial(
+                for: [.britain, .france, .russia, .ottoman, .austria, .sardinia],
+                scenarioId: "black_sea_crisis_1853",
+                turn: 1
+            ),
+            divisions: [austrian]
+        )
+
+        XCTAssertFalse(SupplyRules().hasSupplyLine(for: austrian, in: accessState))
+    }
+
     func testBlackSeaCoalitionControlCanSatisfyScenarioVictory() throws {
         var state = DataLoader().loadInitialGameState()
         let sevastopol = try XCTUnwrap(state.map.objective(id: "obj_sevastopol")?.coord)
@@ -727,6 +786,20 @@ final class RuleEngineCoreTests: XCTestCase {
         map: MapState,
         divisions: [Division]
     ) -> GameState {
+        testState(
+            activeFaction: activeFaction,
+            map: map,
+            diplomacyState: .empty,
+            divisions: divisions
+        )
+    }
+
+    private static func testState(
+        activeFaction: Faction,
+        map: MapState,
+        diplomacyState: DiplomacyState,
+        divisions: [Division]
+    ) -> GameState {
         GameState(
             scenarioId: "test",
             turn: 1,
@@ -734,6 +807,7 @@ final class RuleEngineCoreTests: XCTestCase {
             activeFaction: activeFaction,
             phase: activeFaction == .germany ? .germanAI : .alliedPlayer,
             map: map,
+            diplomacyState: diplomacyState,
             divisions: divisions,
             victoryState: .ongoing,
             selectedUnitSummary: nil,
