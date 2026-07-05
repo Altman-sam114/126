@@ -179,6 +179,10 @@ struct CommandValidator {
             return .invalid(.wrongFaction)
         }
 
+        guard EconomyRules().constructionSiteIsValid(kind: kind, tile: tile) else {
+            return .invalid(.invalidConstructionSite)
+        }
+
         guard EconomyRules().canQueueConstruction(
             kind: kind,
             target: target,

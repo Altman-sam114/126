@@ -125,6 +125,8 @@
 - `RegionInspectorView` 新增物流只读展示：所选 hex 显示物流标签，region 显示从 hex 聚合得到的标签数量，继续保持 hex 为物流权威。
 - 新增 `ConstructionKind.railway`、`ConstructionOrder` 和 `Command.queueConstruction(kind:target:)` 起步切片；铁路工程从经济面板选中 hex 后经 `RuleEngine` 扣费入队，回合结算完成时只给目标 hex 添加 `.rail` 物流标签，不改占领、region、theater、front 或 deploy 权威。
 - 新增 `ConstructionKind.fieldWorks` 与 `LogisticsTag.fieldWorks`；野战工事同样从经济面板选中 hex 后经 `RuleEngine` 扣费入队，完成时只给目标 hex 添加 `.fieldWorks` 标签，并由 `CombatRules.terrainDefenseBonus` 提供轻量防御加成，不改任何地图控制权威。
+- 新增 `ConstructionKind.portWorks`；港口工程只能排在已有 `.coast` 标签且尚无 `.port` 的己控 hex 上，完成时只给目标 hex 添加 `.port` 标签，并复用现有同盟/共同作战港口补给锚点规则。
+- `CommandValidationError` 新增 `invalidConstructionSite`，避免把非 coast 建港等站点约束误报为资源不足。
 - `md/flow/flow.md` 同步记录当前经济/生产兼容边界。
 
 关键文件：
@@ -132,6 +134,7 @@
 - `WWIIHexV0/Core/EconomyState.swift`
 - `WWIIHexV0/Core/Terrain.swift`
 - `WWIIHexV0/Data/DataLoader.swift`
+- `WWIIHexV0/Commands/CommandValidation.swift`
 - `WWIIHexV0/Rules/EconomyRules.swift`
 - `WWIIHexV0/Rules/CombatRules.swift`
 - `WWIIHexV0/Commands/Command.swift`

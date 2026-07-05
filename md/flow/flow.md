@@ -512,22 +512,22 @@ EconomyPanelView
 
 这些预算动作只改 faction 级经济账本，不改变 hex 占领、region controller、动态战区或前线。
 
-铁路与野战工事建设由 `Command.queueConstruction(kind:target:)` 进入同一规则系统：
+铁路、野战工事与港口工程建设由 `Command.queueConstruction(kind:target:)` 进入同一规则系统：
 
 ```text
 EconomyPanelView selected hex
   -> AppContainer.queueConstruction
-  -> Command.queueConstruction(kind: .railway / .fieldWorks, target: HexCoord)
+  -> Command.queueConstruction(kind: .railway / .fieldWorks / .portWorks, target: HexCoord)
   -> RuleEngine
   -> CommandValidator.validateConstruction
   -> CommandExecutor.executeQueueConstruction
   -> EconomyRules.queueConstruction
   -> FactionEconomyLedger.constructionQueue
   -> EconomyRules.resolveFactionTurn / advanceConstruction
-  -> MapState.setTile(tile with logisticsTags.insert(.rail / .fieldWorks))
+  -> MapState.setTile(tile with logisticsTags.insert(.rail / .fieldWorks / .port))
 ```
 
-当前 `ConstructionKind` 包含 `railway` 与 `fieldWorks` 起步动作。校验要求目标 hex 存在、可通行、由当前行动势力控制、尚无对应完成物流标签、同一目标未重复排队且账本资源足够。完成时只修改该 hex 的 `logisticsTags`，不改变 `HexTile.controller`、region controller、`regionToTheater`、`hexToTheater`、`hexToFrontZone` 或前线。`.fieldWorks` 是轻量野战工事标签，防守方在该 hex 上通过 `CombatRules.terrainDefenseBonus` 获得防御加成。
+当前 `ConstructionKind` 包含 `railway`、`fieldWorks` 与 `portWorks` 起步动作。校验要求目标 hex 存在、可通行、由当前行动势力控制、尚无对应完成物流标签、同一目标未重复排队且账本资源足够。`portWorks` 额外要求目标 hex 已有 `.coast` 物流标签，完成时添加 `.port`，并自然进入现有港口补给锚点逻辑。完成时只修改该 hex 的 `logisticsTags`，不改变 `HexTile.controller`、region controller、`regionToTheater`、`hexToTheater`、`hexToFrontZone` 或前线。`.fieldWorks` 是轻量野战工事标签，防守方在该 hex 上通过 `CombatRules.terrainDefenseBonus` 获得防御加成。
 
 自动补员在 active faction 结束回合时发生，只处理：
 

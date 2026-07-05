@@ -286,6 +286,7 @@ enum EconomyCommand: String, Codable, Equatable, CaseIterable, Identifiable {
 enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
     case railway
     case fieldWorks
+    case portWorks
 
     var id: String {
         rawValue
@@ -297,6 +298,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
             return "Railway Works"
         case .fieldWorks:
             return "Field Works"
+        case .portWorks:
+            return "Port Works"
         }
     }
 
@@ -306,6 +309,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
             return "tram.fill"
         case .fieldWorks:
             return "shield.lefthalf.filled"
+        case .portWorks:
+            return "ferry.fill"
         }
     }
 
@@ -315,6 +320,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
             return EconomyResources(manpower: 20, industry: 65, supplies: 12)
         case .fieldWorks:
             return EconomyResources(manpower: 14, industry: 35, supplies: 18)
+        case .portWorks:
+            return EconomyResources(manpower: 18, industry: 70, supplies: 26)
         }
     }
 
@@ -324,6 +331,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
             return 2
         case .fieldWorks:
             return 1
+        case .portWorks:
+            return 2
         }
     }
 
@@ -333,6 +342,18 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
             return .rail
         case .fieldWorks:
             return .fieldWorks
+        case .portWorks:
+            return .port
+        }
+    }
+
+    var siteRequirementDescription: String? {
+        switch self {
+        case .portWorks:
+            return "Requires coastal hex"
+        case .railway,
+             .fieldWorks:
+            return nil
         }
     }
 }

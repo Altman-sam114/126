@@ -89,6 +89,7 @@ struct EconomyRules {
         guard let tile = state.map.tile(at: target),
               tile.isPassable,
               tile.controller == faction,
+              constructionSiteIsValid(kind: kind, tile: tile),
               !tile.logisticsTags.contains(kind.completedLogisticsTag) else {
             return false
         }
@@ -500,7 +501,8 @@ struct EconomyRules {
     ) -> Bool {
         guard var tile = state.map.tile(at: order.target),
               tile.isPassable,
-              tile.controller == faction else {
+              tile.controller == faction,
+              constructionSiteIsValid(kind: order.kind, tile: tile) else {
             return false
         }
 
@@ -511,6 +513,16 @@ struct EconomyRules {
         tile.logisticsTags.insert(order.kind.completedLogisticsTag)
         state.map.setTile(tile)
         return true
+    }
+
+    func constructionSiteIsValid(kind: ConstructionKind, tile: HexTile) -> Bool {
+        switch kind {
+        case .portWorks:
+            return tile.logisticsTags.contains(.coast)
+        case .railway,
+             .fieldWorks:
+            return true
+        }
     }
 
     private func deploymentHex(

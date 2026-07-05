@@ -245,7 +245,14 @@ struct EconomyPanelView: View {
     }
 
     private func constructionSummary(_ kind: ConstructionKind) -> String {
-        "Cost \(resourceSummary(kind.cost)) | \(kind.buildTurns) turn(s)"
+        var parts = [
+            "Cost \(resourceSummary(kind.cost))",
+            "\(kind.buildTurns) turn(s)"
+        ]
+        if let siteRequirementDescription = kind.siteRequirementDescription {
+            parts.append(siteRequirementDescription)
+        }
+        return parts.joined(separator: " | ")
     }
 
     private func iconName(for kind: ProductionKind) -> String {
