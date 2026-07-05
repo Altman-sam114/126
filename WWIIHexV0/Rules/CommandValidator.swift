@@ -17,6 +17,8 @@ struct CommandValidator {
             return validateRecoveryCommand(divisionId: divisionId, in: state)
         case .queueProduction(let kind):
             return validateProduction(kind: kind, in: state)
+        case .economy(let command):
+            return validateEconomyCommand(command, in: state)
         case .endTurn:
             return validateEndTurn(in: state)
         }
@@ -136,6 +138,18 @@ struct CommandValidator {
         }
 
         guard EconomyRules().canQueueProduction(kind: kind, faction: state.activeFaction, in: state) else {
+            return .invalid(.insufficientResources)
+        }
+
+        return .valid
+    }
+
+    private func validateEconomyCommand(_ command: EconomyCommand, in state: GameState) -> CommandValidation {
+        guard phaseAllowsCommands(in: state) else {
+            return .invalid(.wrongPhase)
+        }
+
+        guard EconomyRules().canApplyEconomyCommand(command, faction: state.activeFaction, in: state) else {
             return .invalid(.insufficientResources)
         }
 

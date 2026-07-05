@@ -119,25 +119,34 @@
 - 生产完成逻辑按新旧 case 分组生成线列步兵军、近卫旅、骑兵旅、攻城炮兵或补给车队效果，不绕过 `Command.queueProduction -> RuleEngine -> EconomyRules` 管线。
 - `EconomyResources.victorianSummary` 统一经济日志、经济面板成本和 region inspector 输出为 `REC/TRE/STO`，减少默认 UI 中 `MP/IC/SUP` 残留。
 - `Division.isInfantryHeavy` 扩展识别 `lineInfantry`、`guardInfantry`、`colonialInfantry` 和 `irregulars`，让维多利亚组件获得既有步兵地形防御规则兼容。
+- 新增 `EconomyCommand` 和 `Command.economy(command:)`，首批支持 `raiseWarLoan` 与 `buySupplies` 两个预算动作，经 `CommandValidator`、`CommandExecutor` 和 `EconomyRules` 统一执行。
+- `FactionEconomyLedger` 新增 `warDebt` 兼容字段；战争贷款增加 treasury 和 debt，后续回合通过 debt service 消耗 treasury；购买补给消耗 treasury 并增加 stores。
+- `EconomyPanelView` 新增 Budget 区块，展示 debt / debt service，并将预算按钮接入 `AppContainer.executeEconomyCommand`。
 - `md/flow/flow.md` 同步记录当前经济/生产兼容边界。
 
 关键文件：
 
 - `WWIIHexV0/Core/EconomyState.swift`
 - `WWIIHexV0/Rules/EconomyRules.swift`
+- `WWIIHexV0/Commands/Command.swift`
+- `WWIIHexV0/Rules/CommandValidator.swift`
+- `WWIIHexV0/Rules/CommandExecutor.swift`
+- `WWIIHexV0/App/AppContainer.swift`
 - `WWIIHexV0/UI/EconomyPanelView.swift`
 - `WWIIHexV0/UI/RegionInspectorView.swift`
+- `WWIIHexV0/UI/RootGameView.swift`
 - `md/flow/flow.md`
 
 验证记录：
 
 - 本机轻量检查：`swiftc -parse` 覆盖 `EconomyState.swift`、`EconomyRules.swift`、`EconomyPanelView.swift`、`RegionInspectorView.swift` 通过；`git diff --check` 通过；本轮改动文件尾随空白扫描无命中；冲突标记扫描无命中。
 - 云端重验证：run `28734509698` attempt `1` 结果包 `WWIIHexV0-ci-v1-main-aa2935a-run28734509698-attempt1` 已核对，`branch=main`、`commitSha=aa2935a684505ba44ef512eff10aef53bf86f9c3`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
+- `EconomyCommand` 预算动作切片待本轮新 commit push 后由最新 GitHub Actions 结果包复核，并在后续日志条目补入 run id / artifact。
 
 遗留事项：
 
-- `EconomyResources.manpower/industry/supplies` 内部字段仍保留作兼容；完整国库、工业产能、铁路运输力、船运量、战争支持、战争贷款和建设命令仍待后续 v5.4-v5.7 切片。
-- 本轮未引入铁路建设、港口扩建、舰队整备或完整财政/舆论状态机。
+- `EconomyResources.manpower/industry/supplies` 内部字段仍保留作兼容；完整国库、工业产能、铁路运输力、船运量、战争支持和建设命令仍待后续 v5.4-v5.7 切片。
+- 本轮未引入铁路建设、港口扩建、舰队整备或完整财政/舆论状态机；`warDebt` 仅是最小财政压力字段，不等同完整债务/议会系统。
 
 ## v0 - 六角格测试板
 

@@ -7,6 +7,7 @@ enum Command: Codable, Equatable {
     case allowRetreat(divisionId: String)
     case resupply(divisionId: String)
     case queueProduction(kind: ProductionKind)
+    case economy(command: EconomyCommand)
     case endTurn
 
     static func rest(divisionId: String) -> Command {
@@ -31,6 +32,8 @@ enum Command: Codable, Equatable {
             return "Resupply(\(divisionId))"
         case .queueProduction(let kind):
             return "QueueProduction(\(kind.displayName))"
+        case .economy(let command):
+            return "Economy(\(command.displayName))"
         case .endTurn:
             return "End Turn"
         }
@@ -47,6 +50,8 @@ enum Command: Codable, Equatable {
             return attackerId
         case .queueProduction:
             return nil
+        case .economy:
+            return nil
         case .endTurn:
             return nil
         }
@@ -61,6 +66,7 @@ enum Command: Codable, Equatable {
              .hold,
              .allowRetreat,
              .queueProduction,
+             .economy,
              .endTurn:
             return false
         }

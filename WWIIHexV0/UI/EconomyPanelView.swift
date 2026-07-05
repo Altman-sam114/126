@@ -5,6 +5,7 @@ struct EconomyPanelView: View {
     let playerFaction: Faction
     let observerModeEnabled: Bool
     let onQueueProduction: (ProductionKind) -> Void
+    let onEconomyCommand: (EconomyCommand) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -12,6 +13,10 @@ struct EconomyPanelView: View {
                 .font(.headline)
 
             ledgerSection(for: gameState.activeFaction)
+
+            Divider()
+
+            budgetControls
 
             Divider()
 
@@ -45,6 +50,34 @@ struct EconomyPanelView: View {
                     metric("Income TRE", ledger.lastIncome.industry)
                     metric("Upkeep", ledger.lastUpkeep.supplies)
                 }
+
+                GridRow {
+                    metric("Debt", ledger.warDebt)
+                    metric("Debt Service", ledger.lastUpkeep.industry)
+                    metric("Queue", ledger.productionQueue.count)
+                }
+            }
+        }
+    }
+
+    private var budgetControls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Budget")
+                .font(.subheadline.weight(.semibold))
+
+            ForEach(EconomyCommand.allCases) { command in
+                Button {
+                    onEconomyCommand(command)
+                } label: {
+                    Label(command.displayName, systemImage: command.systemImageName)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.bordered)
+                .disabled(!canApply(command))
+
+                Text(economyCommandSummary(command))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -109,13 +142,40 @@ struct EconomyPanelView: View {
 
     private func canQueue(_ kind: ProductionKind) -> Bool {
         !observerModeEnabled &&
-            gameState.activeFaction == playerFaction &&
+            activeFactionIsHumanControlled &&
             gameState.phase.isActionPhase &&
             gameState.economyState.ledger(for: gameState.activeFaction).stockpile.canAfford(kind.cost)
     }
 
+    private func canApply(_ command: EconomyCommand) -> Bool {
+        !observerModeEnabled &&
+            activeFactionIsHumanControlled &&
+            gameState.phase.isActionPhase &&
+            EconomyRules().canApplyEconomyCommand(
+                command,
+                faction: gameState.activeFaction,
+                in: gameState
+            )
+    }
+
     private func resourceSummary(_ resources: EconomyResources) -> String {
         resources.victorianSummary
+    }
+
+    private var activeFactionIsHumanControlled: Bool {
+        gameState.isHumanControlled(gameState.activeFaction) ||
+            gameState.activeFaction == playerFaction
+    }
+
+    private func economyCommandSummary(_ command: EconomyCommand) -> String {
+        var parts = [
+            "Cost \(resourceSummary(command.cost))",
+            "Yield \(resourceSummary(command.immediateYield))"
+        ]
+        if command.debtIncrease > 0 {
+            parts.append("Debt +\(command.debtIncrease)")
+        }
+        return parts.joined(separator: " | ")
     }
 
     private func iconName(for kind: ProductionKind) -> String {

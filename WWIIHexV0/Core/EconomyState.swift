@@ -229,6 +229,60 @@ enum ProductionKind: String, Codable, Equatable, CaseIterable, Identifiable {
     }
 }
 
+enum EconomyCommand: String, Codable, Equatable, CaseIterable, Identifiable {
+    case raiseWarLoan
+    case buySupplies
+
+    var id: String {
+        rawValue
+    }
+
+    var displayName: String {
+        switch self {
+        case .raiseWarLoan:
+            return "Raise War Loan"
+        case .buySupplies:
+            return "Buy Stores"
+        }
+    }
+
+    var systemImageName: String {
+        switch self {
+        case .raiseWarLoan:
+            return "banknote"
+        case .buySupplies:
+            return "shippingbox"
+        }
+    }
+
+    var cost: EconomyResources {
+        switch self {
+        case .raiseWarLoan:
+            return .zero
+        case .buySupplies:
+            return EconomyResources(industry: 35)
+        }
+    }
+
+    var immediateYield: EconomyResources {
+        switch self {
+        case .raiseWarLoan:
+            return EconomyResources(industry: 120)
+        case .buySupplies:
+            return EconomyResources(supplies: 90)
+        }
+    }
+
+    var debtIncrease: Int {
+        switch self {
+        case .raiseWarLoan:
+            return 160
+        case .buySupplies:
+            return 0
+        }
+    }
+}
+
 struct ProductionOrder: Identifiable, Codable, Equatable {
     let id: String
     let faction: Faction
@@ -268,7 +322,19 @@ struct FactionEconomyLedger: Codable, Equatable {
     var lastUpkeep: EconomyResources
     var lastReinforcementSpend: EconomyResources
     var productionQueue: [ProductionOrder]
+    var warDebt: Int
     var lastUpdatedTurn: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case faction
+        case stockpile
+        case lastIncome
+        case lastUpkeep
+        case lastReinforcementSpend
+        case productionQueue
+        case warDebt
+        case lastUpdatedTurn
+    }
 
     init(
         faction: Faction,
@@ -277,6 +343,7 @@ struct FactionEconomyLedger: Codable, Equatable {
         lastUpkeep: EconomyResources = .zero,
         lastReinforcementSpend: EconomyResources = .zero,
         productionQueue: [ProductionOrder] = [],
+        warDebt: Int = 0,
         lastUpdatedTurn: Int = 1
     ) {
         self.faction = faction
@@ -285,7 +352,23 @@ struct FactionEconomyLedger: Codable, Equatable {
         self.lastUpkeep = lastUpkeep
         self.lastReinforcementSpend = lastReinforcementSpend
         self.productionQueue = productionQueue
+        self.warDebt = max(0, warDebt)
         self.lastUpdatedTurn = max(1, lastUpdatedTurn)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.faction = try container.decode(Faction.self, forKey: .faction)
+        self.stockpile = try container.decode(EconomyResources.self, forKey: .stockpile)
+        self.lastIncome = try container.decode(EconomyResources.self, forKey: .lastIncome)
+        self.lastUpkeep = try container.decode(EconomyResources.self, forKey: .lastUpkeep)
+        self.lastReinforcementSpend = try container.decode(
+            EconomyResources.self,
+            forKey: .lastReinforcementSpend
+        )
+        self.productionQueue = try container.decode([ProductionOrder].self, forKey: .productionQueue)
+        self.warDebt = max(0, try container.decodeIfPresent(Int.self, forKey: .warDebt) ?? 0)
+        self.lastUpdatedTurn = max(1, try container.decode(Int.self, forKey: .lastUpdatedTurn))
     }
 }
 

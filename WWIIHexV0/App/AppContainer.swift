@@ -255,6 +255,15 @@ final class AppContainer: ObservableObject {
         submit(.queueProduction(kind: kind))
     }
 
+    func executeEconomyCommand(_ command: EconomyCommand) {
+        guard !observerModeEnabled else {
+            appendInteractionEvent("Budget order rejected: observer mode is read-only.")
+            return
+        }
+
+        submit(.economy(command: command))
+    }
+
     func endTurn() {
         submit(.endTurn)
     }

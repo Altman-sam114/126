@@ -5,6 +5,8 @@ struct EconomyRules {
     private let baseIndustryReserve = 160
     private let baseSupplyReserve = 180
     private let maxAutomaticReinforcementPerDivision = 2
+    private let maxWarDebt = 480
+    private let warDebtServiceDivisor = 20
 
     func makeInitialState(map: MapState, factions: [Faction], turn: Int) -> EconomyState {
         var state = EconomyState(lastResolvedTurn: turn)
@@ -78,6 +80,42 @@ struct EconomyRules {
         return true
     }
 
+    func canApplyEconomyCommand(_ command: EconomyCommand, faction: Faction, in state: GameState) -> Bool {
+        let ledger = state.economyState.ledger(for: faction)
+        guard ledger.stockpile.canAfford(command.cost) else {
+            return false
+        }
+
+        if command.debtIncrease > 0 {
+            return ledger.warDebt + command.debtIncrease <= maxWarDebt
+        }
+
+        return true
+    }
+
+    func applyEconomyCommand(_ command: EconomyCommand, faction: Faction, in state: inout GameState) -> Bool {
+        var ledger = state.economyState.ledger(for: faction)
+        guard canApplyEconomyCommand(command, faction: faction, in: state) else {
+            state.appendEvent(
+                "\(faction.displayName) cannot execute \(command.displayName): budget constraints block the order.",
+                category: .supply
+            )
+            return false
+        }
+
+        ledger.stockpile.subtract(command.cost)
+        ledger.stockpile.add(command.immediateYield)
+        ledger.warDebt = min(maxWarDebt, ledger.warDebt + command.debtIncrease)
+        ledger.lastUpdatedTurn = state.turn
+        state.economyState.updateLedger(ledger)
+
+        state.appendEvent(
+            economyCommandLog(command, faction: faction, ledger: ledger),
+            category: .supply
+        )
+        return true
+    }
+
     func resolveFactionTurn(for faction: Faction, in state: inout GameState) {
         ensureLedger(for: faction, in: &state)
 
@@ -89,7 +127,14 @@ struct EconomyRules {
         let upkeep = supplyUpkeep(for: faction, in: state)
         let paidUpkeep = EconomyResources(supplies: min(ledger.stockpile.supplies, upkeep.supplies))
         ledger.stockpile.subtract(paidUpkeep)
+
+        let debtService = warDebtService(for: ledger)
+        let paidDebtService = min(ledger.stockpile.industry, debtService)
+        ledger.stockpile.subtract(EconomyResources(industry: paidDebtService))
+        ledger.warDebt = max(0, ledger.warDebt - paidDebtService)
         ledger.lastUpkeep = upkeep
+        ledger.lastUpkeep.add(EconomyResources(industry: debtService))
+
         let supplyShortfall = max(0, upkeep.supplies - paidUpkeep.supplies)
 
         if supplyShortfall > 0 {
@@ -199,6 +244,13 @@ struct EconomyRules {
                 partial + 2 + (division.isShockFormation ? 2 : 0) + (division.isArtillery ? 1 : 0)
             }
         return EconomyResources(supplies: upkeep)
+    }
+
+    private func warDebtService(for ledger: FactionEconomyLedger) -> Int {
+        guard ledger.warDebt > 0 else {
+            return 0
+        }
+        return min(ledger.warDebt, max(1, ledger.warDebt / warDebtServiceDivisor))
     }
 
     private func applyStrategicSupplyShortfall(for faction: Faction, in state: inout GameState) {
@@ -479,5 +531,14 @@ struct EconomyRules {
 
     private func resourceSummary(_ resources: EconomyResources) -> String {
         resources.victorianSummary
+    }
+
+    private func economyCommandLog(
+        _ command: EconomyCommand,
+        faction: Faction,
+        ledger: FactionEconomyLedger
+    ) -> String {
+        let debtClause = command.debtIncrease > 0 ? "; debt \(ledger.warDebt)" : ""
+        return "\(faction.displayName) executed \(command.displayName): cost \(resourceSummary(command.cost)), yield \(resourceSummary(command.immediateYield))\(debtClause)."
     }
 }

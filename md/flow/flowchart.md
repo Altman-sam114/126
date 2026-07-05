@@ -199,26 +199,29 @@ flowchart TD
     classDef warn fill:#ffedd5,stroke:#f97316,color:#431407
 ```
 
-## 3. v0.8 经济、生产与补员链路
+## 3. v5.4 经济、生产、预算与补员链路
 
-这张图看 v0.8 初级经济。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产命令仍走 `RuleEngine`，UI 不直接改 `GameState`。
+这张图看当前初级经济。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产和预算命令都走 `RuleEngine`，UI 不直接改 `GameState`。
 
 ```mermaid
 flowchart TD
     BOOT["经济启动补账<br/>EconomyRules.bootstrapIfNeeded<br/>旧状态缺 economyState 时从地图推导账本"]:::economy
     HEX["真实控制权<br/>HexTile.controller<br/>经济收入必须有己方控制 hex 证据"]:::authority
     REGION["战略聚合<br/>RegionNode<br/>city / factories / infrastructure / supplyValue"]:::derived
-    INCOME["收入计算<br/>EconomyRules.income<br/>manpower / industry / supplies"]:::economy
-    LEDGER["阵营总账<br/>FactionEconomyLedger<br/>库存、上回合收入、维护费、补员消耗、队列"]:::economy
+    INCOME["收入计算<br/>EconomyRules.income<br/>recruits / treasury / stores 兼容资源"]:::economy
+    LEDGER["阵营总账<br/>FactionEconomyLedger<br/>库存、收入、维护费、补员、队列、warDebt"]:::economy
 
-    UI["经济面板<br/>EconomyPanelView<br/>展示资源和生产按钮"]:::ui
+    UI["经济面板<br/>EconomyPanelView<br/>展示资源、预算和生产按钮"]:::ui
     QUEUE["生产命令<br/>Command.queueProduction<br/>玩家/未来 AI 共用底层命令"]:::command
     VALIDATE["生产校验<br/>CommandValidator.validateProduction<br/>检查 phase 与资源是否足够"]:::rules
-    PAY["预付成本并入队<br/>EconomyRules.queueProduction<br/>扣 MP/IC/SUP，追加 ProductionOrder"]:::economy
+    PAY["预付成本并入队<br/>EconomyRules.queueProduction<br/>扣 REC/TRE/STO，追加 ProductionOrder"]:::economy
+    BUDGET["预算命令<br/>Command.economy<br/>Raise War Loan / Buy Stores"]:::command
+    BVALID["预算校验<br/>CommandValidator.validateEconomyCommand<br/>检查 phase、资源和债务上限"]:::rules
+    APPLYB["执行预算<br/>EconomyRules.applyEconomyCommand<br/>改 treasury / stores / warDebt"]:::economy
 
     END["结束当前阵营回合<br/>Command.endTurn<br/>CommandExecutor.executeEndTurn"]:::command
     SUPPLY["补给状态刷新<br/>SupplyRules.updateSupplyStates"]:::rules
-    RESOLVE["经济结算<br/>EconomyRules.resolveFactionTurn<br/>收入、维护费、短缺、补员、生产推进"]:::economy
+    RESOLVE["经济结算<br/>EconomyRules.resolveFactionTurn<br/>收入、维护费、债务服务、短缺、补员、生产推进"]:::economy
     SHORT{"补给库存够吗?"}:::decision
     LOW["战略补给短缺<br/>supplied 单位降为 lowSupply"]:::rules
     REINF["自动补员<br/>安全后方 supplied 非敌邻单位<br/>每回合最多 +2 strength"]:::rules
@@ -231,6 +234,7 @@ flowchart TD
     BOOT --> LEDGER
     HEX --> REGION --> INCOME --> LEDGER
     UI --> QUEUE --> VALIDATE --> PAY --> LEDGER
+    UI --> BUDGET --> BVALID --> APPLYB --> LEDGER
     END --> SUPPLY --> RESOLVE
     LEDGER --> RESOLVE
     RESOLVE --> SHORT

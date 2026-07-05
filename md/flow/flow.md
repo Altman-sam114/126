@@ -431,6 +431,7 @@ lastIncome
 lastUpkeep
 lastReinforcementSpend
 productionQueue: [ProductionOrder]
+warDebt
 lastUpdatedTurn
 ```
 
@@ -490,6 +491,25 @@ EconomyPanelView
 ```
 
 排产时预付资源，完成时才部署单位或发放 supply stockpile。完成单位只能放到本方控制、passable、空置、非敌邻，且位于首都、城镇/大都会、工厂、高基建、高补给 region 或 supply source 的后方 hex。找不到安全部署点时订单保留到下回合继续尝试。
+
+预算动作由 `Command.economy(command:)` 进入同一规则系统：
+
+```text
+EconomyPanelView
+  -> AppContainer.executeEconomyCommand
+  -> Command.economy
+  -> RuleEngine
+  -> CommandValidator.validateEconomyCommand
+  -> CommandExecutor.executeEconomyCommand
+  -> EconomyRules.applyEconomyCommand
+```
+
+当前 `EconomyCommand` 只包含 v5.4 起步动作：
+
+- `raiseWarLoan`：增加 treasury，写入 `warDebt`，后续回合按 debt service 扣 treasury。
+- `buySupplies`：消耗 treasury，增加 stores。
+
+这些预算动作只改 faction 级经济账本，不改变 hex 占领、region controller、动态战区或前线。
 
 自动补员在 active faction 结束回合时发生，只处理：
 
