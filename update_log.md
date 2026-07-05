@@ -147,7 +147,7 @@
 - 云端重验证：run `28734509698` attempt `1` 结果包 `WWIIHexV0-ci-v1-main-aa2935a-run28734509698-attempt1` 已核对，`branch=main`、`commitSha=aa2935a684505ba44ef512eff10aef53bf86f9c3`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
 - `EconomyCommand` 预算动作切片已由 run `28735351078` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-f20f409-run28735351078-attempt1` 核对通过；manifest 显示 `branch=main`、`commitSha=f20f409aafce14846ecf03ae3ed7458e4859caa6`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
 - Region inspector 物流展示切片已由 run `28735908770` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-51e1e46-run28735908770-attempt1` 核对通过；manifest 显示 `branch=main`、`commitSha=51e1e46e2d1ba05d935b0ec217aba4cfedf662b6`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
-- 铁路工程建设命令切片待本轮新 commit push 后由最新 GitHub Actions 结果包复核，并在后续日志条目补入 run id / artifact。
+- 铁路工程建设命令切片已由 run `28736720326` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-321b76f-run28736720326-attempt1` 核对通过；manifest 显示 `branch=main`、`commitSha=321b76f7662a36eeca112dcc66fafc18f0cf7ea8`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
 
 遗留事项：
 
