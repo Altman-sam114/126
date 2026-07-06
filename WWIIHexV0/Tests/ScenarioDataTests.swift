@@ -135,16 +135,21 @@ final class ScenarioDataTests: XCTestCase {
             providerName: "Simulated Staff",
             commandHandler: RuleEngine(),
             commanderPool: TheaterCommanderPool.automatic(for: state),
-            marshalAgent: MarshalAgent(config: MarshalAgentConfig.fromCommander(commander, state: state))
+            marshalAgent: MarshalAgent(config: MarshalAgentConfig.fromCommander(commander, state: state)),
+            rulerAgent: RulerAgent.automatic(for: .russia, in: state)
         )
 
         let outcome = await manager.runAITurn(state: state, faction: .russia)
 
         XCTAssertEqual(commander.id, "menshikov")
         XCTAssertEqual(outcome.record.agentId, "menshikov")
+        XCTAssertEqual(outcome.record.provider, "Simulated Staff+Cabinet+MarshalDirective")
+        XCTAssertTrue(outcome.record.parsedIntent?.contains("Cabinet") == true)
+        XCTAssertTrue(outcome.record.rawJSON?.contains("Cabinet Directive JSON") == true)
         XCTAssertFalse(outcome.directiveRecords.isEmpty)
         XCTAssertTrue(outcome.directiveRecords.allSatisfy { $0.issuerId == "menshikov" })
         XCTAssertTrue(outcome.directiveRecords.allSatisfy { $0.commanderAgentId == "menshikov" })
+        XCTAssertEqual(outcome.state.diplomacyState.latestRulerRecord?.faction, .russia)
         XCTAssertFalse(outcome.record.rawJSON?.contains("marshal_russia") == true)
     }
 }

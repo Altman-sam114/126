@@ -280,9 +280,9 @@ flowchart TD
 
 ## 4. AI / 元帅决策链：AI 怎么下命令
 
-这张图看 v0.5 分支默认 AI 主路径。AI 不直接控制单位，也不直接改地图；元帅先读取降维战场摘要，模拟 LLM 输出 `TheaterDirectiveEnvelope` JSON，经 decoder 校验和 compiler 降级后，形成战区级 `DirectiveEnvelope`。`WarCommandExecutor` 再把这些战术翻译成底层 `Command`，最后交给 `RuleEngine`。
+这张图看当前默认 AI 主路径。AI 不直接控制单位，也不直接改地图；元帅读取降维战场摘要，模拟 LLM 输出 `TheaterDirectiveEnvelope` JSON，经 decoder 校验和 compiler 降级后形成战区级 `DirectiveEnvelope`。Cabinet posture 再记录姿态并塑形已编译的 envelope；`WarCommandExecutor` 把最终战术翻译成底层 `Command`，最后交给 `RuleEngine`。
 
-当前 v0.5 的默认 AI 主线是 `MarshalAgent -> TheaterDirective JSON -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler -> ZoneDirective -> WarCommandExecutor -> RuleEngine`。旧 v0.37 `TheaterCommanderPool -> ZoneCommanderAgent` 作为 fallback 和显式 `.zoneDirective` 路径保留。统治者层只作为后续上游预留，当前不在主链路调用。旧 Agent D 管线仍保留，但默认不走。
+当前默认 AI 主线是 `MarshalAgent -> TheaterDirective JSON -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler -> Cabinet posture -> ZoneDirective -> WarCommandExecutor -> RuleEngine`。旧 v0.37 `TheaterCommanderPool -> ZoneCommanderAgent` 作为 fallback 和显式 `.zoneDirective` 路径保留。Cabinet posture 由 `RulerAgent` 兼容层承载，`TurnManager` 只把 `RulerDecisionRecord` 作为 audit-only 记录写入 `DiplomacyState`，并塑形 directive envelope，不直接改地图、单位、外交关系或经济账本。旧 Agent D 管线仍保留，但默认不走。
 
 ```mermaid
 flowchart TD
@@ -295,6 +295,7 @@ flowchart TD
     LLM["模拟 LLM 客户端<br/>SimulatedMarshalLLMClient<br/>输出 fenced JSON，不接真实网络或模型"]:::ai
     DEC["元帅 JSON 解码器<br/>TheaterDirectiveDecoder<br/>提取 JSON、解码、校验 schema/zone/region/tactic"]:::command
     COMP["元帅意图编译器<br/>TheaterDirectiveCompiler<br/>TheaterDirective -> ZoneDirective<br/>传递 focus/convergence/coordinated 参数"]:::command
+    CAB["Cabinet posture<br/>RulerAgent.adjust<br/>记录 posture/rationale，塑形已编译 envelope"]:::ai
     ENV["指令信封<br/>DirectiveEnvelope<br/>收集编译后的 ZoneDirective"]:::command
     TACTIC["高级战术路由<br/>TacticName<br/>rapid advance / spearhead / breakthrough / pincer / fire / feint / irregular / elastic / depth / lastStand"]:::command
     WCE["指令执行器<br/>WarCommandExecutor.execute<br/>按战术 profile 选择单位、目标和 fallback"]:::command
@@ -305,11 +306,11 @@ flowchart TD
 
     START --> CHECK
     CHECK -->|否| STOP
-    CHECK -->|是| REFRESH --> TM --> SUM --> LLM --> DEC --> COMP --> ENV
+    CHECK -->|是| REFRESH --> TM --> SUM --> LLM --> DEC --> COMP --> CAB --> ENV
     ENV --> TACTIC --> WCE --> BOTTOM --> RE --> RECORD --> END
 
     FALLBACK["Fallback 将军池<br/>TheaterCommanderPool + ZoneCommanderAgent<br/>元帅 JSON 无效或某 zone 无指令时使用"]:::ai
-    DEC -.解码失败.-> FALLBACK --> ENV
+    DEC -.解码失败.-> FALLBACK --> CAB
     COMP -.zone 缺指令.-> FALLBACK
 
     LEGACY["旧 Agent D 管线<br/>AgentContext -> DecisionProvider -> AgentCommandMapper<br/>只在 legacyAgentOrder 显式分支或测试中使用"]:::legacy
@@ -422,14 +423,14 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    STATE["运行时状态<br/>GameState + EventLog + WarDirectiveRecord"]:::state
+    STATE["运行时状态<br/>GameState + EventLog + WarDirectiveRecord + RulerDecisionRecord"]:::state
     ROOT["主界面<br/>RootGameView<br/>HUD + Info tabs"]:::ui
     LOG["日志面板<br/>EventLogView<br/>最近 60 条 LogDisplayEntry"]:::ui
-    AIUI["AI 面板<br/>AgentPanelView<br/>raw JSON + command results + zone directives"]:::ui
+    AIUI["AI 面板<br/>AgentPanelView<br/>Decision Payload + Cabinet posture + zone directives"]:::ui
     DIPUI["外交面板<br/>DiplomacyPanelView<br/>scenario war goals + warSupport 只读展示"]:::ui
     GOALS["战争目标状态<br/>GameState.victoryConditions + victoryState<br/>Open / Holding / Resolved"]:::state
     BOARD["地图场景<br/>BoardScene<br/>缓存 unit display hex 后排序绘制"]:::ui
-    MARSHAL["模拟参谋链<br/>Persona GameAgent -> MarshalAgentConfig<br/>Simulated Staff fallback"]:::ai
+    MARSHAL["模拟参谋链<br/>Persona MarshalAgentConfig -> Cabinet posture<br/>Simulated Staff fallback"]:::ai
     ZD["战区指令<br/>ZoneDirective<br/>tactic / focus / intensity"]:::command
     WCE["执行解释<br/>WarCommandExecutor<br/>infiltration 限制默认投入"]:::command
     RULE["规则权威<br/>RuleEngine<br/>唯一修改 GameState"]:::rules

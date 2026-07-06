@@ -29,6 +29,7 @@ struct TurnManager {
     let mapper: AgentCommandMapper
     let commanderPool: TheaterCommanderPool?
     let marshalAgent: MarshalAgent?
+    let rulerAgent: RulerAgent?
     let warCommandExecutor: WarCommandExecutor
 
     init(
@@ -41,6 +42,7 @@ struct TurnManager {
         mapper: AgentCommandMapper = AgentCommandMapper(),
         commanderPool: TheaterCommanderPool? = nil,
         marshalAgent: MarshalAgent? = nil,
+        rulerAgent: RulerAgent? = nil,
         warCommandExecutor: WarCommandExecutor? = nil
     ) {
         self.agent = agent
@@ -52,6 +54,7 @@ struct TurnManager {
         self.mapper = mapper
         self.commanderPool = commanderPool
         self.marshalAgent = marshalAgent
+        self.rulerAgent = rulerAgent
         self.warCommandExecutor = warCommandExecutor ?? WarCommandExecutor(commandHandler: commandHandler)
     }
 
@@ -228,20 +231,30 @@ struct TurnManager {
                 fallbackPool: fallbackPool,
                 issuerId: agent.id
             )
-            let compiledJSON = try Self.canonicalDirectiveJSON(resolution.directiveEnvelope)
-            let rawJSON = resolution.rawTheaterJSON.map {
+            let cabinetAdjustment = rulerAgent?.adjust(envelope: resolution.directiveEnvelope, in: state)
+            let directiveEnvelope = cabinetAdjustment?.envelope ?? resolution.directiveEnvelope
+            let compiledJSON = try Self.canonicalDirectiveJSON(directiveEnvelope)
+            var rawJSON = resolution.rawTheaterJSON.map {
                 "\($0)\n\nCompiled ZoneDirective JSON:\n\(compiledJSON)"
             } ?? compiledJSON
+            if let cabinetRecord = cabinetAdjustment?.record {
+                let cabinetJSON = try Self.canonicalRulerJSON(cabinetRecord)
+                rawJSON = "Cabinet Directive JSON:\n\(cabinetJSON)\n\n\(rawJSON)"
+            }
 
             return executeDirectiveEnvelope(
-                resolution.directiveEnvelope,
+                directiveEnvelope,
                 state: state,
                 faction: faction,
                 contextSummary: contextSummary,
                 rawJSON: rawJSON,
-                parsedIntent: resolution.theaterEnvelope?.strategicIntent ?? "marshal directives",
-                providerSuffix: "MarshalDirective",
-                additionalDiagnostics: diagnostics + resolution.diagnostics
+                parsedIntent: parsedIntent(
+                    cabinetRecord: cabinetAdjustment?.record,
+                    strategicIntent: resolution.theaterEnvelope?.strategicIntent
+                ),
+                providerSuffix: cabinetAdjustment == nil ? "MarshalDirective" : "Cabinet+MarshalDirective",
+                additionalDiagnostics: diagnostics + resolution.diagnostics,
+                rulerRecord: cabinetAdjustment?.record
             )
         } catch {
             return AgentTurnOutcome(
@@ -279,9 +292,13 @@ struct TurnManager {
         rawJSON: String,
         parsedIntent: String,
         providerSuffix: String,
-        additionalDiagnostics: [String]
+        additionalDiagnostics: [String],
+        rulerRecord: RulerDecisionRecord? = nil
     ) -> AgentTurnOutcome {
         var nextState = state
+        if let rulerRecord {
+            nextState.diplomacyState.appendRulerRecord(rulerRecord)
+        }
         var commandResults: [CommandResultSummary] = []
         var directiveRecords: [WarDirectiveRecord] = []
         var errors = additionalDiagnostics
@@ -436,5 +453,20 @@ struct TurnManager {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(envelope)
         return String(decoding: data, as: UTF8.self)
+    }
+
+    static func canonicalRulerJSON(_ record: RulerDecisionRecord) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(record)
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private func parsedIntent(cabinetRecord: RulerDecisionRecord?, strategicIntent: String?) -> String {
+        guard let cabinetRecord else {
+            return strategicIntent ?? "marshal directives"
+        }
+        let intent = strategicIntent ?? "marshal directives"
+        return "Cabinet \(cabinetRecord.posture.displayName): \(intent)"
     }
 }

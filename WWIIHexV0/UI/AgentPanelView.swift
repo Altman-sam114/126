@@ -42,8 +42,8 @@ struct AgentPanelView: View {
 
             if let rulerRecord {
                 Divider()
-                LabeledContent("Ruler") {
-                    Text(rulerRecord.rulerAgentId)
+                LabeledContent("Cabinet") {
+                    Text(cabinetDisplayId(rulerRecord.rulerAgentId))
                 }
                 LabeledContent("Posture") {
                     Text(rulerRecord.posture.displayName)
@@ -52,6 +52,10 @@ struct AgentPanelView: View {
                     LabeledContent("Focus") {
                         Text(zoneId.rawValue)
                     }
+                }
+                LabeledContent("Rationale") {
+                    Text(rulerRecord.rationale)
+                        .multilineTextAlignment(.trailing)
                 }
             }
 
@@ -179,9 +183,16 @@ struct AgentPanelView: View {
     }
 
     private func sanitizedDecisionPayload(_ payload: String) -> String {
-        TacticName.allCases.reduce(payload) { result, tactic in
+        let tacticPayload = TacticName.allCases.reduce(payload) { result, tactic in
             result.replacingOccurrences(of: tactic.rawValue, with: tactic.displayName)
         }
+        return tacticPayload
+            .replacingOccurrences(of: "rulerAgentId", with: "cabinetAgentId")
+            .replacingOccurrences(of: "ruler_", with: "cabinet_")
+    }
+
+    private func cabinetDisplayId(_ id: String) -> String {
+        id.replacingOccurrences(of: "ruler_", with: "cabinet_")
     }
 
     private var decisionPayloadPlaceholder: String {

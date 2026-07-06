@@ -201,18 +201,18 @@ struct RulerAgent {
     private func rationale(for posture: RulerStrategicPosture, snapshot: RulerStrategicSnapshot) -> String {
         switch posture {
         case .offensive:
-            return "Ruler sees \(snapshot.advantagedFrontZoneCount) advantaged zone(s) and accepts offensive risk."
+            return "Cabinet sees \(snapshot.advantagedFrontZoneCount) advantaged command sector(s) and accepts offensive risk."
         case .defensive:
-            return "Ruler sees pressure \(snapshot.averageZonePressure) and \(snapshot.outnumberedFrontZoneCount) outnumbered zone(s)."
+            return "Cabinet sees pressure \(snapshot.averageZonePressure) and \(snapshot.outnumberedFrontZoneCount) outnumbered command sector(s)."
         case .coalitionMaintenance:
-            return "Ruler preserves coalition reserves across \(snapshot.frontZoneCount) active zone(s)."
+            return "Cabinet preserves coalition reserves across \(snapshot.frontZoneCount) active command sector(s)."
         case .stabilizeFront:
-            return "Ruler avoids overextension while contested forward presence is resolved."
+            return "Cabinet avoids overextension while contested forward presence is resolved."
         }
     }
 
     private func appendRulerContext(_ context: String?, record: RulerDecisionRecord) -> String {
-        let rulerContext = "Ruler \(record.rulerAgentId): \(record.posture.displayName), target \(record.preferredFrontZoneId?.rawValue ?? "none")."
+        let rulerContext = "Cabinet \(record.rulerAgentId): \(record.posture.displayName), target \(record.preferredFrontZoneId?.rawValue ?? "none")."
         guard let context, !context.isEmpty else {
             return rulerContext
         }

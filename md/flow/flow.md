@@ -40,8 +40,8 @@ MapEditor / JSON 数据
 - `hexToFrontZone` 是部署层动态归属权威。
 - `EconomyState` 是 faction 级经济总账；收入来自受控 region、城市、工厂、基础设施和补给值，但战术占领仍以 hex 为准。
 - 玩家、AI、后续聊天命令最终都必须经过 `Command` / `ZoneDirective -> WarCommandExecutor -> RuleEngine`，不能直接改 `GameState`。
-- v0.5 默认战争 AI 上游是 `MarshalAgent -> TheaterDirective JSON -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler`，下游执行收口到 `ZoneDirective -> WarCommandExecutor -> RuleEngine`。
-- 统治者层只作为后续方向预留；当前 v0.5 主链路不调用 `RulerAgent`，也不写统治者决策记录。
+- 默认战争 AI 上游是 `MarshalAgent -> TheaterDirective JSON -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler -> RulerAgent.adjust as Cabinet posture`，下游执行收口到 `ZoneDirective -> WarCommandExecutor -> RuleEngine`。
+- Cabinet posture 只塑形已编译的 directive envelope；`TurnManager` 会把 `RulerDecisionRecord` 作为 audit-only 记录写入 `DiplomacyState`，但 Cabinet posture 不直接改 hex、region、经济账本或外交关系。
 
 ---
 
@@ -399,16 +399,16 @@ isCoreZone
 
 这层是 AI 调度能否“看见部队”的关键。历史上的“AI 看起来不动”根因之一就是突破后的单位被误判成 garrison，从 `unitsFront` 调度池消失。现在前线/敌区/敌控 hex 会强制把这种单位归到 front。
 
-### 1.7 后续统治者层预留
+### 1.7 Cabinet posture 层
 
-v0.5 当前不接入统治者层。工作树中可能存在 `WWIIHexV0/Core/DiplomacyState.swift`、`WWIIHexV0/Agents/RulerAgent.swift` 等其他版本方向文件，但它们不是本 v0.5 分支的默认战争 AI 主链路，`TurnManager` 当前不调用 `RulerAgent`。
+v5.6 起，默认 `.marshalDirective` AI 主路径会接入 `RulerAgent` 作为源码兼容承载的 Cabinet posture 层。它位于元帅层和执行层之间：先由 `MarshalAgent` 产出并编译 `DirectiveEnvelope`，再由 Cabinet posture 根据外交摘要、前线压力和历史 directive 记录调整攻守姿态、预备队倾向和目标排序，最后仍交给 `WarCommandExecutor -> RuleEngine`。
 
-后续若加入统治者层，必须满足这些边界：
+边界：
 
-- 统治者只能位于元帅上游，输出国家级姿态、优先方向或约束条件。
-- 统治者不得直接生成底层 `Command`，不得绕过 `MarshalAgent` / `ZoneDirective`。
-- 统治者不得直接修改 `HexTile.controller`、`Division.coord`、`regionToTheater`、`hexToTheater` 或 `hexToFrontZone`。
-- 若需要审计记录，必须单独设计数据 schema，并在 `md/flow/*`、`README.md`、`update_log.md` 中同步说明。
+- Cabinet posture 不直接生成底层 `Command`，不得绕过 `MarshalAgent` / `ZoneDirective`。
+- Cabinet posture 不直接修改 `HexTile.controller`、`Division.coord`、`regionToTheater`、`hexToTheater` 或 `hexToFrontZone`。
+- Cabinet posture 不直接修改外交关系、战争支持或经济账本；`TurnManager` 仅把 `RulerDecisionRecord` 追加为 audit-only 记录，记录姿态与 rationale。
+- AI 面板展示最近 Cabinet posture / focus / rationale；外交面板仍可读取 `DiplomacyState.latestRulerRecord`。
 
 ### 1.8 EconomyState / EconomyRules
 
@@ -582,7 +582,8 @@ AppContainer.bootstrap()
   -> defaultAIFaction(in: bootstrappedState)
   -> GameAgent.defaultCommander(for: defaultAIFaction, from: victorian_personas)
   -> MarshalAgentConfig.fromCommander(defaultAgent, state: bootstrappedState)
-  -> TurnManager(... commanderPool: buildCommanderPool(state: bootstrappedState), marshalAgent: persona marshal)
+  -> RulerAgent.automatic(for: defaultAIFaction, in: bootstrappedState)
+  -> TurnManager(... commanderPool: buildCommanderPool(state: bootstrappedState), marshalAgent: persona marshal, rulerAgent: cabinet posture)
   -> AppContainer(... playerFaction: scenario human faction fallback)
 ```
 
@@ -597,7 +598,7 @@ loadGameState(
 
 `AppContainer` 未显式传入 `playerFaction` 时，会从 `GameState.turnOrder` 与 `humanControlledFactions` 推导默认玩家视角势力；黑海危机默认落到 Britain，而不是 legacy `.allies`。`resetGame()` 重载初始 state 后也会重新推导该值，除非调用方显式注入了玩家势力覆盖值。玩家命令门禁不再只看该默认视角值：当前 `activeFaction` 若属于 `humanControlledFactions` 且处于 action phase，就作为 `commandFaction` 允许操作，避免黑海 Britain / France / Ottoman 多个人控回合被 AI 跳过后无法命令。
 
-默认 AI 身份不再从 bootstrap 固定创建 Guderian。`GameAgent.defaultCommander(for:from:state:)` 优先读取 `victorian_personas.json` 中与当前 faction 匹配的 agent；黑海默认 Russia AI 会使用 Menshikov，Britain / France / Ottoman 等在 observer 模式或非人控配置下也可映射到 Raglan、Saint-Arnaud、Omar Pasha。找不到 persona 时才 fallback 到通用 General Staff；legacy Germany 仍可走 Guderian fallback。`AppContainer` 会用同一个 `GameAgent` 派生 `MarshalAgentConfig`，使 theater directive raw payload、compiled directive envelope、`AgentDecisionRecord` 与 `WarDirectiveRecord` 的 issuer / commander audit identity 保持一致。`MockAIClient` 仍是 deterministic provider 实现，但主 UI / Agent 记录的 provider 名称显示为 `Simulated Staff`。
+默认 AI 身份不再从 bootstrap 固定创建 Guderian。`GameAgent.defaultCommander(for:from:state:)` 优先读取 `victorian_personas.json` 中与当前 faction 匹配的 agent；黑海默认 Russia AI 会使用 Menshikov，Britain / France / Ottoman 等在 observer 模式或非人控配置下也可映射到 Raglan、Saint-Arnaud、Omar Pasha。找不到 persona 时才 fallback 到通用 General Staff；legacy Germany 仍可走 Guderian fallback。`AppContainer` 会用同一个 `GameAgent` 派生 `MarshalAgentConfig`，使 theater directive raw payload、compiled directive envelope、`AgentDecisionRecord` 与 `WarDirectiveRecord` 的 issuer / commander audit identity 保持一致；同时注入 `RulerAgent.automatic` 作为 Cabinet posture 层，写入 `RulerDecisionRecord` 并在 AI 面板显示 Cabinet posture / rationale。`MockAIClient` 仍是 deterministic provider 实现，但主 UI / Agent 记录的 provider 名称显示为 `Simulated Staff`。
 
 如果失败，会先 fallback 到 legacy `ardennes_v0_scenario` + `ardennes_v02_regions`，再 fallback 到老的 `GameState.initial()` + v0.2 region 叠加路径。
 
@@ -1301,7 +1302,7 @@ v5.5 起，`DiplomacyPanelView` 读取完整 `GameState`，把 `victoryCondition
 
 源码：`WWIIHexV0/Turn/TurnManager.swift`、`WWIIHexV0/Agents/ZoneCommanderAgent.swift`、`WWIIHexV0/Commands/WarDirective.swift`、`WWIIHexV0/Commands/WarCommandExecutor.swift`
 
-v0.5 分支默认路径：
+当前默认路径：
 
 ```text
 AppContainer.runAIIfNeeded
@@ -1312,10 +1313,11 @@ AppContainer.runAIIfNeeded
   -> SimulatedMarshalLLMClient.completeTheaterDirectiveJSON
   -> TheaterDirectiveDecoder.parse
   -> TheaterDirectiveCompiler.compile
+  -> RulerAgent.adjust as Cabinet posture
   -> DirectiveEnvelope / ZoneDirective
   -> WarCommandExecutor.execute(directive, in: state)
   -> RuleEngine.execute(Command)
-  -> WarDirectiveRecord
+  -> RulerDecisionRecord / WarDirectiveRecord
   -> RuleEngine.execute(.endTurn)
 ```
 
@@ -1350,9 +1352,9 @@ TheaterDirective
 
 最终执行由 `TurnManager.executeDirectiveEnvelope` 统一完成。`.marshalDirective` 和显式 `.zoneDirective` 共享同一段 WarCommandExecutor 执行、WarDirectiveRecord 记录、endTurn 推进逻辑。
 
-统治者层是后续预留方向，当前 v0.5 主路径不调用 `RulerAgent`，也不在 `DirectiveEnvelope` 与执行层之间插入姿态塑形。
+v5.6 起，`RulerAgent` 作为兼容承载的 Cabinet posture 层重新接入默认 `.marshalDirective` 路径。它只读取外交摘要、前线压力、部署和历史 directive 记录，输出 `RulerDecisionRecord`，并在执行前塑形已编译的 `DirectiveEnvelope`；它不生成底层 `Command`，也不绕过 `WarCommandExecutor` / `RuleEngine`。显式 `.zoneDirective` 和 `.legacyAgentOrder` 仍不强制插入 Cabinet 层。
 
-v5.6 起，`TurnManager` 的 agent identity 优先来自 `victorian_personas.json` 的 faction persona。该身份用于上下文、marshal theater directive payload、compiled directive envelope、审计记录和 UI 复盘，不直接修改 `GameState`；真正执行仍由 `MarshalAgent -> TheaterDirectiveDecoder/Compiler -> ZoneDirective -> WarCommandExecutor -> RuleEngine` 完成。persona role 当前支持 `expeditionaryCommander`、`fieldCommander` 与 `generalStaff` 等维多利亚指挥角色，后续 Cabinet / Foreign / War / Treasury 等上游 Agent 会在同一 JSON directive 约束下继续扩展。
+v5.6 起，`TurnManager` 的 agent identity 优先来自 `victorian_personas.json` 的 faction persona。该身份用于上下文、marshal theater directive payload、compiled directive envelope、审计记录和 UI 复盘，不直接修改 `GameState`；真正执行仍由 `MarshalAgent -> TheaterDirectiveDecoder/Compiler -> Cabinet posture -> ZoneDirective -> WarCommandExecutor -> RuleEngine` 完成。persona role 当前支持 `expeditionaryCommander`、`fieldCommander` 与 `generalStaff` 等维多利亚指挥角色，后续 Foreign / War / Treasury / Admiralty / Press 等上游 Agent 会在同一 JSON directive 约束下继续扩展。
 
 Legacy Agent D 仍存在，但只在显式 `.legacyAgentOrder` 分支运行：
 
@@ -1907,9 +1909,9 @@ MapEditorGameResourceBridge.loadDefaultDocument
 ## 10. 当前已知边界
 
 - 真 LLM 尚未接入；当前只用 `SimulatedMarshalLLMClient` 模拟 fenced JSON 输出和解码流程。
-- 默认 AI 上游已是 `MarshalAgent -> TheaterDirectiveEnvelope -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler`，下游执行必须是 `ZoneDirective -> WarCommandExecutor -> RuleEngine`。
+- 默认 AI 上游已是 `MarshalAgent -> TheaterDirectiveEnvelope -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler -> Cabinet posture`，下游执行必须是 `ZoneDirective -> WarCommandExecutor -> RuleEngine`。
 - 元帅层不能直接输出底层 `Command`，不能直接修改地图、单位、hex controller 或动态战区权威。
-- 统治者层只作为未来方向预留，当前 v0.5 不在主链路调用。
+- Cabinet posture 只塑形 directive envelope；`RulerDecisionRecord` 是 TurnManager 追加的 audit-only 记录，不能直接修改地图、单位、hex controller、外交关系或经济账本。
 - 当前工作树存在外交/经济/UI 等非 v0.5 方向残留，合并前需要单独审查文件归属和 public API 冲突。
 - `AttackIntensity.infiltration` 已在 `WarCommandExecutor` 中解释为默认低投入上限；`.limitedCounter` 和 `.allOut` 仍主要依赖 tactic profile 与显式 `maxCommittedUnits`。
 - `TacticConditionChecker` 当前总是允许现有战术。
@@ -1918,7 +1920,7 @@ MapEditorGameResourceBridge.loadDefaultDocument
 - Legacy Agent D 管线仍保留，不应删除，也不应默认接回主战争 AI。
 - `RegionCommand` / AgentOrder v2 仍可桥接到 hex command，但当前默认战争 AI 是 ZoneDirective。
 - 地图编辑器的 theater assignment 是初始战区划分，不是运行时动态战区脚本。
-- 历史回退的 Cabinet/Minister/StrategicDirective 管线仍不得恢复；v0.5 当前实现没有把内阁或部长塞进 `GameState`。
+- 历史回退的 Cabinet/Minister/StrategicDirective 污染管线仍不得恢复；当前只保留受限 Cabinet posture 记录层，不恢复部长状态机或内阁直接执行器。
 - v5.5 当前只实现战争目标可视化和战争支持压力桥；尚未实现完整 `DiplomaticPlay`、玩家/AI 动态提出战争目标、谈判、投降、议会、新闻报纸、战争厌倦或国家级财政。
 
 ---
@@ -1962,7 +1964,7 @@ v1.0 分支名：`v1.0-ui-ai-playtest`。
 GameState / WarDirectiveRecord / EventLog
   -> RootGameView
   -> HUD + Info tabs
-  -> AgentPanelView 展示 raw JSON / command results / zone directives
+  -> AgentPanelView 展示 Decision Payload / command results / zone directives / Cabinet posture
   -> EventLogView 展示最近 60 条分类日志
 
 BoardScene
@@ -1988,7 +1990,7 @@ Marshal / ZoneDirective
 
 - UI：HUD、Info tabs、Economy、Diplomacy、AI panel 是否可读。
 - 地图：hex/province/initial/dynamic/front/deploy 图层是否清晰。
-- AI：raw JSON、zone directive、diagnostics 是否能解释 AI 回合。
+- AI：Decision Payload、Cabinet posture、zone directive、diagnostics 是否能解释 AI 回合。
 - 规则：玩家和 AI 行动是否仍能追溯到 `CommandResultSummary` / `WarDirectiveRecord`。
 - 性能体感：地图拖动、图层切换、日志面板滚动是否有明显卡顿。
 

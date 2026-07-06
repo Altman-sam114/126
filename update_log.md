@@ -219,6 +219,7 @@
 - `AppContainer.bootstrap()` 不再固定构造 Guderian / Germany marshal；它会从当前 `GameState.turnOrder` 与 `humanControlledFactions` 推导默认 AI faction，并为该 faction 构造 persona commander 与 marshal agent。
 - `turnManager(for:)` 不再为非 Germany faction 生成 `*_mock_commander`；运行时 AI 审计记录使用 persona id/name，provider 在 UI / 日志中显示为 `Simulated Staff`。
 - `MarshalAgentConfig.fromCommander(_:)` 让 AppContainer 默认 marshal theater payload 与 compiled directive envelope 使用同一个 persona id/name；黑海 Russia 默认路径不再在 marshal 审计链中暴露 `marshal_russia` 这类通用占位身份。
+- 默认 `.marshalDirective` 路径重新接入受限 Cabinet posture 层：`RulerAgent` 作为兼容承载读取外交/前线/部署摘要，输出 `RulerDecisionRecord`，塑形已编译的 `DirectiveEnvelope`，再交给 `WarCommandExecutor -> RuleEngine`；它不直接修改外交关系、经济账本、hex controller 或单位位置。
 - `TacticName.displayName` 为 Agent 面板提供兼容显示名，保留 raw value / JSON schema 不变；默认 UI 中 `blitzkrieg` 显示为 `Rapid advance`。
 - `AgentPanelView` 将底层 raw JSON 的可见区改为 `Decision Payload`，展示时把内部 tactic raw value 映射为维多利亚兼容 display name，保留记录中的原始 `rawJSON` 供规则/解码兼容。
 - `tools/validate_black_sea_data.py` 增加 persona agent role 白名单检查，避免 JSON / Swift 角色 schema 分叉时 CI 仍误报通过。
@@ -227,9 +228,11 @@
 
 - `WWIIHexV0/Agents/GameAgent.swift`
 - `WWIIHexV0/Agents/AgentConfiguration.swift`
+- `WWIIHexV0/Agents/RulerAgent.swift`
 - `WWIIHexV0/Agents/ZoneCommanderAgent.swift`
 - `WWIIHexV0/App/AppContainer.swift`
 - `WWIIHexV0/Commands/WarDirective.swift`
+- `WWIIHexV0/Turn/TurnManager.swift`
 - `WWIIHexV0/UI/AgentPanelView.swift`
 - `WWIIHexV0/Tests/ScenarioDataTests.swift`
 - `tools/validate_black_sea_data.py`
@@ -238,7 +241,7 @@
 
 遗留事项：
 
-- 本轮只把默认 AI identity 接到维多利亚 persona 与审计记录；尚未实现完整 Cabinet / ForeignMinister / WarMinister / Treasury / Admiralty / Press 多角色 directive 链。
+- 本轮只接入受限 Cabinet posture 层；尚未实现完整 ForeignMinister / WarMinister / Treasury / Admiralty / Press 多角色 directive 链，也尚未实现 DiplomaticPlay 动态外交命令。
 - `MockAIClient` 仍是 deterministic provider 实现，作为 `Simulated Staff` fallback 使用；真实 LLM 接入、外交 play directive 和上游内阁 JSON 合同留后续 v5.6-v5.8。
 
 ## v0 - 六角格测试板
@@ -981,7 +984,7 @@ MarshalAgent
 - 新增 `TheaterDirectiveCompiler`，把元帅意图降级为现有 `ZoneDirective`；缺失或失败时 fallback 到 `TheaterCommanderPool`。
 - `WarPipelineMode` 新增 `.marshalDirective`，`AppContainer` 和 `TurnManager` 默认使用该模式；旧 `.zoneDirective` 和 `.legacyAgentOrder` 仍保留为显式路径。
 - `TurnManager` 抽出公共 `executeDirectiveEnvelope`，确保元帅链路和旧将军池链路共享同一执行、记录和 endTurn 逻辑。
-- v0.5 收口时移除 v0.9 旁支曾插入的 `RulerAgent` 塑形调用；当前 `.marshalDirective` 与显式 `.zoneDirective` 都不写统治者记录，统治者仅作为后续上游预留。
+- v0.5 收口时移除 v0.9 旁支曾插入的 `RulerAgent` 塑形调用；该历史切片当时的 `.marshalDirective` 与显式 `.zoneDirective` 都不写统治者记录，统治者仅作为未来方向记录。v5.6 主线已重新接入受限 Cabinet posture 层，见本文件 v5.6 段。
 - 新增实现记录文档，详细写明本分支算法、边界、fallback 和轻量验证。
 
 关键系统：

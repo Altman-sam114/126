@@ -75,7 +75,8 @@ final class AppContainer: ObservableObject {
             providerName: "Simulated Staff",
             commandHandler: commandHandler,
             commanderPool: Self.buildCommanderPool(state: bootstrappedState, registry: generalRegistry),
-            marshalAgent: Self.buildMarshalAgent(agent: defaultAgent, state: bootstrappedState)
+            marshalAgent: Self.buildMarshalAgent(agent: defaultAgent, state: bootstrappedState),
+            rulerAgent: Self.buildRulerAgent(faction: defaultAIFaction, state: bootstrappedState)
         )
         return AppContainer(
             gameState: bootstrappedState,
@@ -790,7 +791,8 @@ final class AppContainer: ObservableObject {
             providerName: "Simulated Staff",
             commandHandler: commandHandler,
             commanderPool: Self.buildCommanderPool(state: state, registry: generalRegistry),
-            marshalAgent: Self.buildMarshalAgent(agent: agent, state: state)
+            marshalAgent: Self.buildMarshalAgent(agent: agent, state: state),
+            rulerAgent: Self.buildRulerAgent(faction: faction, state: state)
         )
     }
 
@@ -821,6 +823,10 @@ final class AppContainer: ObservableObject {
 
     private static func buildMarshalAgent(agent: GameAgent, state: GameState) -> MarshalAgent {
         MarshalAgent(config: MarshalAgentConfig.fromCommander(agent, state: state))
+    }
+
+    private static func buildRulerAgent(faction: Faction, state: GameState) -> RulerAgent {
+        RulerAgent.automatic(for: faction, in: state)
     }
 
     private func handleDivisionTap(_ division: Division) {
