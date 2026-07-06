@@ -205,6 +205,12 @@ struct EconomyRules {
         if supplyShortfall > 0 {
             applyStrategicSupplyShortfall(for: faction, in: &state)
         }
+        applyWarSupportPressure(
+            for: faction,
+            debtService: debtService,
+            supplyShortfall: supplyShortfall,
+            in: &state
+        )
 
         let reinforcementSpend = applyAutomaticReinforcement(for: faction, ledger: &ledger, in: &state)
         ledger.lastReinforcementSpend = reinforcementSpend
@@ -330,6 +336,45 @@ struct EconomyRules {
             "\(faction.displayName) strategic supply stockpile is depleted; supplied units degrade to Low Supply this turn.",
             category: .supply
         )
+    }
+
+    private func applyWarSupportPressure(
+        for faction: Faction,
+        debtService: Int,
+        supplyShortfall: Int,
+        in state: inout GameState
+    ) {
+        let penalty = warSupportPressurePenalty(debtService: debtService, supplyShortfall: supplyShortfall)
+        guard penalty > 0 else {
+            return
+        }
+
+        let adjustments = state.diplomacyState.adjustWarSupport(for: faction, delta: -penalty, turn: state.turn)
+        guard !adjustments.isEmpty else {
+            return
+        }
+
+        state.appendEvent(
+            "\(faction.displayName) war support falls under fiscal and supply pressure: \(warSupportSummary(adjustments)).",
+            category: .diplomacy
+        )
+    }
+
+    private func warSupportPressurePenalty(debtService: Int, supplyShortfall: Int) -> Int {
+        var penalty = 0
+        if debtService > 0 {
+            penalty += min(3, max(1, debtService / 8))
+        }
+        if supplyShortfall > 0 {
+            penalty += min(4, max(1, supplyShortfall / 6))
+        }
+        return min(6, penalty)
+    }
+
+    private func warSupportSummary(_ adjustments: [WarSupportAdjustment]) -> String {
+        adjustments
+            .map { "\($0.countryName) \($0.oldValue)->\($0.newValue)" }
+            .joined(separator: ", ")
     }
 
     private func applyAutomaticReinforcement(

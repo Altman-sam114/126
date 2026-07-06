@@ -204,8 +204,7 @@ struct RootGameView: View {
                     )
                 case .diplomacy:
                     DiplomacyPanelView(
-                        diplomacyState: container.gameState.diplomacyState,
-                        activeFaction: container.gameState.activeFaction
+                        gameState: container.gameState
                     )
                 case .agent:
                     AgentPanelView(

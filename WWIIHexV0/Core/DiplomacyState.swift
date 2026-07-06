@@ -219,6 +219,13 @@ struct RulerDecisionRecord: Identifiable, Codable, Equatable {
     let rationale: String
 }
 
+struct WarSupportAdjustment: Equatable {
+    let countryId: CountryId
+    let countryName: String
+    let oldValue: Int
+    let newValue: Int
+}
+
 struct DiplomacyState: Codable, Equatable {
     var countries: [CountryProfile]
     var blocs: [DiplomaticBloc]
@@ -449,6 +456,37 @@ struct DiplomacyState: Codable, Equatable {
             rulerRecords.removeFirst(rulerRecords.count - 40)
         }
         lastUpdatedTurn = record.turn
+    }
+
+    @discardableResult
+    mutating func adjustWarSupport(for faction: Faction, delta: Int, turn: Int) -> [WarSupportAdjustment] {
+        guard delta != 0 else {
+            return []
+        }
+
+        var adjustments: [WarSupportAdjustment] = []
+        for index in countries.indices where countries[index].faction == faction {
+            let oldValue = countries[index].warSupport
+            let newValue = max(0, min(100, oldValue + delta))
+            guard newValue != oldValue else {
+                continue
+            }
+
+            countries[index].warSupport = newValue
+            adjustments.append(
+                WarSupportAdjustment(
+                    countryId: countries[index].id,
+                    countryName: countries[index].name,
+                    oldValue: oldValue,
+                    newValue: newValue
+                )
+            )
+        }
+
+        if !adjustments.isEmpty {
+            lastUpdatedTurn = turn
+        }
+        return adjustments
     }
 
     private static func makeInitialRelations(countries: [CountryProfile], turn: Int) -> [DiplomaticRelation] {
