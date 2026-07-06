@@ -309,6 +309,17 @@ struct DiplomaticPlay: Identifiable, Codable, Equatable {
     }
 }
 
+struct DiplomaticPlayAdvanceRecord: Equatable {
+    let playId: String
+    let issuerFaction: Faction
+    let targetFaction: Faction
+    let warGoal: DiplomaticPlayWarGoal
+    let escalation: Int
+    let deadlineTurn: Int
+    let outcome: DiplomaticPlayOutcome
+    let didEscalateToWar: Bool
+}
+
 struct DiplomacyState: Codable, Equatable {
     var countries: [CountryProfile]
     var blocs: [DiplomaticBloc]
@@ -497,8 +508,8 @@ struct DiplomacyState: Codable, Equatable {
         }
 
         return !activeDiplomaticPlays.contains { play in
-            let samePair = play.issuerFaction == issuerFaction && play.targetFaction == targetFaction ||
-                play.issuerFaction == targetFaction && play.targetFaction == issuerFaction
+            let samePair = (play.issuerFaction == issuerFaction && play.targetFaction == targetFaction) ||
+                (play.issuerFaction == targetFaction && play.targetFaction == issuerFaction)
             return samePair && play.regionId == regionId
         }
     }
@@ -541,6 +552,53 @@ struct DiplomacyState: Codable, Equatable {
         diplomaticPlays.sort { $0.id < $1.id }
         lastUpdatedTurn = turn
         return play
+    }
+
+    @discardableResult
+    mutating func advanceDiplomaticPlays(turn: Int, escalationStep: Int = 25) -> [DiplomaticPlayAdvanceRecord] {
+        var records: [DiplomaticPlayAdvanceRecord] = []
+
+        for index in diplomaticPlays.indices where diplomaticPlays[index].outcome == .active {
+            if relationStatus(
+                between: diplomaticPlays[index].issuerFaction,
+                and: diplomaticPlays[index].targetFaction
+            ) == .atWar {
+                diplomaticPlays[index].escalation = 100
+                diplomaticPlays[index].outcome = .escalatedToWar
+                records.append(advanceRecord(for: diplomaticPlays[index], didEscalateToWar: false))
+                continue
+            }
+
+            diplomaticPlays[index].escalation = min(
+                100,
+                diplomaticPlays[index].escalation + max(0, escalationStep)
+            )
+
+            if turn >= diplomaticPlays[index].deadlineTurn {
+                diplomaticPlays[index].escalation = 100
+                let didDeclareWar = declareWar(
+                    actingFaction: diplomaticPlays[index].issuerFaction,
+                    targetFaction: diplomaticPlays[index].targetFaction,
+                    turn: turn
+                )
+                if didDeclareWar ||
+                    relationStatus(
+                        between: diplomaticPlays[index].issuerFaction,
+                        and: diplomaticPlays[index].targetFaction
+                    ) == .atWar {
+                    diplomaticPlays[index].escalation = 100
+                    diplomaticPlays[index].outcome = .escalatedToWar
+                }
+                records.append(advanceRecord(for: diplomaticPlays[index], didEscalateToWar: didDeclareWar))
+            } else {
+                records.append(advanceRecord(for: diplomaticPlays[index], didEscalateToWar: false))
+            }
+        }
+
+        if !records.isEmpty {
+            lastUpdatedTurn = turn
+        }
+        return records
     }
 
     func canDeclareWar(actingFaction: Faction, targetFaction: Faction) -> Bool {
@@ -880,5 +938,18 @@ struct DiplomacyState: Codable, Equatable {
     ) -> String {
         let regionComponent = regionId?.rawValue ?? "general"
         return "play_\(max(1, turn))_\(issuerFaction.rawValue)_\(targetFaction.rawValue)_\(regionComponent)_\(warGoal.rawValue)"
+    }
+
+    private func advanceRecord(for play: DiplomaticPlay, didEscalateToWar: Bool) -> DiplomaticPlayAdvanceRecord {
+        DiplomaticPlayAdvanceRecord(
+            playId: play.id,
+            issuerFaction: play.issuerFaction,
+            targetFaction: play.targetFaction,
+            warGoal: play.warGoal,
+            escalation: play.escalation,
+            deadlineTurn: play.deadlineTurn,
+            outcome: play.outcome,
+            didEscalateToWar: didEscalateToWar
+        )
     }
 }

@@ -227,11 +227,34 @@ struct CommandExecutor {
         state.phase = state.actionPhase(for: nextFaction.faction)
         if nextFaction.completedCycle {
             state.turn += 1
+            advanceDiplomaticPlaysForNewTurn(in: &state)
         }
 
         resetActionsForActiveFaction(in: &state)
         state = StrategicStateBootstrapper().refreshRuntimeState(state)
         state.appendEvent("Turn advanced to \(state.turn), \(state.activeFaction.displayName) active.")
+    }
+
+    private func advanceDiplomaticPlaysForNewTurn(in state: inout GameState) {
+        let records = state.diplomacyState.advanceDiplomaticPlays(turn: state.turn)
+        for record in records {
+            state.appendEvent(
+                diplomaticPlayAdvanceMessage(record),
+                category: .diplomacy,
+                relatedRecordId: record.playId
+            )
+        }
+    }
+
+    private func diplomaticPlayAdvanceMessage(_ record: DiplomaticPlayAdvanceRecord) -> String {
+        if record.outcome == .escalatedToWar {
+            if record.didEscalateToWar {
+                return "Diplomatic play \(record.warGoal.displayName) escalated to war: \(record.issuerFaction.displayName) against \(record.targetFaction.displayName)."
+            }
+            return "Diplomatic play \(record.warGoal.displayName) closed after war was already active: \(record.issuerFaction.displayName) and \(record.targetFaction.displayName)."
+        }
+
+        return "Diplomatic play \(record.warGoal.displayName) escalated to \(record.escalation); deadline turn \(record.deadlineTurn)."
     }
 
     private func resetActionsForActiveFaction(in state: inout GameState) {

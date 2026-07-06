@@ -202,7 +202,7 @@ flowchart TD
 
 ## 3. v5.5 经济、生产、预算、建设与战争支持链路
 
-这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)` 或 `.declareWar`：前者只记录 active diplomatic play，后者把 active faction 与目标 faction 的关系写为 `atWar` 并刷新前线/部署派生层。这不是完整谈判/升级状态机或完整围城状态机。
+这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)` 或 `.declareWar`：前者记录 active diplomatic play，整轮完成后推进 escalation，deadline 到期时尝试宣战，宣战成功后升级为战争；后者直接把 active faction 与目标 faction 的关系写为 `atWar` 并刷新前线/部署派生层。这不是完整谈判/支持者选择状态机或完整围城状态机。
 
 ```mermaid
 flowchart TD
@@ -222,10 +222,11 @@ flowchart TD
     BUILD["建设命令<br/>Command.queueConstruction<br/>Railway / Field / Port / Siege Depot Works @ selected hex"]:::command
     BLDVALID["建设校验<br/>CommandValidator.validateConstruction<br/>己控 hex / 港口需 coast / 围城需邻接敌方城市要塞 / 未有目标标签 / 资源足够"]:::rules
     BLDQUEUE["预付成本并入建设队列<br/>EconomyRules.queueConstruction<br/>constructionQueue"]:::economy
-    DIP["外交状态<br/>DiplomacyState<br/>国家 warSupport / active plays"]:::diplomacy
+    DIP["外交状态<br/>DiplomacyState<br/>国家 warSupport / active plays<br/>escalation / deadline / outcome"]:::diplomacy
     DIPCMD["外交命令<br/>Command.diplomacy<br/>createDiplomaticPlay / declareWar"]:::command
     DIPVALID["外交校验<br/>CommandValidator.validateDiplomacyCommand<br/>action phase / 有国家档案 / 非自身 neutral / 尚未 atWar"]:::rules
     DIPPLAY["创建外交危机<br/>DiplomacyState.createDiplomaticPlay<br/>issuer / target / warGoal / backers / deadline"]:::diplomacy
+    DIPADV["整轮完成后推进外交危机<br/>DiplomacyState.advanceDiplomaticPlays<br/>escalation +25 / deadline -> declareWar 尝试"]:::diplomacy
     DIPAPPLY["执行宣战<br/>DiplomacyState.declareWar<br/>全部 country pair -> atWar"]:::diplomacy
 
     END["结束当前阵营回合<br/>Command.endTurn<br/>CommandExecutor.executeEndTurn"]:::command
@@ -256,6 +257,9 @@ flowchart TD
     DIPVALID --> DIPPLAY --> DIP
     DIPVALID --> DIPAPPLY --> DIP
     DIPAPPLY --> NEXT
+    END --> DIPADV
+    DIPADV -- "deadline 到期" --> DIPAPPLY
+    DIPADV -- "未到期或宣战失败" --> DIP
     GOALS --> DIPUI
     DIP --> DIPUI
     END --> SUPPLY --> RESOLVE
