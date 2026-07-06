@@ -21,11 +21,11 @@ struct AgentPanelView: View {
                 .font(.headline)
 
             LabeledContent("Agent") {
-                Text(record?.agentId ?? "guderian")
+                Text(record?.agentId ?? "No agent selected")
             }
 
             LabeledContent("Provider") {
-                Text(record?.provider ?? "MockAI")
+                Text(record?.provider ?? "No provider")
             }
 
             LabeledContent("Intent") {
@@ -173,7 +173,7 @@ struct AgentPanelView: View {
     private var rawJSONPlaceholder: String {
         """
         {
-          "agentId": "guderian",
+          "agentId": "system",
           "status": "placeholder",
           "orders": []
         }

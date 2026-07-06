@@ -206,6 +206,7 @@
 后续迭代：
 
 - 2026-07-06：新增 `Siege Depot Works` 围城补给站建设切片。`ConstructionKind.siegeDepotWorks` 从经济面板选中己控 hex 后经 `Command.queueConstruction -> RuleEngine -> EconomyRules` 扣费入队；站点必须邻接外交上可攻击方控制的城市或要塞 hex，完成时只给目标 hex 添加 `.siegeDepot` 物流标签。炮兵从带 `.siegeDepot` 的 hex 攻击城市/要塞时获得轻量攻城准备加成。该切片不改变 hex controller、region controller、`regionToTheater`、`hexToTheater`、`hexToFrontZone` 或前线。
+- 2026-07-06：完成黑海默认玩家势力与主路径可见文案清理切片。`AppContainer` 未显式注入 `playerFaction` 时从 `GameState.turnOrder` / `humanControlledFactions` 推导默认玩家视角，黑海危机默认落到 Britain，`resetGame()` 后同步重算；命令门禁新增 `commandFaction` 口径，当前 `activeFaction` 若是人控 action phase，就允许该势力操作，避免 France / Ottoman 人控回合被 AI 跳过后无法命令。主 UI、交互日志、Agent prompt 和 legacy MockAI 可见 intent 将二战/旧口径的 `Allies`、Guderian/Bastogne、`division/unit`、`FrontZone` 标签收敛为 player-controlled formation / command sector 等通用历史策略口径。内部 `Division`、`FrontZone` 和 Guderian legacy fallback 仍保留给旧数据、测试和回归路径。
 
 ## v0 - 六角格测试板
 

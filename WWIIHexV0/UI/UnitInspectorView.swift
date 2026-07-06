@@ -3,6 +3,7 @@ import SwiftUI
 struct UnitInspectorView: View {
     let division: Division?
     let playerFaction: Faction
+    let humanControlledFactions: Set<Faction>
     let strategicState: UnitInspectorStrategicState?
 
     var body: some View {
@@ -33,7 +34,7 @@ struct UnitInspectorView: View {
             }
 
             LabeledContent("Command") {
-                Text(division.faction == playerFaction ? "Direct" : "Observer")
+                Text(commandLabel(for: division.faction))
             }
 
             LabeledContent("Type") {
@@ -53,7 +54,7 @@ struct UnitInspectorView: View {
                     Text(strategicState.dynamicTheaterId?.rawValue ?? "None")
                 }
 
-                LabeledContent("Front Zone") {
+                LabeledContent("Command Sector") {
                     Text(strategicState.frontZoneId?.rawValue ?? "None")
                 }
 
@@ -92,6 +93,16 @@ struct UnitInspectorView: View {
                     .multilineTextAlignment(.trailing)
             }
         }
+    }
+
+    private func commandLabel(for faction: Faction) -> String {
+        if faction == playerFaction {
+            return "Direct"
+        }
+        if humanControlledFactions.contains(faction) {
+            return "Friendly"
+        }
+        return "Observer"
     }
 
     private func componentSummary(for division: Division) -> String {

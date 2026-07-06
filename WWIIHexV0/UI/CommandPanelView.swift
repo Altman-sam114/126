@@ -5,6 +5,7 @@ struct CommandPanelView: View {
     let activeFaction: Faction
     let phase: GamePhase
     let playerFaction: Faction
+    let humanControlledFactions: Set<Faction>
     let observerModeEnabled: Bool
     let lastCommandMessage: String?
     let onHold: () -> Void
@@ -87,11 +88,14 @@ struct CommandPanelView: View {
         }
 
         guard let selectedDivision else {
-            return "No active unit selected."
+            return "No active formation selected."
         }
 
         guard selectedDivision.faction == playerFaction else {
-            return "Enemy unit selected. Commands disabled."
+            if humanControlledFactions.contains(selectedDivision.faction) {
+                return "Friendly formation selected. Commands unavailable during \(activeFaction.displayName) turn."
+            }
+            return "Enemy formation selected. Commands disabled."
         }
 
         guard activeFaction == playerFaction, phase.isActionPhase else {
@@ -99,7 +103,7 @@ struct CommandPanelView: View {
         }
 
         guard !selectedDivision.hasActed else {
-            return "Selected unit has acted."
+            return "Selected formation has acted."
         }
 
         return "Move/Attack ready."

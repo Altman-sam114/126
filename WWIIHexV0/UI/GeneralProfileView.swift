@@ -126,10 +126,10 @@ struct GeneralProfileView: View {
 
     private var assignedUnitsBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Assigned Units")
+            Text("Assigned Formations")
                 .font(.headline)
             if assignedDivisions.isEmpty {
-                Text("No active divisions assigned.")
+                Text("No active formations assigned.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {

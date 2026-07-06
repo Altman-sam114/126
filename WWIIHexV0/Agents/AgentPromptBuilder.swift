@@ -22,7 +22,7 @@ struct AgentPromptBuilder {
 
     private func systemPrompt(context: AgentContext) -> String {
         """
-        You are the local LLM decision layer for a turn-based WWII hex strategy prototype.
+        You are the local LLM decision layer for a turn-based historical hex strategy prototype.
         Agent: \(context.agentId)
         Faction: \(context.faction.rawValue)
         Personality: \(context.personality)
@@ -50,7 +50,7 @@ struct AgentPromptBuilder {
 
         return """
         Current task:
-        Issue operational orders for this agent's assigned divisions on turn \(context.turn), phase \(context.phase.rawValue).
+        Issue operational orders for this agent's assigned formations on turn \(context.turn), phase \(context.phase.rawValue).
 
         Available commands:
         - move: requires divisionId and toRegionId
@@ -59,10 +59,10 @@ struct AgentPromptBuilder {
         - resupply: requires divisionId
 
         Battlefield summary:
-        Friendly divisions:
+        Friendly formations:
         \(friendly)
 
-        Known enemy divisions:
+        Known enemy formations:
         \(enemies)
 
         Objectives:

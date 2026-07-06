@@ -581,7 +581,7 @@ AppContainer.bootstrap()
   -> GameAgent.guderian(...)
   -> StrategicStateBootstrapper().bootstrapIfNeeded(...)
   -> TurnManager(... commanderPool: buildCommanderPool(state: bootstrappedState))
-  -> AppContainer(...)
+  -> AppContainer(... playerFaction: scenario human faction fallback)
 ```
 
 `DataLoader.loadInitialGameState()` 当前优先走编辑器兼容 JSON：
@@ -592,6 +592,8 @@ loadGameState(
   regionName: "black_sea_crisis_1853_regions"
 )
 ```
+
+`AppContainer` 未显式传入 `playerFaction` 时，会从 `GameState.turnOrder` 与 `humanControlledFactions` 推导默认玩家视角势力；黑海危机默认落到 Britain，而不是 legacy `.allies`。`resetGame()` 重载初始 state 后也会重新推导该值，除非调用方显式注入了玩家势力覆盖值。玩家命令门禁不再只看该默认视角值：当前 `activeFaction` 若属于 `humanControlledFactions` 且处于 action phase，就作为 `commandFaction` 允许操作，避免黑海 Britain / France / Ottoman 多个人控回合被 AI 跳过后无法命令。
 
 如果失败，会先 fallback 到 legacy `ardennes_v0_scenario` + `ardennes_v02_regions`，再 fallback 到老的 `GameState.initial()` + v0.2 region 叠加路径。
 
@@ -871,7 +873,10 @@ lastAgentDecisionRecord
 lastWarDirectiveRecords
 observerModeEnabled
 mapDisplayLayer
+playerFaction / commandFaction
 ```
+
+`playerFaction` 是默认 UI 视角兜底口径。`commandFaction` 是当前可命令的人控势力，优先取 action phase 中的 `GameState.activeFaction`，否则回退 `playerFaction`。v5.5 后默认视角来自 scenario / `GameState.humanControlledFactions`，不再在主容器中固定为 legacy Allies；显式注入值仍作为测试、预览或 legacy 场景覆盖值保留。
 
 玩家提交命令：
 
@@ -904,10 +909,12 @@ handleBoardTap(coord)
 玩家可行动单位必须满足：
 
 - 非 observer mode。
-- 单位属于 `playerFaction`。
-- 当前 activeFaction 是 `playerFaction`。
+- 单位属于当前 `commandFaction`。
+- 当前 activeFaction 属于 `humanControlledFactions`，并与 `commandFaction` 一致。
 - 当前 phase 是 action phase；旧阿登兼容时仍可能显示 `.alliedPlayer`。
 - 未行动。
+
+主 UI 显示层逐步使用维多利亚兼容口径：兵牌/命令日志泛称显示为 `formation`，部署面板把 `FrontZone` 类型显示为 command sector；内部 `Division`、`FrontZone`、`FrontZoneId` 等兼容类型名暂不重命名。
 
 ### 4.2 RootGameView
 

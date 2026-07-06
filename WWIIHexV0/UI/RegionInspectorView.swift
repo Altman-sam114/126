@@ -39,7 +39,7 @@ struct RegionInspectorView: View {
                     Text(state.selectedHexDynamicTheaterId?.rawValue ?? "None")
                 }
 
-                LabeledContent("Hex FrontZone") {
+                LabeledContent("Hex Command Sector") {
                     Text(state.selectedHexFrontZoneId?.rawValue ?? "None")
                 }
 
@@ -86,7 +86,7 @@ struct RegionInspectorView: View {
                 Text(state.theaterId?.rawValue ?? "None")
             }
 
-            LabeledContent("FrontZone") {
+            LabeledContent("Command Sector") {
                 Text(state.frontZoneId?.rawValue ?? "None")
             }
 
@@ -112,7 +112,7 @@ struct RegionInspectorView: View {
                 Text(state.objectiveStatus)
             }
 
-            LabeledContent("Friendly Units") {
+            LabeledContent("Friendly Formations") {
                 Text(unitNames(state.friendlyDivisions))
                     .multilineTextAlignment(.trailing)
             }

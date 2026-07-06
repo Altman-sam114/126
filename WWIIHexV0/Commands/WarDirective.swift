@@ -500,7 +500,7 @@ enum TheaterDirectiveDecoderError: Error, Equatable, LocalizedError {
         case .factionMismatch(let expected, let actual):
             return "Theater directive faction mismatch. Expected \(expected.displayName), got \(actual.displayName)."
         case .missingZone(let zoneId):
-            return "Theater directive references missing FrontZone \(zoneId.rawValue)."
+            return "Theater directive references missing command sector \(zoneId.rawValue)."
         case .zoneFactionMismatch(let zoneId, let expected, let actual):
             return "Theater directive zone \(zoneId.rawValue) belongs to \(actual.displayName), expected \(expected.displayName)."
         case .missingTargetTheater(let theaterId):

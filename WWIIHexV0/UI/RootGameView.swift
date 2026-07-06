@@ -141,7 +141,8 @@ struct RootGameView: View {
                 case .unit:
                     UnitInspectorView(
                         division: container.selectedDivision,
-                        playerFaction: container.playerFaction,
+                        playerFaction: container.commandFaction,
+                        humanControlledFactions: container.gameState.humanControlledFactions,
                         strategicState: container.selectedUnitInspectorStrategicState
                     )
                     RegionInspectorView(inspectorState: container.selectedRegionInspectorState)
@@ -149,7 +150,8 @@ struct RootGameView: View {
                         selectedDivision: container.selectedDivision,
                         activeFaction: container.gameState.activeFaction,
                         phase: container.gameState.phase,
-                        playerFaction: container.playerFaction,
+                        playerFaction: container.commandFaction,
+                        humanControlledFactions: container.gameState.humanControlledFactions,
                         observerModeEnabled: container.observerModeEnabled,
                         lastCommandMessage: container.lastCommandMessage,
                         onHold: container.holdSelected,
@@ -195,7 +197,7 @@ struct RootGameView: View {
                 case .economy:
                     EconomyPanelView(
                         gameState: container.gameState,
-                        playerFaction: container.playerFaction,
+                        playerFaction: container.commandFaction,
                         observerModeEnabled: container.observerModeEnabled,
                         selectedHex: container.selectedHex,
                         onQueueProduction: container.queueProduction,
@@ -221,7 +223,7 @@ struct RootGameView: View {
 }
 
 private enum CompactInfoPanel: String, CaseIterable, Identifiable {
-    case unit = "Unit"
+    case unit = "Formation"
     case region = "Region"
     case general = "General"
     case log = "Log"

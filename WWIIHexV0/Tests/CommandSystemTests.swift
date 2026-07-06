@@ -328,7 +328,7 @@ final class CommandSystemTests: XCTestCase {
         let outcome = await manager.runGermanAITurn(state: state, pipelineMode: .zoneDirective)
 
         XCTAssertTrue(outcome.record.errors.contains {
-            $0.contains("german_stray") && $0.contains("not assigned to any FrontZone")
+            $0.contains("german_stray") && $0.contains("not assigned to any command sector")
         })
         XCTAssertTrue(outcome.directiveRecords.contains {
             $0.diagnostics.contains { $0.contains("german_stray") }

@@ -1,8 +1,8 @@
 import Foundation
 
 // DEPRECATED as of v0.352 - kept for regression reference, not invoked by default. See WarPipelineMode.
-// Guderian MockAI. Heuristic: skip acted; low/encircled supply -> resupply;
-// in-range vulnerable enemy -> attack; else advance toward Bastogne on roads; else hold.
+// Legacy MockAI. Heuristic: skip acted; low/encircled supply -> resupply;
+// in-range vulnerable enemy -> attack; else advance toward the visible objective on roads; else hold.
 
 struct MockAIClient: DecisionProvider {
     func decide(context: AgentContext) async throws -> AgentDecisionEnvelope {
@@ -13,7 +13,7 @@ struct MockAIClient: DecisionProvider {
 
         var orders: [AgentOrder] = []
         var reservedDestinations = Set(context.friendlyDivisions.compactMap(\.regionId) + context.enemyDivisions.compactMap(\.regionId))
-        let objective = context.objectives.first { $0.name == "Bastogne" } ?? context.objectives.first
+        let objective = context.objectives.first
 
         for division in context.friendlyDivisions.sorted(by: orderPriority) {
             guard !division.hasActed else {
@@ -27,7 +27,7 @@ struct MockAIClient: DecisionProvider {
                         divisionId: division.id,
                         toRegionId: division.regionId,
                         stance: "recover",
-                        reason: "Unit is \(division.supplyState.rawValue); recover supply before continuing the attack."
+                        reason: "Formation is \(division.supplyState.rawValue); recover supply before continuing the attack."
                     )
                 )
                 continue
@@ -85,9 +85,14 @@ struct MockAIClient: DecisionProvider {
             schemaVersion: context.visibleRegions.isEmpty ? 1 : 2,
             agentId: context.agentId,
             turn: context.turn,
-            intent: "Break through toward Bastogne using armor on roads and artillery support.",
+            intent: operationalIntent(for: objective),
             orders: orders
         )
+    }
+
+    private func operationalIntent(for objective: ObjectiveSummary?) -> String {
+        let objectiveName = objective?.name ?? "the active objective"
+        return "Advance toward \(objectiveName) using roads, reserves, and artillery support."
     }
 
     private func frontDeploymentDecision(context: AgentContext) -> AgentDecisionEnvelope? {
@@ -130,7 +135,7 @@ struct MockAIClient: DecisionProvider {
                                 divisionId: unitId,
                                 targetDivisionId: target.id,
                                 stance: segment.isEncircled ? "closePocket" : "frontAttack",
-                                reason: "v0.33 deployment: FRONT unit acts on segment \(segment.regionId.rawValue)."
+                                reason: "Deployment: forward formation acts on segment \(segment.regionId.rawValue)."
                             )
                         )
                     } else {
@@ -140,7 +145,7 @@ struct MockAIClient: DecisionProvider {
                                 divisionId: unitId,
                                 toRegionId: division.regionId,
                                 stance: segment.isEncircled ? "containPocket" : "holdFront",
-                                reason: "v0.33 deployment: FRONT unit holds assigned segment \(segment.regionId.rawValue)."
+                                reason: "Deployment: forward formation holds assigned segment \(segment.regionId.rawValue)."
                             )
                         )
                     }
@@ -166,7 +171,7 @@ struct MockAIClient: DecisionProvider {
                             divisionId: unitId,
                             toRegionId: targetRegion,
                             stance: "depthReinforce",
-                            reason: "v0.33 deployment: DEPTH reserve reinforces nearest FRONT segment."
+                            reason: "Deployment: depth reserve reinforces nearest forward segment."
                         )
                     )
                 } else {
@@ -196,7 +201,7 @@ struct MockAIClient: DecisionProvider {
                     divisionId: unitId,
                     toRegionId: division.regionId,
                     stance: "garrison",
-                    reason: "v0.33 deployment: GARRISON unit does not leave core or city region."
+                    reason: "Deployment: garrison formation does not leave core or city region."
                 )
             )
             usedDivisionIds.insert(unitId)
@@ -215,7 +220,7 @@ struct MockAIClient: DecisionProvider {
                     divisionId: division.id,
                     toRegionId: regionId,
                     stance: stance,
-                    reason: "v0.33 deployment: unit outside deployment pool holds."
+                    reason: "Deployment: formation outside command sector pool holds."
                 )
             )
         }
@@ -225,7 +230,7 @@ struct MockAIClient: DecisionProvider {
             schemaVersion: 2,
             agentId: context.agentId,
             turn: context.turn,
-            intent: "Use v0.33 FrontZone deployment: front units hold or attack, depth reserves reinforce, garrisons hold.",
+            intent: "Use command sector deployment: forward formations hold or attack, depth reserves reinforce, garrisons hold.",
             orders: orders
         )
     }

@@ -14,13 +14,14 @@ final class AppContainer: ObservableObject {
     @Published private(set) var lastWarDirectiveRecords: [WarDirectiveRecord]
     @Published private(set) var observerModeEnabled: Bool
     @Published private(set) var mapDisplayLayer: MapDisplayLayer
+    @Published private(set) var playerFaction: Faction
 
     let commandHandler: GameCommandHandling
     let dataLoader: DataLoader
     let generalRegistry: GeneralRegistry
-    let playerFaction: Faction
     let warPipelineMode: WarPipelineMode
     let turnManager: TurnManager?
+    private let playerFactionOverride: Faction?
     private var isRunningAI = false
 
     init(
@@ -28,18 +29,20 @@ final class AppContainer: ObservableObject {
         commandHandler: GameCommandHandling,
         dataLoader: DataLoader,
         generalRegistry: GeneralRegistry = .empty,
-        playerFaction: Faction = .allies,
+        playerFaction: Faction? = nil,
         turnManager: TurnManager? = nil,
         warPipelineMode: WarPipelineMode = .marshalDirective,
         observerModeEnabled: Bool = false,
         mapDisplayLayer: MapDisplayLayer = .hex
     ) {
         let bootstrappedState = StrategicStateBootstrapper().bootstrapIfNeeded(gameState)
-        self.gameState = Self.refreshGeneralAssignments(in: bootstrappedState, registry: generalRegistry)
+        let assignedState = Self.refreshGeneralAssignments(in: bootstrappedState, registry: generalRegistry)
+        self.gameState = assignedState
         self.commandHandler = commandHandler
         self.dataLoader = dataLoader
         self.generalRegistry = generalRegistry
-        self.playerFaction = playerFaction
+        self.playerFactionOverride = playerFaction
+        self.playerFaction = playerFaction ?? Self.defaultPlayerFaction(in: assignedState)
         self.warPipelineMode = warPipelineMode
         self.turnManager = turnManager
         self.selectedUnitId = nil
@@ -147,7 +150,7 @@ final class AppContainer: ObservableObject {
         selectedRegionId = mapDisplayAdapter.regionId(for: coord)
         appendInteractionEvent(selectionMessage(for: coord))
 
-        let displayedDivisions = mapDisplayAdapter.divisions(displayedAt: coord, viewerFaction: playerFaction)
+        let displayedDivisions = mapDisplayAdapter.divisions(displayedAt: coord, viewerFaction: commandFaction)
         if let attacker = selectedActionDivision,
            let enemy = displayedDivisions.first(where: { gameState.diplomacyState.canAttack(attacker: attacker.faction, target: $0.faction) }) {
             submit(.attack(attackerId: attacker.id, targetId: enemy.id))
@@ -169,7 +172,7 @@ final class AppContainer: ObservableObject {
 
     func holdSelected() {
         guard let division = selectedActionDivision else {
-            appendInteractionEvent("Hold rejected: no active allied unit selected.")
+            appendInteractionEvent("Hold rejected: no active player-controlled formation selected.")
             return
         }
 
@@ -178,7 +181,7 @@ final class AppContainer: ObservableObject {
 
     func allowRetreatSelected() {
         guard let division = selectedActionDivision else {
-            appendInteractionEvent("Allow retreat rejected: no active allied unit selected.")
+            appendInteractionEvent("Allow retreat rejected: no active player-controlled formation selected.")
             return
         }
 
@@ -187,7 +190,7 @@ final class AppContainer: ObservableObject {
 
     func resupplySelected() {
         guard let division = selectedActionDivision else {
-            appendInteractionEvent("Resupply rejected: no active allied unit selected.")
+            appendInteractionEvent("Resupply rejected: no active player-controlled formation selected.")
             return
         }
 
@@ -196,7 +199,7 @@ final class AppContainer: ObservableObject {
 
     func orderSelectedGeneralHoldLine() {
         guard let zone = selectedGeneralCommandZone else {
-            appendInteractionEvent("General order rejected: no allied front zone selected.")
+            appendInteractionEvent("General order rejected: no player command sector selected.")
             return
         }
 
@@ -222,7 +225,7 @@ final class AppContainer: ObservableObject {
             return
         }
         guard let zone = selectedGeneralCommandZone else {
-            appendInteractionEvent("General order rejected: no allied source front zone available.")
+            appendInteractionEvent("General order rejected: no player source command sector available.")
             return
         }
 
@@ -295,9 +298,11 @@ final class AppContainer: ObservableObject {
 
     func resetGame() {
         isRunningAI = false
-        gameState = refreshGeneralAssignments(
+        let resetState = refreshGeneralAssignments(
             in: StrategicStateBootstrapper().bootstrapIfNeeded(dataLoader.loadInitialGameState())
         )
+        gameState = resetState
+        playerFaction = playerFactionOverride ?? Self.defaultPlayerFaction(in: resetState)
         selectedUnitId = nil
         selectedHex = nil
         selectedRegionId = nil
@@ -320,7 +325,7 @@ final class AppContainer: ObservableObject {
         guard let selectedRegionId else {
             return nil
         }
-        return mapDisplayAdapter.inspectorState(for: selectedRegionId, selectedHex: selectedHex, viewerFaction: playerFaction)
+        return mapDisplayAdapter.inspectorState(for: selectedRegionId, selectedHex: selectedHex, viewerFaction: commandFaction)
     }
 
     var selectedUnitInspectorStrategicState: UnitInspectorStrategicState? {
@@ -395,6 +400,10 @@ final class AppContainer: ObservableObject {
         Array((gameState.eventLog + interactionLog).suffix(80))
     }
 
+    var commandFaction: Faction {
+        currentPlayerCommandFaction ?? playerFaction
+    }
+
     var selectedUnitCanAct: Bool {
         selectedActionDivision != nil
     }
@@ -403,10 +412,11 @@ final class AppContainer: ObservableObject {
         guard !observerModeEnabled else {
             return nil
         }
+        guard let commandFaction = currentPlayerCommandFaction else {
+            return nil
+        }
         guard let division = selectedDivision,
-              division.faction == playerFaction,
-              gameState.activeFaction == playerFaction,
-              gameState.phase.isActionPhase,
+              division.faction == commandFaction,
               !division.hasActed else {
             return nil
         }
@@ -415,16 +425,26 @@ final class AppContainer: ObservableObject {
     }
 
     private var canIssuePlayerDirective: Bool {
-        !observerModeEnabled &&
-            gameState.activeFaction == playerFaction &&
-            gameState.phase.isActionPhase
+        !observerModeEnabled && currentPlayerCommandFaction != nil
+    }
+
+    private var currentPlayerCommandFaction: Faction? {
+        guard gameState.phase.isActionPhase,
+              gameState.activeFaction.participatesInTurnOrder,
+              gameState.isHumanControlled(gameState.activeFaction) else {
+            return nil
+        }
+        return gameState.activeFaction
     }
 
     private var selectedAttackTarget: (region: RegionNode, zone: FrontZone)? {
+        guard let commandFaction = currentPlayerCommandFaction else {
+            return nil
+        }
         guard let selectedRegionId,
               let region = gameState.map.region(id: selectedRegionId),
               let targetZone = gameState.warDeploymentState.zone(for: selectedRegionId),
-              gameState.diplomacyState.canAttack(attacker: playerFaction, target: targetZone.faction) else {
+              gameState.diplomacyState.canAttack(attacker: commandFaction, target: targetZone.faction) else {
             return nil
         }
         return (region, targetZone)
@@ -459,6 +479,22 @@ final class AppContainer: ObservableObject {
         return next
     }
 
+    private static func defaultPlayerFaction(in state: GameState) -> Faction {
+        if let configuredHumanFaction = state.turnOrder.first(where: { state.humanControlledFactions.contains($0) }) {
+            return configuredHumanFaction
+        }
+        if let humanFaction = state.humanControlledFactions
+            .filter(\.participatesInTurnOrder)
+            .sorted(by: { $0.rawValue < $1.rawValue })
+            .first {
+            return humanFaction
+        }
+        if state.turnOrder.contains(.allies) {
+            return .allies
+        }
+        return state.turnOrder.first(where: \.participatesInTurnOrder) ?? state.activeFaction
+    }
+
     private func applyPlayerCommandBookkeeping(
         _ command: Command,
         to state: GameState,
@@ -470,10 +506,12 @@ final class AppContainer: ObservableObject {
             return next
         }
 
+        let commandFaction = previousState.activeFaction
         guard let divisionId = command.actingDivisionId,
-              previousState.activeFaction == playerFaction,
+              previousState.isHumanControlled(commandFaction),
               previousState.phase.isActionPhase,
-              previousState.division(id: divisionId)?.faction == playerFaction else {
+              commandFaction.participatesInTurnOrder,
+              previousState.division(id: divisionId)?.faction == commandFaction else {
             return next
         }
 
@@ -495,32 +533,36 @@ final class AppContainer: ObservableObject {
     }
 
     private func inferredPlayerCommandZone() -> FrontZone? {
+        guard let commandFaction = currentPlayerCommandFaction else {
+            return nil
+        }
+
         if let division = selectedDivision,
-           division.faction == playerFaction,
+           division.faction == commandFaction,
            let zoneId = gameState.warDeploymentState.zoneId(for: division.coord, map: gameState.map),
            let zone = gameState.warDeploymentState.frontZones[zoneId],
-           zone.faction == playerFaction {
+           zone.faction == commandFaction {
             return zone
         }
 
         if let selectedRegionId,
            let zone = gameState.warDeploymentState.zone(for: selectedRegionId),
-           zone.faction == playerFaction {
+           zone.faction == commandFaction {
             return zone
         }
 
         guard let targetZone = selectedGeneralTargetZone,
-              gameState.diplomacyState.canAttack(attacker: playerFaction, target: targetZone.faction) else {
+              gameState.diplomacyState.canAttack(attacker: commandFaction, target: targetZone.faction) else {
             return nil
         }
 
-        return playerZonesAdjacent(to: targetZone.id).first
+        return playerZonesAdjacent(to: targetZone.id, faction: commandFaction).first
     }
 
-    private func playerZonesAdjacent(to targetZoneId: FrontZoneId) -> [FrontZone] {
+    private func playerZonesAdjacent(to targetZoneId: FrontZoneId, faction: Faction) -> [FrontZone] {
         gameState.warDeploymentState.frontZones.values
             .filter { zone in
-                zone.faction == playerFaction &&
+                zone.faction == faction &&
                     zone.frontSegments.contains { $0.neighborEnemyZone == targetZoneId }
             }
             .sorted { $0.id.rawValue < $1.id.rawValue }
@@ -566,18 +608,19 @@ final class AppContainer: ObservableObject {
         sourceRegionId: RegionId?,
         targetRegionId: RegionId?
     ) {
-        guard canIssuePlayerDirective else {
+        guard let commandFaction = currentPlayerCommandFaction,
+              canIssuePlayerDirective else {
             appendInteractionEvent("General order rejected: not in the player command phase.")
             return
         }
-        guard gameState.warDeploymentState.frontZones[directive.zoneId]?.faction == playerFaction else {
+        guard gameState.warDeploymentState.frontZones[directive.zoneId]?.faction == commandFaction else {
             appendInteractionEvent("General order rejected: source zone is not controlled by the player.")
             return
         }
 
         let startState = refreshedRuntimeState(gameState)
         guard let refreshedZone = startState.warDeploymentState.frontZones[directive.zoneId],
-              refreshedZone.faction == playerFaction else {
+              refreshedZone.faction == commandFaction else {
             appendInteractionEvent("General order rejected: source zone changed during refresh.")
             return
         }
@@ -607,14 +650,14 @@ final class AppContainer: ObservableObject {
             diagnostics.append("\(rejected.count) command(s) were rejected by rules.")
         }
         if !lockedIds.isEmpty {
-            diagnostics.append("\(lockedIds.count) micromanaged division(s) excluded.")
+            diagnostics.append("\(lockedIds.count) micromanaged formation(s) excluded.")
         }
 
         let record = WarDirectiveRecord(
             id: "player_directive_turn_\(startState.turn)_\(directive.zoneId.rawValue)_\(directive.type.rawValue)_\(targetRegionId?.rawValue ?? "hold")",
             issuerId: "player",
             turn: startState.turn,
-            faction: playerFaction,
+            faction: commandFaction,
             zoneId: directive.zoneId,
             directiveType: directive.type,
             targetRegionIds: targetRegionId.map { [$0] } ?? directive.targetRegionIds,
@@ -632,7 +675,7 @@ final class AppContainer: ObservableObject {
                 id: "player_operation_turn_\(startState.turn)_\(directive.zoneId.rawValue)_\(directive.type.rawValue)_\(targetRegionId?.rawValue ?? "hold")",
                 turn: startState.turn,
                 zoneId: directive.zoneId,
-                faction: playerFaction,
+                faction: commandFaction,
                 directiveType: directive.type,
                 sourceRegionId: sourceRegionId,
                 targetRegionId: targetRegionId,
@@ -783,13 +826,19 @@ final class AppContainer: ObservableObject {
     private func handleDivisionTap(_ division: Division) {
         if observerModeEnabled {
             selectDivision(division)
-            appendInteractionEvent("Inspecting unit: \(division.name).")
+            appendInteractionEvent("Inspecting formation: \(division.name).")
             return
         }
 
-        if division.faction == playerFaction {
+        if division.faction == commandFaction {
             selectDivision(division)
-            appendInteractionEvent("Selected unit: \(division.name).")
+            appendInteractionEvent("Selected formation: \(division.name).")
+            return
+        }
+
+        if gameState.isHumanControlled(division.faction) {
+            selectDivision(division)
+            appendInteractionEvent("Selected friendly formation: \(division.name).")
             return
         }
 
@@ -797,7 +846,7 @@ final class AppContainer: ObservableObject {
             submit(.attack(attackerId: attacker.id, targetId: division.id))
         } else {
             selectDivision(division)
-            appendInteractionEvent("Selected enemy unit: \(division.name).")
+            appendInteractionEvent("Selected enemy formation: \(division.name).")
         }
     }
 
