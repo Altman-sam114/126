@@ -208,6 +208,36 @@
 - 2026-07-06：新增 `Siege Depot Works` 围城补给站建设切片。`ConstructionKind.siegeDepotWorks` 从经济面板选中己控 hex 后经 `Command.queueConstruction -> RuleEngine -> EconomyRules` 扣费入队；站点必须邻接外交上可攻击方控制的城市或要塞 hex，完成时只给目标 hex 添加 `.siegeDepot` 物流标签。炮兵从带 `.siegeDepot` 的 hex 攻击城市/要塞时获得轻量攻城准备加成。该切片不改变 hex controller、region controller、`regionToTheater`、`hexToTheater`、`hexToFrontZone` 或前线。
 - 2026-07-06：完成黑海默认玩家势力与主路径可见文案清理切片。`AppContainer` 未显式注入 `playerFaction` 时从 `GameState.turnOrder` / `humanControlledFactions` 推导默认玩家视角，黑海危机默认落到 Britain，`resetGame()` 后同步重算；命令门禁新增 `commandFaction` 口径，当前 `activeFaction` 若是人控 action phase，就允许该势力操作，避免 France / Ottoman 人控回合被 AI 跳过后无法命令。主 UI、交互日志、Agent prompt 和 legacy MockAI 可见 intent 将二战/旧口径的 `Allies`、Guderian/Bastogne、`division/unit`、`FrontZone` 标签收敛为 player-controlled formation / command sector 等通用历史策略口径。内部 `Division`、`FrontZone` 和 Guderian legacy fallback 仍保留给旧数据、测试和回归路径。
 
+## v5.6 - 维多利亚 persona AI 指挥链起步切片
+
+完成日期：2026-07-06
+
+核心更新：
+
+- `AgentRole` 增加 `expeditionaryCommander`、`fieldCommander` 与 `generalStaff`，使 `victorian_personas.json` 中 Raglan、Saint-Arnaud、Omar Pasha、Menshikov 等 agent 可实例化为运行时 `GameAgent`。
+- 新增 `GameAgent.defaultCommander(for:from:state:)`：默认 AI 身份优先按 faction 从 `victorian_personas.agents` 选择 persona，缺失时使用通用 General Staff，legacy Germany 仍保留 Guderian fallback。
+- `AppContainer.bootstrap()` 不再固定构造 Guderian / Germany marshal；它会从当前 `GameState.turnOrder` 与 `humanControlledFactions` 推导默认 AI faction，并为该 faction 构造 persona commander 与 marshal agent。
+- `turnManager(for:)` 不再为非 Germany faction 生成 `*_mock_commander`；运行时 AI 审计记录使用 persona id/name，provider 在 UI / 日志中显示为 `Simulated Staff`。
+- `TacticName.displayName` 为 Agent 面板提供兼容显示名，保留 raw value / JSON schema 不变；默认 UI 中 `blitzkrieg` 显示为 `Rapid advance`。
+- `tools/validate_black_sea_data.py` 增加 persona agent role 白名单检查，避免 JSON / Swift 角色 schema 分叉时 CI 仍误报通过。
+
+关键文件：
+
+- `WWIIHexV0/Agents/GameAgent.swift`
+- `WWIIHexV0/Agents/AgentConfiguration.swift`
+- `WWIIHexV0/App/AppContainer.swift`
+- `WWIIHexV0/Commands/WarDirective.swift`
+- `WWIIHexV0/UI/AgentPanelView.swift`
+- `WWIIHexV0/Tests/ScenarioDataTests.swift`
+- `tools/validate_black_sea_data.py`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+
+遗留事项：
+
+- 本轮只把默认 AI identity 接到维多利亚 persona 与审计记录；尚未实现完整 Cabinet / ForeignMinister / WarMinister / Treasury / Admiralty / Press 多角色 directive 链。
+- `MockAIClient` 仍是 deterministic provider 实现，作为 `Simulated Staff` fallback 使用；真实 LLM 接入、外交 play directive 和上游内阁 JSON 合同留后续 v5.6-v5.8。
+
 ## v0 - 六角格测试板
 
 完成日期：2026-06-14 至 2026-06-15

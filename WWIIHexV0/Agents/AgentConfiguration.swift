@@ -1,6 +1,29 @@
 import Foundation
 
 extension GameAgent {
+    static func defaultCommander(for faction: Faction, from loader: DataLoader, state: GameState) -> GameAgent {
+        if let definition = try? loader.loadGeneralAgents().first(where: { $0.faction == faction.rawValue }),
+           let agent = GameAgent(definition: definition) {
+            return agent
+        }
+
+        if faction == .germany {
+            return guderian(from: loader, state: state)
+        }
+
+        let assignedIds = state.divisions
+            .filter { $0.faction == faction && !$0.isDestroyed }
+            .map(\.id)
+            .sorted()
+        return GameAgent.sample(
+            id: "\(faction.rawValue)_general_staff",
+            name: "\(faction.commanderDisplayName) General Staff",
+            faction: faction,
+            role: .generalStaff,
+            assignedDivisionIds: assignedIds
+        )
+    }
+
     static func guderian(from loader: DataLoader, state: GameState) -> GameAgent {
         if let definition = try? loader.loadGeneralAgents().first(where: { $0.id == "guderian" }),
            let agent = GameAgent(definition: definition) {
@@ -29,13 +52,35 @@ extension GameAgent {
             personality: AgentPersonality(
                 prompt: definition.personalityPrompt,
                 traits: [definition.commandStyle],
-                aggression: definition.commandStyle == "breakthrough" ? 80 : 50,
-                riskTolerance: definition.commandStyle == "breakthrough" ? 75 : 50,
+                aggression: Self.aggression(for: definition.commandStyle),
+                riskTolerance: Self.riskTolerance(for: definition.commandStyle),
                 autonomy: 70
             ),
             relationship: AgentRelationship(loyalty: 70, trust: 70, satisfaction: 70),
             assignedDivisionIds: definition.assignedDivisionIds
         )
+    }
+
+    private static func aggression(for commandStyle: String) -> Int {
+        switch commandStyle {
+        case "aggressive", "breakthrough":
+            return 80
+        case "cautious":
+            return 35
+        default:
+            return 50
+        }
+    }
+
+    private static func riskTolerance(for commandStyle: String) -> Int {
+        switch commandStyle {
+        case "aggressive", "breakthrough":
+            return 75
+        case "cautious":
+            return 35
+        default:
+            return 50
+        }
     }
 
     static func guderianFallback(assignedDivisionIds: [String]) -> GameAgent {

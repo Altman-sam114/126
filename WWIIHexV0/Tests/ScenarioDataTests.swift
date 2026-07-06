@@ -105,4 +105,20 @@ final class ScenarioDataTests: XCTestCase {
         XCTAssertEqual(dataSet.scenario.id, "mapeditor_scenario")
         XCTAssertTrue(dataSet.scenario.initialUnits.allSatisfy { $0.assignedAgentId == nil })
     }
+
+    func testVictorianPersonasMapToRuntimeAgents() throws {
+        let loader = DataLoader()
+        let state = loader.loadInitialGameState()
+
+        let russianCommander = GameAgent.defaultCommander(for: .russia, from: loader, state: state)
+        XCTAssertEqual(russianCommander.id, "menshikov")
+        XCTAssertEqual(russianCommander.faction, .russia)
+        XCTAssertEqual(russianCommander.role, .fieldCommander)
+        XCTAssertEqual(russianCommander.personality.traits, ["cautious"])
+
+        let britishCommander = GameAgent.defaultCommander(for: .britain, from: loader, state: state)
+        XCTAssertEqual(britishCommander.id, "raglan")
+        XCTAssertEqual(britishCommander.faction, .britain)
+        XCTAssertEqual(britishCommander.role, .expeditionaryCommander)
+    }
 }

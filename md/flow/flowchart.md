@@ -296,7 +296,7 @@ flowchart TD
     DEC["元帅 JSON 解码器<br/>TheaterDirectiveDecoder<br/>提取 JSON、解码、校验 schema/zone/region/tactic"]:::command
     COMP["元帅意图编译器<br/>TheaterDirectiveCompiler<br/>TheaterDirective -> ZoneDirective<br/>传递 focus/convergence/coordinated 参数"]:::command
     ENV["指令信封<br/>DirectiveEnvelope<br/>收集编译后的 ZoneDirective"]:::command
-    TACTIC["高级战术路由<br/>TacticName<br/>blitzkrieg / spearhead / breakthrough / pincer / fire / feint / guerrilla / elastic / depth / lastStand"]:::command
+    TACTIC["高级战术路由<br/>TacticName<br/>rapid advance / spearhead / breakthrough / pincer / fire / feint / irregular / elastic / depth / lastStand"]:::command
     WCE["指令执行器<br/>WarCommandExecutor.execute<br/>按战术 profile 选择单位、目标和 fallback"]:::command
     BOTTOM["具体单位命令<br/>Command<br/>attack / move / hold / allowRetreat"]:::command
     RE["统一规则校验执行<br/>RuleEngine<br/>AI 和玩家共用同一套规则"]:::rules
@@ -429,7 +429,7 @@ flowchart TD
     DIPUI["外交面板<br/>DiplomacyPanelView<br/>scenario war goals + warSupport 只读展示"]:::ui
     GOALS["战争目标状态<br/>GameState.victoryConditions + victoryState<br/>Open / Holding / Resolved"]:::state
     BOARD["地图场景<br/>BoardScene<br/>缓存 unit display hex 后排序绘制"]:::ui
-    MARSHAL["模拟元帅 / MockAI<br/>MarshalAgent + SimulatedMarshalLLMClient"]:::ai
+    MARSHAL["模拟参谋链<br/>Persona GameAgent + MarshalAgent<br/>Simulated Staff fallback"]:::ai
     ZD["战区指令<br/>ZoneDirective<br/>tactic / focus / intensity"]:::command
     WCE["执行解释<br/>WarCommandExecutor<br/>infiltration 限制默认投入"]:::command
     RULE["规则权威<br/>RuleEngine<br/>唯一修改 GameState"]:::rules
@@ -446,7 +446,7 @@ flowchart TD
     LOG --> PLAYTEST
     BOARD --> PLAYTEST
 
-    WARN["边界<br/>UI / MockAI 不直接改 GameState<br/>仍必须走统一命令管线"]:::warn
+    WARN["边界<br/>UI / Simulated Staff 不直接改 GameState<br/>仍必须走统一命令管线"]:::warn
     AIUI -.守住.-> WARN
     WCE -.守住.-> WARN
 

@@ -63,18 +63,19 @@ final class AppContainer: ObservableObject {
         let gameState = dataLoader.loadInitialGameState()
         let commandHandler = RuleEngine()
         let generalRegistry = (try? dataLoader.loadGeneralRegistry()) ?? .empty
-        let guderian = GameAgent.guderian(from: dataLoader, state: gameState)
         let bootstrappedState = Self.refreshGeneralAssignments(
             in: StrategicStateBootstrapper().bootstrapIfNeeded(gameState),
             registry: generalRegistry
         )
+        let defaultAIFaction = Self.defaultAIFaction(in: bootstrappedState)
+        let defaultAgent = GameAgent.defaultCommander(for: defaultAIFaction, from: dataLoader, state: bootstrappedState)
         let turnManager = TurnManager(
-            agent: guderian,
+            agent: defaultAgent,
             provider: MockAIClient(),
-            providerName: "MockAI",
+            providerName: "Simulated Staff",
             commandHandler: commandHandler,
             commanderPool: Self.buildCommanderPool(state: bootstrappedState, registry: generalRegistry),
-            marshalAgent: Self.buildMarshalAgent(faction: .germany, state: bootstrappedState)
+            marshalAgent: Self.buildMarshalAgent(faction: defaultAIFaction, state: bootstrappedState)
         )
         return AppContainer(
             gameState: bootstrappedState,
@@ -495,6 +496,18 @@ final class AppContainer: ObservableObject {
         return state.turnOrder.first(where: \.participatesInTurnOrder) ?? state.activeFaction
     }
 
+    private static func defaultAIFaction(in state: GameState) -> Faction {
+        if let configuredAIFaction = state.turnOrder.first(where: { faction in
+            faction.participatesInTurnOrder && !state.humanControlledFactions.contains(faction)
+        }) {
+            return configuredAIFaction
+        }
+        if state.activeFaction.participatesInTurnOrder {
+            return state.activeFaction
+        }
+        return state.turnOrder.first(where: \.participatesInTurnOrder) ?? .germany
+    }
+
     private func applyPlayerCommandBookkeeping(
         _ command: Command,
         to state: GameState,
@@ -763,31 +776,18 @@ final class AppContainer: ObservableObject {
     }
 
     private func turnManager(for faction: Faction, state: GameState) -> TurnManager {
-        if faction == .germany, let turnManager, generalRegistry.allGenerals.isEmpty {
+        if let turnManager,
+           turnManager.agent.faction == faction,
+           generalRegistry.allGenerals.isEmpty {
             return turnManager
         }
 
-        let agent: GameAgent
-        switch faction {
-        case .germany:
-            agent = GameAgent.guderian(from: dataLoader, state: state)
-        default:
-            let assignedIds = state.divisions
-                .filter { $0.faction == faction && !$0.isDestroyed }
-                .map(\.id)
-            agent = GameAgent.sample(
-                id: "\(faction.rawValue)_mock_commander",
-                name: "\(faction.commanderDisplayName) Mock Commander",
-                faction: faction,
-                role: .armyCommander,
-                assignedDivisionIds: assignedIds
-            )
-        }
+        let agent = GameAgent.defaultCommander(for: faction, from: dataLoader, state: state)
 
         return TurnManager(
             agent: agent,
             provider: MockAIClient(),
-            providerName: "MockAI",
+            providerName: "Simulated Staff",
             commandHandler: commandHandler,
             commanderPool: Self.buildCommanderPool(state: state, registry: generalRegistry),
             marshalAgent: Self.buildMarshalAgent(faction: faction, state: state)

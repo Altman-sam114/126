@@ -10,6 +10,14 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "WWIIHexV0" / "Data"
+SUPPORTED_AGENT_ROLES = {
+    "ruler",
+    "fieldMarshal",
+    "armyCommander",
+    "expeditionaryCommander",
+    "fieldCommander",
+    "generalStaff",
+}
 
 
 def load_json(name: str) -> Any:
@@ -213,6 +221,8 @@ def main() -> int:
     for agent in persona_agents:
         if agent.get("faction") not in factions:
             errors.append(f"agent {agent['id']} has unknown faction {agent.get('faction')}.")
+        if agent.get("role") not in SUPPORTED_AGENT_ROLES:
+            errors.append(f"agent {agent['id']} has unsupported role {agent.get('role')}.")
         for division_id in agent.get("assignedDivisionIds", []):
             if division_id not in unit_id_set:
                 errors.append(f"agent {agent['id']} references unknown division {division_id}.")

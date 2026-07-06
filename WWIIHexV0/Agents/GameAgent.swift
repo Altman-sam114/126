@@ -1,12 +1,15 @@
 import Foundation
 
-// v0 runtime agent. Lightweight: no cabinet, no directive board, no authority ranks.
-// Only Guderian army commander used in v0 German AI turn. v0.5+ can extend.
+// Runtime agent identity used for audit records and deterministic fallback context.
+// Execution still flows through directive decoders, WarCommandExecutor, and RuleEngine.
 
 enum AgentRole: String, Codable, Equatable, CaseIterable {
     case ruler
     case fieldMarshal
     case armyCommander
+    case expeditionaryCommander
+    case fieldCommander
+    case generalStaff
 
     var displayName: String {
         switch self {
@@ -16,6 +19,12 @@ enum AgentRole: String, Codable, Equatable, CaseIterable {
             return "Field Marshal"
         case .armyCommander:
             return "Army Commander"
+        case .expeditionaryCommander:
+            return "Expeditionary Commander"
+        case .fieldCommander:
+            return "Field Commander"
+        case .generalStaff:
+            return "General Staff"
         }
     }
 }
@@ -44,7 +53,12 @@ struct GameAgent: Identifiable, Codable, Equatable {
     var assignedDivisionIds: [String]
 
     var canIssueUnitCommands: Bool {
-        role == .armyCommander
+        switch role {
+        case .armyCommander, .expeditionaryCommander, .fieldCommander:
+            return true
+        case .ruler, .fieldMarshal, .generalStaff:
+            return false
+        }
     }
 }
 

@@ -42,6 +42,35 @@ enum TacticName: String, Codable, Equatable, CaseIterable {
             return .defense
         }
     }
+
+    var displayName: String {
+        switch self {
+        case .standardAttack:
+            return "Standard attack"
+        case .blitzkrieg:
+            return "Rapid advance"
+        case .spearhead:
+            return "Spearhead"
+        case .breakthrough:
+            return "Breakthrough"
+        case .pincerMovement:
+            return "Pincer movement"
+        case .fireCoverage:
+            return "Fire coverage"
+        case .feint:
+            return "Feint"
+        case .guerrillaWarfare:
+            return "Irregular warfare"
+        case .holdPosition:
+            return "Hold position"
+        case .elasticDefense:
+            return "Elastic defense"
+        case .defenseInDepth:
+            return "Defense in depth"
+        case .lastStand:
+            return "Last stand"
+        }
+    }
 }
 
 struct TacticCondition: Codable, Equatable {
