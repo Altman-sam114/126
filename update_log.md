@@ -167,8 +167,41 @@
 
 遗留事项：
 
-- `EconomyResources.manpower/industry/supplies` 内部字段仍保留作兼容；完整国库、工业产能、铁路运输力、船运量和战争支持仍待后续 v5.4-v5.7 切片。
+- `EconomyResources.manpower/industry/supplies` 内部字段仍保留作兼容；完整国库、工业产能、铁路运输力、船运量和完整战争支持状态机仍待后续 v5.5-v5.7 切片。
 - 本轮已引入单 hex 铁路工程、野战工事、港口工程和主地图物流标记；尚未引入舰队整备、铁路运输力、建设上限、完整财政/舆论状态机或可交互物流图例；`warDebt` 仅是最小财政压力字段，不等同完整债务/议会系统。
+
+## v5.5 - 战争目标与舆论压力起步切片
+
+完成日期：2026-07-06
+
+核心更新：
+
+- 新增 `WarSupportAdjustment` 和 `DiplomacyState.adjustWarSupport(for:delta:turn:)`，允许规则层按 faction 调整对应国家的 `CountryProfile.warSupport`，并保持 0-100 边界。
+- `EconomyRules.resolveFactionTurn` 在回合经济结算中计算战争债务服务和战略补给短缺压力；`warDebt` 的 debt service 会持续侵蚀战争支持，stores 短缺会叠加支持度惩罚，并通过外交日志记录受影响国家。
+- `DiplomacyPanelView` 改为读取完整 `GameState`，在外交面板展示 scenario `victoryConditions` 中的战争目标、目标名称、Open / Holding / Resolved 状态和 hold duration。
+- 外交面板国家列表展示 `warSupport`，并对低支持度使用阈值颜色提示。
+- `RootGameView` 把 `container.gameState` 传入外交面板，避免 UI 只能看到静态 `DiplomacyState` 而看不到胜利条件和胜利状态。
+
+关键文件：
+
+- `WWIIHexV0/Core/DiplomacyState.swift`
+- `WWIIHexV0/Rules/EconomyRules.swift`
+- `WWIIHexV0/UI/DiplomacyPanelView.swift`
+- `WWIIHexV0/UI/RootGameView.swift`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+
+验证记录：
+
+- 功能 commit `57052c9928f149a4cf6aa0d8bf6a1ff6d1b10ded` 已 push 到 `origin/main`。
+- 本机轻量检查：`swiftc -parse` 覆盖 `DiplomacyState.swift`、`EconomyRules.swift`、`DiplomacyPanelView.swift`、`RootGameView.swift` 通过；`git diff --check` 通过；本轮改动文件尾随空白扫描无命中；冲突标记扫描无命中。
+- 云端重验证：run `28788988901` attempt `1` 结果包 `WWIIHexV0-ci-v1-main-57052c9-run28788988901-attempt1` 已核对，manifest 显示 `branch=main`、`commitSha=57052c9928f149a4cf6aa0d8bf6a1ff6d1b10ded`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
+
+遗留事项：
+
+- 本轮是战争目标可视化和战争支持压力桥，不是完整 `DiplomaticPlay`、议会、新闻报纸、战争厌倦、国家级财政或投降谈判系统。
+- 经济仍是 faction 级总账，因此 `adjustWarSupport(for faction:)` 会影响该 faction 下所有国家；后续若引入国家级经济账本，需要把支持度压力收窄到具体国家或 coalition 成员。
+- 战争目标来源仍是 scenario `victoryConditions`，尚未提供玩家/AI 动态提出、修改或谈判战争目标的命令入口。
 
 ## v0 - 六角格测试板
 

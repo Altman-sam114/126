@@ -83,8 +83,8 @@ flowchart TD
     H2T["动态战区权威<br/>hexToTheater<br/>运行时推进只改具体 hex"]:::authority
     FRONT["前线层<br/>FrontLine / FrontSegment<br/>按外交可攻击双方的动态战区真实相邻 hex 生成"]:::derived
     DEPLOY["部署层<br/>WarDeploymentState<br/>用 hexToFrontZone 把单位分成前线/纵深/驻军"]:::derived
-    ECO["经济总账<br/>EconomyState / EconomyRules<br/>收入、维护费、生产队列、自动补员"]:::economy
-    DIP["外交关系<br/>DiplomacyState<br/>判断 atWar、通行权、中立、可攻击"]:::diplomacy
+    ECO["经济总账<br/>EconomyState / EconomyRules<br/>收入、维护费、warDebt、生产队列、自动补员、战争支持压力"]:::economy
+    DIP["外交关系与支持度<br/>DiplomacyState<br/>判断 atWar、通行权、中立、可攻击；保存 CountryProfile.warSupport"]:::diplomacy
     PLAYER["玩家输入<br/>点击地图、移动、攻击、结束回合"]:::input
     AI["AI 元帅系统<br/>MarshalAgent + TheaterDirective JSON<br/>先做大战役级规划"]:::input
     DEC["元帅 JSON 解码<br/>TheaterDirectiveDecoder<br/>提取 fenced JSON、校验 id 与 schema"]:::command
@@ -110,6 +110,7 @@ flowchart TD
     H2T --> FRONT --> DEPLOY
     GS --> ECO
     GS --> DIP
+    ECO -->|debt / supply pressure| DIP
 
     PLAYER --> CMD
     AI --> DEC --> COMP --> ZD --> WCE --> CMD
@@ -199,9 +200,9 @@ flowchart TD
     classDef warn fill:#ffedd5,stroke:#f97316,color:#431407
 ```
 
-## 3. v5.4 经济、生产、预算与补员链路
+## 3. v5.5 经济、生产、预算、建设与战争支持链路
 
-这张图看当前初级经济。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产和预算命令都走 `RuleEngine`，UI 不直接改 `GameState`。
+这张图看当前初级经济。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算和建设命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；这不是完整 `DiplomaticPlay`。
 
 ```mermaid
 flowchart TD
@@ -221,12 +222,14 @@ flowchart TD
     BUILD["建设命令<br/>Command.queueConstruction<br/>Railway / Field / Port Works @ selected hex"]:::command
     BLDVALID["建设校验<br/>CommandValidator.validateConstruction<br/>己控 hex / 港口需 coast / 未有目标标签 / 资源足够"]:::rules
     BLDQUEUE["预付成本并入建设队列<br/>EconomyRules.queueConstruction<br/>constructionQueue"]:::economy
+    DIP["外交状态<br/>DiplomacyState<br/>国家 warSupport"]:::diplomacy
 
     END["结束当前阵营回合<br/>Command.endTurn<br/>CommandExecutor.executeEndTurn"]:::command
     SUPPLY["补给状态刷新<br/>SupplyRules.updateSupplyStates"]:::rules
-    RESOLVE["经济结算<br/>EconomyRules.resolveFactionTurn<br/>收入、维护费、债务服务、短缺、补员、生产推进"]:::economy
+    RESOLVE["经济结算<br/>EconomyRules.resolveFactionTurn<br/>收入、维护费、债务服务、短缺、支持度压力、补员、生产推进"]:::economy
     SHORT{"补给库存够吗?"}:::decision
     LOW["战略补给短缺<br/>supplied 单位降为 lowSupply"]:::rules
+    PRESS["战争支持压力<br/>EconomyRules.applyWarSupportPressure<br/>debt service + stores 短缺 -> adjustWarSupport"]:::diplomacy
     REINF["自动补员<br/>安全后方 supplied 非敌邻单位<br/>每回合最多 +2 strength"]:::rules
     PROD["推进生产队列<br/>remainingTurns - 1<br/>ready 后部署或发补给箱"]:::economy
     CONST["推进建设队列<br/>remainingTurns - 1<br/>ready 后只改目标 hex logisticsTags"]:::economy
@@ -235,15 +238,20 @@ flowchart TD
     WAIT["保留订单<br/>本回合无安全 hex，等待后续回合"]:::economy
     RAIL["完成工程<br/>MapState.setTile<br/>target.logisticsTags.insert(.rail / .fieldWorks / .port)"]:::authority
     NEXT["切换阵营并刷新运行时层<br/>StrategicStateBootstrapper.refreshRuntimeState"]:::rules
+    DIPUI["外交面板<br/>DiplomacyPanelView<br/>scenario war goals + support 只读展示"]:::ui
+    GOALS["场景战争目标<br/>GameState.victoryConditions<br/>Open / Holding / Resolved"]:::derived
 
     BOOT --> LEDGER
     HEX --> REGION --> INCOME --> LEDGER
     UI --> QUEUE --> VALIDATE --> PAY --> LEDGER
     UI --> BUDGET --> BVALID --> APPLYB --> LEDGER
     UI --> BUILD --> BLDVALID --> BLDQUEUE --> LEDGER
+    GOALS --> DIPUI
+    DIP --> DIPUI
     END --> SUPPLY --> RESOLVE
     LEDGER --> RESOLVE
     RESOLVE --> SHORT
+    RESOLVE --> PRESS --> DIP
     SHORT -->|不足| LOW --> REINF
     SHORT -->|足够| REINF
     REINF --> PROD --> CONST
@@ -260,6 +268,7 @@ flowchart TD
     classDef authority fill:#fee2e2,stroke:#dc2626,color:#111827
     classDef derived fill:#dcfce7,stroke:#16a34a,color:#052e16
     classDef economy fill:#fef9c3,stroke:#ca8a04,color:#292107
+    classDef diplomacy fill:#f3e8ff,stroke:#7e22ce,color:#2e1065
     classDef command fill:#fae8ff,stroke:#a21caf,color:#2a0a2f
     classDef rules fill:#ccfbf1,stroke:#0f766e,color:#042f2e
     classDef decision fill:#fff7ed,stroke:#ea580c,color:#1f1300
@@ -415,6 +424,8 @@ flowchart TD
     ROOT["主界面<br/>RootGameView<br/>HUD + Info tabs"]:::ui
     LOG["日志面板<br/>EventLogView<br/>最近 60 条 LogDisplayEntry"]:::ui
     AIUI["AI 面板<br/>AgentPanelView<br/>raw JSON + command results + zone directives"]:::ui
+    DIPUI["外交面板<br/>DiplomacyPanelView<br/>scenario war goals + warSupport 只读展示"]:::ui
+    GOALS["战争目标状态<br/>GameState.victoryConditions + victoryState<br/>Open / Holding / Resolved"]:::state
     BOARD["地图场景<br/>BoardScene<br/>缓存 unit display hex 后排序绘制"]:::ui
     MARSHAL["模拟元帅 / MockAI<br/>MarshalAgent + SimulatedMarshalLLMClient"]:::ai
     ZD["战区指令<br/>ZoneDirective<br/>tactic / focus / intensity"]:::command
@@ -425,7 +436,9 @@ flowchart TD
     STATE --> ROOT
     ROOT --> LOG
     ROOT --> AIUI
+    ROOT --> DIPUI
     ROOT --> BOARD
+    STATE --> GOALS --> DIPUI
     MARSHAL --> ZD --> WCE --> RULE --> STATE
     AIUI --> PLAYTEST
     LOG --> PLAYTEST

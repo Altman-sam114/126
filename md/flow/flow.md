@@ -132,8 +132,8 @@ playerCommandState
 - `theaterState` 保存初始战区快照与运行时动态战区。
 - `frontLineState` 从动态战区相邻 hex 派生。
 - `warDeploymentState` 从动态战区/前线/单位位置派生，供 AI 调度单位。
-- `economyState` 保存 manpower、industry、supplies、生产队列、上回合收入/维护费/补员消耗，不直接改变战术占领权。
-- `diplomacyState` 保存国家/集团/关系草案。v5.1 起移动、攻击、补给、AI 目标选择的敌我判断优先通过 `DiplomacyState.canAttack` / `canEnterTerritory`，不再走 `Faction.opponent` 主路径。
+- `economyState` 保存 manpower、industry、supplies、生产/建设队列、warDebt、上回合收入/维护费/补员消耗，不直接改变战术占领权。
+- `diplomacyState` 保存国家、集团、关系和 `CountryProfile.warSupport`。v5.1 起移动、攻击、补给、AI 目标选择的敌我判断优先通过 `DiplomacyState.canAttack` / `canEnterTerritory`，不再走 `Faction.opponent` 主路径；v5.5 起 `EconomyRules.resolveFactionTurn` 可通过 `DiplomacyState.adjustWarSupport` 写入战争支持压力。
 - `turnOrder` 保存本局参战势力行动顺序，`humanControlledFactions` 保存人类控制势力；旧阿登数据默认兼容为 Germany -> Allies，Allies 为玩家。
 - `eventLog` 给 UI 和调试看。
 - `warDirectiveRecords` 记录战争指令执行回放，供 v0.36+ 后续接 LLM / 聊天命令审计。
@@ -512,6 +512,27 @@ EconomyPanelView
 - `buySupplies`：消耗 treasury，增加 stores。
 
 这些预算动作只改 faction 级经济账本，不改变 hex 占领、region controller、动态战区或前线。`mobilizeReserves` 只补充可用 recruits，不直接生成单位；真正新部队仍必须通过生产队列和后方部署规则落地。
+
+v5.5 起，`EconomyRules.resolveFactionTurn` 会把财政和补给压力桥接到外交状态：
+
+```text
+warDebt
+  -> debtService = warDebt / 20
+  -> 扣 treasury 并偿还等额 warDebt
+  -> debt service 本身形成战争支持压力
+
+strategic supply upkeep
+  -> stores 不足形成 supplyShortfall
+  -> supplied 单位降为 lowSupply
+  -> supplyShortfall 形成额外战争支持压力
+
+EconomyRules.applyWarSupportPressure
+  -> DiplomacyState.adjustWarSupport(for: faction, delta: -penalty, turn:)
+  -> 同 faction 国家 CountryProfile.warSupport 下降
+  -> EventLog category = diplomacy
+```
+
+当前 war support 压力仍以 faction 级经济账本为来源，因此一个 faction 下所有国家会一起受影响。这是财政/舆论桥接切片，不是完整国家级财政、议会或报纸舆论系统。
 
 铁路、野战工事与港口工程建设由 `Command.queueConstruction(kind:target:)` 进入同一规则系统：
 
@@ -905,11 +926,16 @@ handleBoardTap(coord)
   - `Deploy`
 - `Observer` toggle。
 - `[ INFO ]` 面板，内含：
-  - Unit + Region + Command
+  - Unit
   - Region
+  - General
   - Log
+  - Economy
+  - Diplomacy
   - AI
 - `UnitTooltipView`。
+
+`DiplomacyPanelView` 当前接收完整 `GameState`，只读展示 scenario war goals、objective 名称、Open / Holding / Resolved 状态、hold duration 和国家 `warSupport`。它不新增外交命令入口，也不直接修改 `GameState`。
 
 v5.3 显示适配：
 
@@ -1226,7 +1252,9 @@ SupplyRules.updateSupplyStates
 EconomyRules.resolveFactionTurn(for: activeFaction)
   -> 收入入账
   -> 支付战略补给维护费
+  -> 支付 warDebt debt service
   -> supplies 短缺时 supplied 单位降为 lowSupply
+  -> debt service / supplies 短缺时下调同 faction 国家 warSupport
   -> 安全后方自动补员
   -> 推进生产队列并部署完成单位
 SupplyRules.advanceRetreats
@@ -1246,6 +1274,8 @@ appendEvent("Turn advanced ...")
 `SupplyRules` 当前补给锚点包括正式 `SupplySource` 和受控港口。港口必须由本方、allied 或 coBelligerent 控制才可为某 faction 提供补给路径；militaryAccess 只允许通行，不自动提供港口补给。
 
 `VictoryRules` 当前先读 `GameState.victoryConditions`。黑海危机等 v5 数据局会使用 scenario JSON 中的 `controlObjective`、`controlObjectives`、`holdObjectives` 条件，并按 `DiplomacyState` 将 allied / coBelligerent 控制计入同一战争目标侧；没有数据条件的 legacy 阿登局才回退到 Bastogne / St. Vith / German armor 旧规则。
+
+v5.5 起，`DiplomacyPanelView` 读取完整 `GameState`，把 `victoryConditions` 作为只读 scenario war goals 展示，并根据 `victoryState.resolvedConditionId` 与 `conditionSatisfiedSinceTurn` 标记 `Open`、`Holding` 或 `Resolved`。这只是把数据驱动胜利条件暴露到外交面板，不等于实现可动态谈判、追加或放弃的 `DiplomaticPlay`。
 
 ---
 
@@ -1871,6 +1901,7 @@ MapEditorGameResourceBridge.loadDefaultDocument
 - `RegionCommand` / AgentOrder v2 仍可桥接到 hex command，但当前默认战争 AI 是 ZoneDirective。
 - 地图编辑器的 theater assignment 是初始战区划分，不是运行时动态战区脚本。
 - 历史回退的 Cabinet/Minister/StrategicDirective 管线仍不得恢复；v0.5 当前实现没有把内阁或部长塞进 `GameState`。
+- v5.5 当前只实现战争目标可视化和战争支持压力桥；尚未实现完整 `DiplomaticPlay`、玩家/AI 动态提出战争目标、谈判、投降、议会、新闻报纸、战争厌倦或国家级财政。
 
 ---
 
