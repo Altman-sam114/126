@@ -734,13 +734,139 @@ final class RuleEngineCoreTests: XCTestCase {
 
     func testDiplomacyCommandCodableRoundTrip() throws {
         let command = Command.diplomacy(command: .declareWar(targetFaction: .austria))
+        let playCommand = Command.diplomacy(
+            command: .createDiplomaticPlay(
+                targetFaction: .austria,
+                regionId: "region_danube_delta",
+                warGoal: .demandDanubianWithdrawal
+            )
+        )
 
         let data = try JSONEncoder().encode(command)
         let decoded = try JSONDecoder().decode(Command.self, from: data)
+        let playData = try JSONEncoder().encode(playCommand)
+        let decodedPlay = try JSONDecoder().decode(Command.self, from: playData)
 
         XCTAssertEqual(decoded, command)
+        XCTAssertEqual(decodedPlay, playCommand)
         XCTAssertNil(command.actingDivisionId)
+        XCTAssertNil(playCommand.actingDivisionId)
         XCTAssertFalse(command.isRecoveryCommand)
+        XCTAssertFalse(playCommand.isRecoveryCommand)
+    }
+
+    func testCreateDiplomaticPlayRecordsCrisisWithoutOpeningWar() {
+        var state = DataLoader().loadInitialGameState()
+        state.activeFaction = .britain
+        state.phase = .humanAction
+        let originalMap = state.map
+        let originalDivisions = state.divisions
+        let originalFrontLineState = state.frontLineState
+        let originalWarDeploymentState = state.warDeploymentState
+
+        XCTAssertEqual(state.diplomacyState.relationStatus(between: .britain, and: .austria), .neutral)
+        XCTAssertTrue(state.diplomacyState.activeDiplomaticPlays.isEmpty)
+
+        let result = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: state
+        )
+
+        XCTAssertTrue(result.succeeded)
+        XCTAssertEqual(result.state.map, originalMap)
+        XCTAssertEqual(result.state.divisions, originalDivisions)
+        XCTAssertEqual(result.state.frontLineState, originalFrontLineState)
+        XCTAssertEqual(result.state.warDeploymentState, originalWarDeploymentState)
+        XCTAssertEqual(result.state.diplomacyState.relationStatus(between: .britain, and: .austria), .neutral)
+        XCTAssertFalse(result.state.diplomacyState.canAttack(attacker: .britain, target: .austria))
+        XCTAssertEqual(result.state.diplomacyState.activeDiplomaticPlays.count, 1)
+
+        let play = result.state.diplomacyState.activeDiplomaticPlays[0]
+        XCTAssertEqual(play.issuerFaction, .britain)
+        XCTAssertEqual(play.targetFaction, .austria)
+        XCTAssertNil(play.regionId)
+        XCTAssertEqual(play.warGoal, .weakenPrestige)
+        XCTAssertEqual(play.backers, [.britain])
+        XCTAssertEqual(play.opposingBackers, [.austria])
+        XCTAssertEqual(play.createdTurn, state.turn)
+        XCTAssertEqual(play.deadlineTurn, state.turn + 3)
+        XCTAssertEqual(play.outcome, .active)
+        XCTAssertTrue(
+            result.state.eventLog.contains {
+                $0.category == .diplomacy &&
+                    $0.relatedRecordId == play.id &&
+                    $0.message == "Britain opened a diplomatic play against Austria: Weaken prestige in the wider crisis."
+            }
+        )
+    }
+
+    func testCreateDiplomaticPlayRejectsDuplicatesAtWarAndWrongPhase() {
+        var state = DataLoader().loadInitialGameState()
+        state.activeFaction = .britain
+        state.phase = .humanAction
+        let command = Command.diplomacy(
+            command: .createDiplomaticPlay(
+                targetFaction: .austria,
+                regionId: nil,
+                warGoal: .weakenPrestige
+            )
+        )
+
+        let created = RuleEngine().execute(command, in: state)
+        XCTAssertTrue(created.succeeded)
+
+        let duplicate = RuleEngine().execute(command, in: created.state)
+        XCTAssertFalse(duplicate.succeeded)
+        XCTAssertEqual(duplicate.validation.errors, [.diplomaticPlayAlreadyActive])
+        XCTAssertEqual(duplicate.state, created.state)
+
+        let atWar = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .russia,
+                    regionId: nil,
+                    warGoal: .demandDanubianWithdrawal
+                )
+            ),
+            in: state
+        )
+        XCTAssertFalse(atWar.succeeded)
+        XCTAssertEqual(atWar.validation.errors, [.alreadyAtWar])
+
+        state.phase = .diplomacyResolution
+        let wrongPhase = RuleEngine().execute(command, in: state)
+        XCTAssertFalse(wrongPhase.succeeded)
+        XCTAssertEqual(wrongPhase.validation.errors, [.wrongPhase])
+        XCTAssertTrue(wrongPhase.state.diplomacyState.activeDiplomaticPlays.isEmpty)
+    }
+
+    func testDiplomacyStateDecodesLegacyJSONWithoutDiplomaticPlays() throws {
+        let data = Data(
+            """
+            {
+              "countries": [],
+              "blocs": [],
+              "relations": [],
+              "rulerRecords": [],
+              "lastUpdatedTurn": 2
+            }
+            """.utf8
+        )
+
+        let decoded = try JSONDecoder().decode(DiplomacyState.self, from: data)
+
+        XCTAssertTrue(decoded.countries.isEmpty)
+        XCTAssertTrue(decoded.blocs.isEmpty)
+        XCTAssertTrue(decoded.relations.isEmpty)
+        XCTAssertTrue(decoded.rulerRecords.isEmpty)
+        XCTAssertTrue(decoded.diplomaticPlays.isEmpty)
+        XCTAssertEqual(decoded.lastUpdatedTurn, 2)
     }
 
     func testDeclareWarCommandUpdatesDiplomacyAndAllowsAttack() {

@@ -185,6 +185,31 @@ struct CommandValidator {
             ) else {
                 return .invalid(.invalidTargetFaction)
             }
+        case .createDiplomaticPlay(let targetFaction, let regionId, _):
+            guard targetFaction != state.activeFaction,
+                  targetFaction.participatesInTurnOrder,
+                  !targetFaction.isNeutral,
+                  !state.diplomacyState.countries(for: state.activeFaction).isEmpty,
+                  !state.diplomacyState.countries(for: targetFaction).isEmpty else {
+                return .invalid(.invalidTargetFaction)
+            }
+
+            if let regionId,
+               state.map.region(id: regionId) == nil {
+                return .invalid(.regionNotFound)
+            }
+
+            guard state.diplomacyState.relationStatus(between: state.activeFaction, and: targetFaction) != .atWar else {
+                return .invalid(.alreadyAtWar)
+            }
+
+            guard state.diplomacyState.canCreateDiplomaticPlay(
+                issuerFaction: state.activeFaction,
+                targetFaction: targetFaction,
+                regionId: regionId
+            ) else {
+                return .invalid(.diplomaticPlayAlreadyActive)
+            }
         }
 
         return .valid

@@ -186,6 +186,24 @@ struct CommandExecutor {
                 category: .diplomacy
             )
             state = StrategicStateBootstrapper().refreshRuntimeState(state)
+        case .createDiplomaticPlay(let targetFaction, let regionId, let warGoal):
+            let actingFaction = state.activeFaction
+            guard let play = state.diplomacyState.createDiplomaticPlay(
+                issuerFaction: actingFaction,
+                targetFaction: targetFaction,
+                regionId: regionId,
+                warGoal: warGoal,
+                turn: state.turn
+            ) else {
+                return
+            }
+
+            let regionDescription = regionId.flatMap { state.map.region(id: $0)?.name } ?? "the wider crisis"
+            state.appendEvent(
+                "\(actingFaction.displayName) opened a diplomatic play against \(targetFaction.displayName): \(play.warGoal.displayName) in \(regionDescription).",
+                category: .diplomacy,
+                relatedRecordId: play.id
+            )
         }
     }
 

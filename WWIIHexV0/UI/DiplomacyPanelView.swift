@@ -21,6 +21,9 @@ struct DiplomacyPanelView: View {
                 Divider()
             }
 
+            diplomaticPlaySection
+            Divider()
+
             crisisActionSection
             Divider()
 
@@ -82,17 +85,66 @@ struct DiplomacyPanelView: View {
         }
     }
 
+    private var diplomaticPlaySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Diplomatic Plays")
+                .font(.subheadline.weight(.semibold))
+
+            if diplomacyState.activeDiplomaticPlays.isEmpty {
+                Text("No active diplomatic plays.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(diplomacyState.activeDiplomaticPlays) { play in
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack {
+                            Text("\(play.issuerFaction.displayName) -> \(play.targetFaction.displayName)")
+                                .font(.caption.weight(.semibold))
+                            Spacer()
+                            Text("\(play.escalation)")
+                                .font(.caption.monospacedDigit().weight(.semibold))
+                                .foregroundStyle(play.escalation >= 70 ? .orange : .secondary)
+                        }
+
+                        Text(play.warGoal.displayName)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text("Backers: \(factionNames(play.backers)) | Opposing: \(factionNames(play.opposingBackers)) | Deadline: turn \(play.deadlineTurn)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
     private var crisisActionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Crisis Actions")
                 .font(.subheadline.weight(.semibold))
 
             if declarationTargetFactions.isEmpty {
-                Text("No declaration targets.")
+                Text("No crisis targets.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(declarationTargetFactions, id: \.self) { targetFaction in
+                    Button {
+                        onDiplomacyCommand(
+                            .createDiplomaticPlay(
+                                targetFaction: targetFaction,
+                                regionId: nil,
+                                warGoal: defaultWarGoal(against: targetFaction)
+                            )
+                        )
+                    } label: {
+                        Label("Open diplomatic play against \(targetFaction.displayName)", systemImage: "doc.text")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!canCreateDiplomaticPlay(against: targetFaction))
+
                     Button {
                         onDiplomacyCommand(.declareWar(targetFaction: targetFaction))
                     } label: {
@@ -279,6 +331,17 @@ struct DiplomacyPanelView: View {
             }
     }
 
+    private func canCreateDiplomaticPlay(against targetFaction: Faction) -> Bool {
+        !observerModeEnabled &&
+            activeFactionIsHumanControlled &&
+            gameState.phase.isActionPhase &&
+            diplomacyState.canCreateDiplomaticPlay(
+                issuerFaction: activeFaction,
+                targetFaction: targetFaction,
+                regionId: nil
+            )
+    }
+
     private func canDeclareWar(on targetFaction: Faction) -> Bool {
         !observerModeEnabled &&
             activeFactionIsHumanControlled &&
@@ -312,6 +375,21 @@ struct DiplomacyPanelView: View {
             return "Declaration unavailable | \(status) | \(countries)"
         }
         return "\(activeFaction.displayName) -> \(targetFaction.displayName) | \(status) | \(countries)"
+    }
+
+    private func defaultWarGoal(against targetFaction: Faction) -> DiplomaticPlayWarGoal {
+        switch targetFaction {
+        case .russia:
+            return .demandDanubianWithdrawal
+        case .ottoman:
+            return .keepStraitsOpen
+        default:
+            return .weakenPrestige
+        }
+    }
+
+    private func factionNames(_ factions: [Faction]) -> String {
+        factions.map(\.displayName).joined(separator: ", ")
     }
 
     private func declarationSummaryColor(for targetFaction: Faction) -> Color {

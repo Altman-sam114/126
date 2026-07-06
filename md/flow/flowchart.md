@@ -202,7 +202,7 @@ flowchart TD
 
 ## 3. v5.5 经济、生产、预算、建设与战争支持链路
 
-这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.declareWar)`，把 active faction 与目标 faction 的关系写为 `atWar` 并刷新前线/部署派生层。这不是完整 `DiplomaticPlay` 或完整围城状态机。
+这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)` 或 `.declareWar`：前者只记录 active diplomatic play，后者把 active faction 与目标 faction 的关系写为 `atWar` 并刷新前线/部署派生层。这不是完整谈判/升级状态机或完整围城状态机。
 
 ```mermaid
 flowchart TD
@@ -222,9 +222,10 @@ flowchart TD
     BUILD["建设命令<br/>Command.queueConstruction<br/>Railway / Field / Port / Siege Depot Works @ selected hex"]:::command
     BLDVALID["建设校验<br/>CommandValidator.validateConstruction<br/>己控 hex / 港口需 coast / 围城需邻接敌方城市要塞 / 未有目标标签 / 资源足够"]:::rules
     BLDQUEUE["预付成本并入建设队列<br/>EconomyRules.queueConstruction<br/>constructionQueue"]:::economy
-    DIP["外交状态<br/>DiplomacyState<br/>国家 warSupport"]:::diplomacy
-    DIPCMD["外交命令<br/>Command.diplomacy<br/>declareWar(targetFaction)"]:::command
+    DIP["外交状态<br/>DiplomacyState<br/>国家 warSupport / active plays"]:::diplomacy
+    DIPCMD["外交命令<br/>Command.diplomacy<br/>createDiplomaticPlay / declareWar"]:::command
     DIPVALID["外交校验<br/>CommandValidator.validateDiplomacyCommand<br/>action phase / 有国家档案 / 非自身 neutral / 尚未 atWar"]:::rules
+    DIPPLAY["创建外交危机<br/>DiplomacyState.createDiplomaticPlay<br/>issuer / target / warGoal / backers / deadline"]:::diplomacy
     DIPAPPLY["执行宣战<br/>DiplomacyState.declareWar<br/>全部 country pair -> atWar"]:::diplomacy
 
     END["结束当前阵营回合<br/>Command.endTurn<br/>CommandExecutor.executeEndTurn"]:::command
@@ -242,7 +243,7 @@ flowchart TD
     RAIL["完成工程<br/>MapState.setTile<br/>target.logisticsTags.insert(.rail / .fieldWorks / .port / .siegeDepot)"]:::authority
     SIEGE["攻城准备修正<br/>CombatRules.effectiveAttack<br/>炮兵从 siegeDepot 攻击城市/要塞 + 轻量加成"]:::rules
     NEXT["切换阵营或外交变化后刷新运行时层<br/>StrategicStateBootstrapper.refreshRuntimeState"]:::rules
-    DIPUI["外交面板<br/>DiplomacyPanelView<br/>war goals / support + 受限 declareWar"]:::ui
+    DIPUI["外交面板<br/>DiplomacyPanelView<br/>war goals / active plays / support + 受限外交动作"]:::ui
     GOALS["场景战争目标<br/>GameState.victoryConditions<br/>Open / Holding / Resolved"]:::derived
 
     BOOT --> LEDGER
@@ -251,7 +252,9 @@ flowchart TD
     UI --> BUDGET --> BVALID --> APPLYB --> LEDGER
     UI --> BUILD --> BLDVALID --> BLDQUEUE --> LEDGER
     DIPUI --> DIPCMD
-    DIPCMD --> DIPVALID --> DIPAPPLY --> DIP
+    DIPCMD --> DIPVALID
+    DIPVALID --> DIPPLAY --> DIP
+    DIPVALID --> DIPAPPLY --> DIP
     DIPAPPLY --> NEXT
     GOALS --> DIPUI
     DIP --> DIPUI
@@ -435,7 +438,7 @@ flowchart TD
     ROOT["主界面<br/>RootGameView<br/>HUD + Info tabs"]:::ui
     LOG["日志面板<br/>EventLogView<br/>最近 60 条 LogDisplayEntry"]:::ui
     AIUI["AI 面板<br/>AgentPanelView<br/>Decision Payload + Cabinet posture + zone directives"]:::ui
-    DIPUI["外交面板<br/>DiplomacyPanelView<br/>scenario war goals + warSupport 只读展示"]:::ui
+    DIPUI["外交面板<br/>DiplomacyPanelView<br/>war goals + active plays + warSupport"]:::ui
     GOALS["战争目标状态<br/>GameState.victoryConditions + victoryState<br/>Open / Holding / Resolved"]:::state
     BOARD["地图场景<br/>BoardScene<br/>缓存 unit display hex 后排序绘制"]:::ui
     MARSHAL["模拟参谋链<br/>Persona MarshalAgentConfig -> Cabinet posture<br/>Simulated Staff fallback"]:::ai

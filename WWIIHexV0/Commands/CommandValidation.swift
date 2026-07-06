@@ -17,6 +17,7 @@ enum CommandValidationError: String, Codable, Equatable {
     case invalidConstructionSite
     case insufficientResources
     case alreadyAtWar
+    case diplomaticPlayAlreadyActive
 }
 
 struct CommandValidation: Codable, Equatable {

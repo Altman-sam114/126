@@ -226,11 +226,95 @@ struct WarSupportAdjustment: Equatable {
     let newValue: Int
 }
 
+enum DiplomaticPlayWarGoal: String, Codable, Equatable, CaseIterable {
+    case protectOttomanTerritory
+    case demandDanubianWithdrawal
+    case controlBlackSeaPort
+    case keepStraitsOpen
+    case weakenPrestige
+
+    var displayName: String {
+        switch self {
+        case .protectOttomanTerritory:
+            return "Protect Ottoman territory"
+        case .demandDanubianWithdrawal:
+            return "Demand Danubian withdrawal"
+        case .controlBlackSeaPort:
+            return "Control Black Sea port"
+        case .keepStraitsOpen:
+            return "Keep Straits open"
+        case .weakenPrestige:
+            return "Weaken prestige"
+        }
+    }
+}
+
+enum DiplomaticPlayOutcome: String, Codable, Equatable {
+    case active
+    case backedDown
+    case negotiatedSettlement
+    case escalatedToWar
+
+    var displayName: String {
+        switch self {
+        case .active:
+            return "Active"
+        case .backedDown:
+            return "Backed down"
+        case .negotiatedSettlement:
+            return "Negotiated"
+        case .escalatedToWar:
+            return "Escalated to war"
+        }
+    }
+}
+
+struct DiplomaticPlay: Identifiable, Codable, Equatable {
+    let id: String
+    let issuerFaction: Faction
+    let targetFaction: Faction
+    let regionId: RegionId?
+    let warGoal: DiplomaticPlayWarGoal
+    var escalation: Int
+    var backers: [Faction]
+    var opposingBackers: [Faction]
+    let createdTurn: Int
+    let deadlineTurn: Int
+    var outcome: DiplomaticPlayOutcome
+
+    init(
+        id: String,
+        issuerFaction: Faction,
+        targetFaction: Faction,
+        regionId: RegionId?,
+        warGoal: DiplomaticPlayWarGoal,
+        escalation: Int = 20,
+        backers: [Faction],
+        opposingBackers: [Faction],
+        createdTurn: Int,
+        deadlineTurn: Int,
+        outcome: DiplomaticPlayOutcome = .active
+    ) {
+        self.id = id
+        self.issuerFaction = issuerFaction
+        self.targetFaction = targetFaction
+        self.regionId = regionId
+        self.warGoal = warGoal
+        self.escalation = max(0, min(100, escalation))
+        self.backers = backers.sorted { $0.rawValue < $1.rawValue }
+        self.opposingBackers = opposingBackers.sorted { $0.rawValue < $1.rawValue }
+        self.createdTurn = max(1, createdTurn)
+        self.deadlineTurn = max(self.createdTurn + 1, deadlineTurn)
+        self.outcome = outcome
+    }
+}
+
 struct DiplomacyState: Codable, Equatable {
     var countries: [CountryProfile]
     var blocs: [DiplomaticBloc]
     var relations: [DiplomaticRelation]
     var rulerRecords: [RulerDecisionRecord]
+    var diplomaticPlays: [DiplomaticPlay]
     var lastUpdatedTurn: Int?
 
     init(
@@ -238,13 +322,46 @@ struct DiplomacyState: Codable, Equatable {
         blocs: [DiplomaticBloc] = [],
         relations: [DiplomaticRelation] = [],
         rulerRecords: [RulerDecisionRecord] = [],
+        diplomaticPlays: [DiplomaticPlay] = [],
         lastUpdatedTurn: Int? = nil
     ) {
         self.countries = countries.sorted { $0.id.rawValue < $1.id.rawValue }
         self.blocs = blocs.sorted { $0.id.rawValue < $1.id.rawValue }
         self.relations = relations.sorted { $0.id < $1.id }
         self.rulerRecords = rulerRecords
+        self.diplomaticPlays = diplomaticPlays.sorted { $0.id < $1.id }
         self.lastUpdatedTurn = lastUpdatedTurn
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case countries
+        case blocs
+        case relations
+        case rulerRecords
+        case diplomaticPlays
+        case lastUpdatedTurn
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            countries: try container.decodeIfPresent([CountryProfile].self, forKey: .countries) ?? [],
+            blocs: try container.decodeIfPresent([DiplomaticBloc].self, forKey: .blocs) ?? [],
+            relations: try container.decodeIfPresent([DiplomaticRelation].self, forKey: .relations) ?? [],
+            rulerRecords: try container.decodeIfPresent([RulerDecisionRecord].self, forKey: .rulerRecords) ?? [],
+            diplomaticPlays: try container.decodeIfPresent([DiplomaticPlay].self, forKey: .diplomaticPlays) ?? [],
+            lastUpdatedTurn: try container.decodeIfPresent(Int.self, forKey: .lastUpdatedTurn)
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(countries, forKey: .countries)
+        try container.encode(blocs, forKey: .blocs)
+        try container.encode(relations, forKey: .relations)
+        try container.encode(rulerRecords, forKey: .rulerRecords)
+        try container.encode(diplomaticPlays, forKey: .diplomaticPlays)
+        try container.encodeIfPresent(lastUpdatedTurn, forKey: .lastUpdatedTurn)
     }
 
     static var empty: DiplomacyState {
@@ -334,6 +451,17 @@ struct DiplomacyState: Codable, Equatable {
         rulerRecords.last
     }
 
+    var activeDiplomaticPlays: [DiplomaticPlay] {
+        diplomaticPlays
+            .filter { $0.outcome == .active }
+            .sorted { lhs, rhs in
+                if lhs.deadlineTurn != rhs.deadlineTurn {
+                    return lhs.deadlineTurn < rhs.deadlineTurn
+                }
+                return lhs.id < rhs.id
+            }
+    }
+
     func countries(for faction: Faction) -> [CountryProfile] {
         countries.filter { $0.faction == faction }
     }
@@ -345,6 +473,74 @@ struct DiplomacyState: Codable, Equatable {
     func relation(between lhs: CountryId, and rhs: CountryId) -> DiplomaticRelation? {
         let key = DiplomaticRelation(firstCountryId: lhs, secondCountryId: rhs, status: .neutral).id
         return relations.first { $0.id == key }
+    }
+
+    func canCreateDiplomaticPlay(
+        issuerFaction: Faction,
+        targetFaction: Faction,
+        regionId: RegionId?
+    ) -> Bool {
+        guard issuerFaction != targetFaction,
+              issuerFaction.participatesInTurnOrder,
+              targetFaction.participatesInTurnOrder,
+              !targetFaction.isNeutral else {
+            return false
+        }
+
+        guard !countries(for: issuerFaction).isEmpty,
+              !countries(for: targetFaction).isEmpty else {
+            return false
+        }
+
+        guard relationStatus(between: issuerFaction, and: targetFaction) != .atWar else {
+            return false
+        }
+
+        return !activeDiplomaticPlays.contains { play in
+            let samePair = play.issuerFaction == issuerFaction && play.targetFaction == targetFaction ||
+                play.issuerFaction == targetFaction && play.targetFaction == issuerFaction
+            return samePair && play.regionId == regionId
+        }
+    }
+
+    @discardableResult
+    mutating func createDiplomaticPlay(
+        issuerFaction: Faction,
+        targetFaction: Faction,
+        regionId: RegionId?,
+        warGoal: DiplomaticPlayWarGoal,
+        turn: Int,
+        duration: Int = 3
+    ) -> DiplomaticPlay? {
+        guard canCreateDiplomaticPlay(
+            issuerFaction: issuerFaction,
+            targetFaction: targetFaction,
+            regionId: regionId
+        ) else {
+            return nil
+        }
+
+        let play = DiplomaticPlay(
+            id: Self.diplomaticPlayId(
+                issuerFaction: issuerFaction,
+                targetFaction: targetFaction,
+                regionId: regionId,
+                warGoal: warGoal,
+                turn: turn
+            ),
+            issuerFaction: issuerFaction,
+            targetFaction: targetFaction,
+            regionId: regionId,
+            warGoal: warGoal,
+            backers: [issuerFaction],
+            opposingBackers: [targetFaction],
+            createdTurn: turn,
+            deadlineTurn: turn + max(1, duration)
+        )
+        diplomaticPlays.append(play)
+        diplomaticPlays.sort { $0.id < $1.id }
+        lastUpdatedTurn = turn
+        return play
     }
 
     func canDeclareWar(actingFaction: Faction, targetFaction: Faction) -> Bool {
@@ -673,5 +869,16 @@ struct DiplomacyState: Codable, Equatable {
                 )
             )
         }
+    }
+
+    private static func diplomaticPlayId(
+        issuerFaction: Faction,
+        targetFaction: Faction,
+        regionId: RegionId?,
+        warGoal: DiplomaticPlayWarGoal,
+        turn: Int
+    ) -> String {
+        let regionComponent = regionId?.rawValue ?? "general"
+        return "play_\(max(1, turn))_\(issuerFaction.rawValue)_\(targetFaction.rawValue)_\(regionComponent)_\(warGoal.rawValue)"
     }
 }
