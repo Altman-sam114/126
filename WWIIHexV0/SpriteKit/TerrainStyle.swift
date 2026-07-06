@@ -132,4 +132,27 @@ enum TerrainStyle {
     static let attackFill = SKColor(red: 0.92, green: 0.14, blue: 0.12, alpha: 0.34)
     static let roadStroke = SKColor(red: 0.80, green: 0.73, blue: 0.56, alpha: 1)
     static let riverStroke = SKColor(red: 0.18, green: 0.60, blue: 0.95, alpha: 1)
+    static let logisticsMarkerStroke = SKColor(red: 0.07, green: 0.08, blue: 0.08, alpha: 0.85)
+    static let logisticsMarkerText = SKColor(white: 0.98, alpha: 1)
+
+    static func logisticsMarkerFill(for tag: LogisticsTag) -> SKColor {
+        switch tag {
+        case .rail:
+            return SKColor(red: 0.22, green: 0.23, blue: 0.24, alpha: 0.92)
+        case .port:
+            return SKColor(red: 0.12, green: 0.38, blue: 0.82, alpha: 0.92)
+        case .coast:
+            return SKColor(red: 0.18, green: 0.62, blue: 0.76, alpha: 0.78)
+        case .coalStation:
+            return SKColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 0.92)
+        case .telegraph:
+            return SKColor(red: 0.88, green: 0.56, blue: 0.12, alpha: 0.92)
+        case .expeditionaryDepot:
+            return SKColor(red: 0.18, green: 0.58, blue: 0.36, alpha: 0.92)
+        case .fieldWorks:
+            return SKColor(red: 0.46, green: 0.34, blue: 0.18, alpha: 0.92)
+        case .siegeDepot:
+            return SKColor(red: 0.72, green: 0.20, blue: 0.14, alpha: 0.92)
+        }
+    }
 }

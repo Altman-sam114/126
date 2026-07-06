@@ -222,6 +222,7 @@ final class BoardScene: SKScene {
         drawRegionOverlays(renderState: renderState, layout: layout)
         drawRoads(map: state.map, layout: layout)
         drawRivers(map: state.map, layout: layout)
+        drawLogisticsMarkers(renderState: renderState, layout: layout)
         drawPlannedOperations(renderState: renderState, layout: layout)
         drawUnits(renderState: renderState, layout: layout)
     }
@@ -318,6 +319,57 @@ final class BoardScene: SKScene {
                 addChild(river)
             }
         }
+    }
+
+    private func drawLogisticsMarkers(renderState: BoardRenderState, layout: HexLayout) {
+        let adapter = renderState.displayAdapter
+
+        for tile in renderState.gameState.map.tiles.values.sorted(by: tileSort) {
+            guard adapter.visibility(for: tile.coord, faction: renderState.viewerFaction) == .visible else {
+                continue
+            }
+
+            let tags = LogisticsTag.allCases.filter { tag in
+                tile.logisticsTags.contains(tag) && tag.isMapMarkerVisible
+            }
+            guard !tags.isEmpty else {
+                continue
+            }
+
+            let center = layout.hexToPixel(tile.coord)
+            let radius = max(4.5, layout.hexSize * 0.12)
+            for (index, tag) in tags.prefix(Self.logisticsMarkerOffsets.count).enumerated() {
+                let offset = Self.logisticsMarkerOffsets[index]
+                drawLogisticsMarker(
+                    tag,
+                    at: CGPoint(
+                        x: center.x + offset.x * layout.hexSize,
+                        y: center.y + offset.y * layout.hexSize
+                    ),
+                    radius: radius
+                )
+            }
+        }
+    }
+
+    private func drawLogisticsMarker(_ tag: LogisticsTag, at position: CGPoint, radius: CGFloat) {
+        let marker = SKShapeNode(circleOfRadius: radius)
+        marker.position = position
+        marker.fillColor = TerrainStyle.logisticsMarkerFill(for: tag)
+        marker.strokeColor = TerrainStyle.logisticsMarkerStroke
+        marker.lineWidth = max(0.8, radius * 0.18)
+        marker.zPosition = 19
+        addChild(marker)
+
+        let label = SKLabelNode(text: tag.mapMarkerLabel)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontSize = max(6, radius * 1.18)
+        label.fontColor = TerrainStyle.logisticsMarkerText
+        label.horizontalAlignmentMode = .center
+        label.verticalAlignmentMode = .center
+        label.position = CGPoint(x: position.x, y: position.y - radius * 0.08)
+        label.zPosition = 19.1
+        addChild(label)
     }
 
     private func drawPlannedOperations(renderState: BoardRenderState, layout: HexLayout) {
@@ -521,5 +573,51 @@ final class BoardScene: SKScene {
             return lhs.coord.q < rhs.coord.q
         }
         return lhs.coord.r < rhs.coord.r
+    }
+
+    private static let logisticsMarkerOffsets = [
+        CGPoint(x: -0.28, y: 0.36),
+        CGPoint(x: 0, y: 0.42),
+        CGPoint(x: 0.28, y: 0.36),
+        CGPoint(x: -0.14, y: 0.15),
+        CGPoint(x: 0.14, y: 0.15)
+    ]
+}
+
+private extension LogisticsTag {
+    var isMapMarkerVisible: Bool {
+        switch self {
+        case .coast:
+            return false
+        case .rail,
+             .port,
+             .coalStation,
+             .telegraph,
+             .expeditionaryDepot,
+             .fieldWorks,
+             .siegeDepot:
+            return true
+        }
+    }
+
+    var mapMarkerLabel: String {
+        switch self {
+        case .rail:
+            return "R"
+        case .port:
+            return "P"
+        case .coast:
+            return "C"
+        case .coalStation:
+            return "K"
+        case .telegraph:
+            return "T"
+        case .expeditionaryDepot:
+            return "E"
+        case .fieldWorks:
+            return "F"
+        case .siegeDepot:
+            return "S"
+        }
     }
 }
