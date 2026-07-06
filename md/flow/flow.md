@@ -698,6 +698,7 @@ theaters: [TheaterId: MapEditorTheaterDraft]
 regionTheaterAssignments: [RegionId: TheaterId]
 initialUnits: [MapEditorUnitDraft]
 backgroundImage
+scenarioMetadata: MapEditorScenarioMetadata?
 ```
 
 四种编辑模式：
@@ -731,6 +732,7 @@ extend  在已有 hex 邻位扩展稀疏地图
 - `deleteHex(at:)` 会删除该 hex 上初始部队；如果某 region 已无 hex，会删除 region 和 theater assignment。
 - `resize` 会裁剪外部 hex、清理无效 region assignment 和越界单位。
 - 底图 `backgroundImage` 只存在编辑器文档，不写入游戏 JSON。
+- `scenarioMetadata` 保存从游戏 scenario 读入的 factions、turnOrder、player/AI faction、humanControlledFactions、victoryConditions 和 dataNotes；新建空白文档没有该字段时，导出器才使用 legacy Germany / Allies 兼容 fallback。
 
 ### 3.2 编辑会话
 
@@ -796,8 +798,9 @@ RegionDataSet JSON
 - map width/height/isSparse。
 - 每个 `MapEditorHex` 写为 `ScenarioTileDefinition`。
 - terrain / road / controller / city / fortress / supply / objective / regionId。
-- factions、initialTurn、initialPhase、playerFaction、aiFaction、turnOrder、humanControlledFactions。
+- factions、initialTurn、initialPhase、playerFaction、aiFaction、turnOrder、humanControlledFactions 优先来自 `document.scenarioMetadata`。
 - `initialUnits` 从 `MapEditorUnitDraft` 写入。
+- `victoryConditions` 和 `dataNotes` 优先从 `document.scenarioMetadata` 保留；MapEditor 不负责重算战争目标。
 - 底图不写入。
 
 `RegionDataSet` 写入：
@@ -849,6 +852,7 @@ loadDefaultDocument()
      - region definitions -> MapEditorRegionDraft
      - region theaterId -> regionTheaterAssignments
      - scenario initialUnits -> MapEditorUnitDraft
+     - scenario metadata -> MapEditorScenarioMetadata
 
 overwriteDefaultGameResources(document:)
   -> MapEditorExporter.export(... 固定默认文件名)
@@ -858,6 +862,7 @@ overwriteDefaultGameResources(document:)
 相关测试确认：
 
 - 编辑器 document、导出 JSON、游戏加载后的 `hexToRegion` / `regionToTheater` / `tile.regionId` / `region.name` 必须一致。
+- 默认黑海资源经编辑器读取再导出后，scenario metadata 必须继续保持 Britain / France / Ottoman / Russia / Austria / Sardinia 的 turn order、Britain 玩家、Russia AI、humanAction 开局、人控联军和原始胜利条件。
 - 游戏和编辑器 hex layout 的垂直方向必须一致。
 - 默认开局单位不能出现在敌对初始 theater 中。
 - App bootstrap 不应自动跑 AI 或移动开局单位。

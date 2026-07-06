@@ -244,6 +244,10 @@
 - 本轮只接入受限 Cabinet posture 层；尚未实现完整 ForeignMinister / WarMinister / Treasury / Admiralty / Press 多角色 directive 链，也尚未实现 DiplomaticPlay 动态外交命令。
 - `MockAIClient` 仍是 deterministic provider 实现，作为 `Simulated Staff` fallback 使用；真实 LLM 接入、外交 play directive 和上游内阁 JSON 合同留后续 v5.6-v5.8。
 
+后续迭代：
+
+- 2026-07-06：修复 MapEditor 默认黑海资源 roundtrip 的 scenario metadata 保真风险。`MapEditorDocument` 新增 `MapEditorScenarioMetadata`，`MapEditorGameResourceBridge.loadDefaultDocument()` 从 `black_sea_crisis_1853_scenario.json` 保存 factions、turnOrder、playerFaction、aiFaction、humanControlledFactions、victoryConditions 和 dataNotes；`MapEditorExporter` 优先使用该 metadata 导出，只有新建空白文档才退回 legacy Germany / Allies fallback。`MapEditorOutputTests` 同步改为断言黑海默认 Britain / humanAction / 多国 turn order 和原始胜利条件，避免覆盖默认资源时把黑海剧本退回阿登式 metadata。
+
 ## v0 - 六角格测试板
 
 完成日期：2026-06-14 至 2026-06-15

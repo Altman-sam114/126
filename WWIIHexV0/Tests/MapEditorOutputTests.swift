@@ -17,6 +17,7 @@ final class MapEditorOutputTests: XCTestCase {
         let tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try MapEditorExporter.write(result, to: tempDirectory)
+        try copyUnitTemplateCatalogs(to: tempDirectory)
 
         let state = try DataLoader(resourceDirectory: tempDirectory).loadGameState(
             scenarioName: "mapeditor_probe_scenario",
@@ -34,9 +35,11 @@ final class MapEditorOutputTests: XCTestCase {
     }
 
     func testGameResourceBridgeLoadsDefaultDataWithoutOverwriting() throws {
+        let sourceScenario = try DataLoader().loadScenarioDefinition(named: MapEditorGameResourceBridge.scenarioResourceName)
         let document = try MapEditorGameResourceBridge.loadDefaultDocument()
 
-        XCTAssertEqual(document.id, "mapeditor_scenario")
+        XCTAssertEqual(document.id, sourceScenario.id)
+        XCTAssertEqual(document.scenarioMetadata, MapEditorScenarioMetadata(scenario: sourceScenario))
         XCTAssertFalse(document.hexes.isEmpty)
         XCTAssertFalse(document.regions.isEmpty)
         XCTAssertFalse(document.initialUnits.isEmpty)
@@ -49,12 +52,29 @@ final class MapEditorOutputTests: XCTestCase {
         let tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try MapEditorExporter.write(result, to: tempDirectory)
+        try copyUnitTemplateCatalogs(to: tempDirectory)
 
         let state = try DataLoader(resourceDirectory: tempDirectory).loadGameState(
             scenarioName: "mapeditor_bridge_scenario",
             regionName: "mapeditor_bridge_regions"
         )
 
+        XCTAssertEqual(result.scenarioDefinition.id, sourceScenario.id)
+        XCTAssertEqual(result.scenarioDefinition.factions, sourceScenario.factions)
+        XCTAssertEqual(result.scenarioDefinition.maxTurns, sourceScenario.maxTurns)
+        XCTAssertEqual(result.scenarioDefinition.initialTurn, sourceScenario.initialTurn)
+        XCTAssertEqual(result.scenarioDefinition.initialPhase, sourceScenario.initialPhase)
+        XCTAssertEqual(result.scenarioDefinition.playerFaction, sourceScenario.playerFaction)
+        XCTAssertEqual(result.scenarioDefinition.aiFaction, sourceScenario.aiFaction)
+        XCTAssertEqual(result.scenarioDefinition.turnOrder, sourceScenario.turnOrder)
+        XCTAssertEqual(result.scenarioDefinition.humanControlledFactions, sourceScenario.humanControlledFactions)
+        XCTAssertEqual(result.scenarioDefinition.victoryConditions, sourceScenario.victoryConditions)
+        XCTAssertEqual(result.scenarioDefinition.dataNotes, sourceScenario.dataNotes)
+        XCTAssertEqual(state.activeFaction, .britain)
+        XCTAssertEqual(state.phase, .humanAction)
+        XCTAssertEqual(state.turnOrder, [.britain, .france, .ottoman, .russia, .austria, .sardinia])
+        XCTAssertEqual(state.humanControlledFactions, [.britain, .france, .ottoman])
+        XCTAssertEqual(state.victoryConditions.count, sourceScenario.victoryConditions.count)
         XCTAssertTrue(state.map.validateRegionGraph().isEmpty)
         XCTAssertFalse(state.theaterState.theaters.isEmpty)
         XCTAssertFalse(state.frontLineState.frontLines.isEmpty)
@@ -68,8 +88,8 @@ final class MapEditorOutputTests: XCTestCase {
             regionName: MapEditorGameResourceBridge.regionResourceName
         )
 
-        XCTAssertEqual(state.activeFaction, .allies)
-        XCTAssertEqual(state.phase, .alliedPlayer)
+        XCTAssertEqual(state.activeFaction, .britain)
+        XCTAssertEqual(state.phase, .humanAction)
 
         let scenarioUnits = Dictionary(uniqueKeysWithValues: scenario.initialUnits.map {
             ($0.id, HexCoord(q: $0.coord.q, r: $0.coord.r))
@@ -124,12 +144,12 @@ final class MapEditorOutputTests: XCTestCase {
 
         let container = AppContainer.bootstrap()
 
-        XCTAssertEqual(container.gameState.activeFaction, .allies)
-        XCTAssertEqual(container.gameState.phase, .alliedPlayer)
+        XCTAssertEqual(container.gameState.activeFaction, .britain)
+        XCTAssertEqual(container.gameState.phase, .humanAction)
         XCTAssertTrue(container.lastWarDirectiveRecords.isEmpty)
         XCTAssertNil(container.lastAgentDecisionRecord)
         XCTAssertEqual(Dictionary(uniqueKeysWithValues: container.gameState.divisions.map { ($0.id, $0.coord) }), expectedCoords)
-        XCTAssertEqual(container.gameState.division(id: "ger_editor_1")?.coord, HexCoord(q: 6, r: -1))
+        XCTAssertEqual(container.gameState.division(id: "unit_british_guards")?.coord, HexCoord(q: 0, r: 1))
     }
 
     func testGameAndEditorHexLayoutsUseSameVerticalOrientation() {
@@ -201,6 +221,7 @@ final class MapEditorOutputTests: XCTestCase {
         let tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try MapEditorExporter.write(result, to: tempDirectory)
+        try copyUnitTemplateCatalogs(to: tempDirectory)
 
         let state = try DataLoader(resourceDirectory: tempDirectory).loadGameState(
             scenarioName: result.scenarioFileName,
@@ -340,5 +361,25 @@ final class MapEditorOutputTests: XCTestCase {
             )
         ]
         return document
+    }
+
+    private func copyUnitTemplateCatalogs(to directory: URL) throws {
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        for resourceName in [
+            DataLoader.legacyUnitTemplatesResourceName,
+            DataLoader.defaultUnitTemplatesResourceName
+        ] {
+            let sourceURL = MapEditorGameResourceBridge.gameDataDirectory
+                .appending(path: resourceName)
+                .appendingPathExtension("json")
+            let destinationURL = directory
+                .appendingPathComponent(resourceName)
+                .appendingPathExtension("json")
+            if fileManager.fileExists(atPath: destinationURL.path) {
+                try fileManager.removeItem(at: destinationURL)
+            }
+            try fileManager.copyItem(at: sourceURL, to: destinationURL)
+        }
     }
 }

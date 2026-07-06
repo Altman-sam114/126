@@ -335,7 +335,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    DOC["编辑器文档<br/>MapEditorDocument<br/>保存 hex、省份、战区分配、初始单位"]:::editor
+    DOC["编辑器文档<br/>MapEditorDocument<br/>保存 hex、省份、战区分配、初始单位、scenario metadata"]:::editor
     MODE1["地块编辑<br/>hexPainter<br/>画地形、道路、控制方、补给点"]:::editor
     MODE2["省份编辑<br/>regionBuilder<br/>把每个 hex 分配给一个 region"]:::editor
     MODE3["初始战区编辑<br/>theaterAssignment<br/>把 region 分配给开局 theater"]:::editor
@@ -344,10 +344,11 @@ flowchart TD
     CHECK{"导出校验通过吗?<br/>每个 hex 必须有 region；region 不能为空"}:::decision
     ERR["导出失败<br/>unassignedHex / missingRegion / emptyRegion<br/>先回编辑器补数据"]:::stop
     SCEN["场景 JSON<br/>ScenarioDefinition<br/>保存 hex 地形、控制方、补给、目标、初始单位"]:::data
+    META["剧本 metadata 保真<br/>factions / turnOrder / playerFaction / aiFaction<br/>humanControlledFactions / victoryConditions / dataNotes"]:::data
     REG["省份 JSON<br/>RegionDataSet<br/>保存 hexToRegion、省份、边、初始 theaterId"]:::data
     NEI["自动推导省份邻接<br/>真实 hex 邻接 -> Region.neighbors / RegionEdge<br/>避免手写邻接出错"]:::derived
     BRIDGE["默认资源桥<br/>MapEditorGameResourceBridge<br/>读取或覆盖项目默认地图资源"]:::loader
-    FILES["项目默认数据文件<br/>WWIIHexV0/Data<br/>ardennes_v0_scenario.json + ardennes_v02_regions.json"]:::data
+    FILES["项目默认数据文件<br/>WWIIHexV0/Data<br/>black_sea_crisis_1853_scenario.json + black_sea_crisis_1853_regions.json"]:::data
     LOAD["游戏启动加载<br/>DataLoader.loadGameState<br/>DEBUG 下优先读源码 JSON"]:::loader
     MAP["地图状态<br/>MapState<br/>tiles + hexToRegion + RegionGraph"]:::state
     THEATER["战区状态<br/>TheaterState<br/>捕获 initialSnapshot，并 seed hexToTheater"]:::state
@@ -362,6 +363,7 @@ flowchart TD
     EXPORT --> CHECK
     CHECK -->|失败| ERR
     CHECK -->|通过| SCEN
+    DOC --> META --> SCEN
     CHECK -->|通过| REG
     REG --> NEI --> REG
     SCEN --> BRIDGE

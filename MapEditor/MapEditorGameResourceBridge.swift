@@ -125,7 +125,8 @@ enum MapEditorGameResourceBridge {
             regions: regions,
             theaters: theaters,
             regionTheaterAssignments: regionTheaterAssignments,
-            initialUnits: units
+            initialUnits: units,
+            scenarioMetadata: MapEditorScenarioMetadata(scenario: scenario)
         )
     }
 }
