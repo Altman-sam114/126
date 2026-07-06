@@ -105,12 +105,12 @@
 
 遗留事项：
 
-- `ComponentType.tank/motorizedInfantry` raw value 仍保留作 legacy 兼容；完整围城状态、多回合封锁、海权、铁路建设命令、港口/铁路 UI 图标、生产 kind raw value 迁移和 MapEditor 新字段编辑能力仍待 v5.4-v5.7 后续切片。
+- `ComponentType.tank/motorizedInfantry` raw value 仍保留作 legacy 兼容；完整围城状态、多回合封锁、海权、生产 kind raw value 迁移、MapEditor 新字段编辑能力和更完整物流图例仍待 v5.4-v5.7 后续切片。
 - 本轮只做规则层最小可观察效果，未引入完整全球市场、完整海军战术或复杂远征状态机。
 
 ## v5.4 - 维多利亚生产 taxonomy 起步切片
 
-完成日期：2026-07-05
+完成日期：2026-07-05 至 2026-07-06
 
 核心更新：
 
@@ -128,6 +128,7 @@
 - 新增 `ConstructionKind.fieldWorks` 与 `LogisticsTag.fieldWorks`；野战工事同样从经济面板选中 hex 后经 `RuleEngine` 扣费入队，完成时只给目标 hex 添加 `.fieldWorks` 标签，并由 `CombatRules.terrainDefenseBonus` 提供轻量防御加成，不改任何地图控制权威。
 - 新增 `ConstructionKind.portWorks`；港口工程只能排在已有 `.coast` 标签且尚无 `.port` 的己控 hex 上，完成时只给目标 hex 添加 `.port` 标签，并复用现有同盟/共同作战港口补给锚点规则。
 - `CommandValidationError` 新增 `invalidConstructionSite`，避免把非 coast 建港等站点约束误报为资源不足。
+- `BoardScene` 主地图开始直接渲染可见 hex 上已有 `LogisticsTag`：铁路、港口、煤站、电报、远征 depot、野战工事和围城 depot 显示为小型 SpriteKit 标记；`.coast` 仍作为建港/海岸规则标签，不默认铺满地图。
 - `md/flow/flow.md` 同步记录当前经济/生产兼容边界。
 
 关键文件：
@@ -145,6 +146,8 @@
 - `WWIIHexV0/UI/EconomyPanelView.swift`
 - `WWIIHexV0/UI/RegionInspectorView.swift`
 - `WWIIHexV0/UI/RootGameView.swift`
+- `WWIIHexV0/SpriteKit/BoardScene.swift`
+- `WWIIHexV0/SpriteKit/TerrainStyle.swift`
 - `WWIIHexV0/SpriteKit/MapDisplayAdapter.swift`
 - `tools/validate_black_sea_data.py`
 - `md/flow/flow.md`
@@ -160,11 +163,12 @@
 - 野战工事建设命令切片已由 run `28740861458` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-b7b2b85-run28740861458-attempt1` 核对通过；manifest 显示 `branch=main`、`commitSha=b7b2b857001df5104d31640944c9668c07b4a623`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
 - 港口工程建设命令切片已由 run `28741593559` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-c3c824e-run28741593559-attempt1` 核对通过；manifest 显示 `branch=main`、`commitSha=c3c824e0066d023a60108b14abde999b3c5694a4`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
 - 预备役动员命令切片已由 run `28786905898` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-4c635d4-run28786905898-attempt1` 核对通过；manifest 显示 `branch=main`、`commitSha=4c635d42e7261b1639e08e3a926a78167cf93d3d`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
+- 主地图物流标记切片已由 run `28787785995` attempt `1` 的 artifact `WWIIHexV0-ci-v1-main-c34e29c-run28787785995-attempt1` 核对通过；manifest 显示 `branch=main`、`commitSha=c34e29cfb59576a4c005502f7774226c55cc1672`、`staticChecksOutcome=success`、`buildOutcome=success`、`testOutcome=skipped`；`junit.xml` 为 3 tests、0 failures、1 skipped；`xcodebuild.log` 结尾 `BUILD SUCCEEDED`。
 
 遗留事项：
 
 - `EconomyResources.manpower/industry/supplies` 内部字段仍保留作兼容；完整国库、工业产能、铁路运输力、船运量和战争支持仍待后续 v5.4-v5.7 切片。
-- 本轮只引入单 hex 铁路工程与野战工事起步动作，未引入港口扩建、舰队整备、铁路运输力、建设上限或完整财政/舆论状态机；`warDebt` 仅是最小财政压力字段，不等同完整债务/议会系统。
+- 本轮已引入单 hex 铁路工程、野战工事、港口工程和主地图物流标记；尚未引入舰队整备、铁路运输力、建设上限、完整财政/舆论状态机或可交互物流图例；`warDebt` 仅是最小财政压力字段，不等同完整债务/议会系统。
 
 ## v0 - 六角格测试板
 
