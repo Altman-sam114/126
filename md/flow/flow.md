@@ -956,7 +956,7 @@ handleBoardTap(coord)
   - AI
 - `UnitTooltipView`。
 
-`DiplomacyPanelView` 当前接收完整 `GameState`，只读展示 scenario war goals、objective 名称、Open / Holding / Resolved 状态、hold duration 和国家 `warSupport`。v5.6 的 `declareWar` 只是规则层 `Command.diplomacy` 入口，当前外交面板尚未新增按钮或菜单，也不直接修改 `GameState`。
+`DiplomacyPanelView` 接收完整 `GameState`、当前 `commandFaction` 口径和 observer 状态，展示 scenario war goals、objective 名称、Open / Holding / Resolved 状态、hold duration、国家 `warSupport`，并提供受限 `Declare war` 入口。按钮只在非 observer、active faction 可由玩家命令、当前为 action phase 且 `DiplomacyState.canDeclareWar` 通过时启用；点击后只通过 `AppContainer.executeDiplomacyCommand` 提交 `Command.diplomacy(.declareWar)`，不直接修改 `GameState`。
 
 v5.3 显示适配：
 
@@ -1139,6 +1139,10 @@ Command.queueConstruction(kind, target)
   -> phaseAllowsCommands
   -> 己控、可通行、站点规则有效、资源足够
 
+DiplomacyPanelView restricted Declare war
+  -> AppContainer.executeDiplomacyCommand
+  -> Command.diplomacy(command: .declareWar(targetFaction))
+
 Command.diplomacy(command: .declareWar(targetFaction))
   -> phaseAllowsCommands
   -> targetFaction 不是 active faction、不是 neutral、双方都有 country profile、尚未 atWar
@@ -1146,7 +1150,7 @@ Command.diplomacy(command: .declareWar(targetFaction))
 
 `phaseAllowsCommands` 在 v5.1 后不再硬编码 `.germanAI` / `.alliedPlayer`，而是要求 `state.phase.isActionPhase` 且 `activeFaction.participatesInTurnOrder`。
 
-当前外交命令只实现最小 `declareWar`：通过 `DiplomacyState.declareWar` 把 active faction 与目标 faction 的全部 country pair 置为 `.atWar`，写入 `.diplomacy` 日志，并调用 `StrategicStateBootstrapper.refreshRuntimeState` 让 `FrontLineState` 与 `WarDeploymentState` 立刻按新敌我关系重建。它不直接移动单位、不改变 hex / region controller、不改经济账本，也不是完整 `DiplomaticPlay`、谈判或动态战争目标系统。
+当前外交命令只实现最小 `declareWar`：外交面板可发起受限按钮动作，但仍由 `CommandValidator` / `RuleEngine` 作最终校验；执行时通过 `DiplomacyState.declareWar` 把 active faction 与目标 faction 的全部 country pair 置为 `.atWar`，写入 `.diplomacy` 日志，并调用 `StrategicStateBootstrapper.refreshRuntimeState` 让 `FrontLineState` 与 `WarDeploymentState` 立刻按新敌我关系重建。它不直接移动单位、不改变 hex / region controller、不改经济账本，也不是完整 `DiplomaticPlay`、谈判或动态战争目标系统。
 
 ### 5.3 移动与占领
 

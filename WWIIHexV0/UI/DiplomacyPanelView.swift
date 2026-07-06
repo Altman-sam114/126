@@ -2,6 +2,9 @@ import SwiftUI
 
 struct DiplomacyPanelView: View {
     let gameState: GameState
+    let playerFaction: Faction
+    let observerModeEnabled: Bool
+    let onDiplomacyCommand: (DiplomacyCommand) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -17,6 +20,9 @@ struct DiplomacyPanelView: View {
                 warGoalSection
                 Divider()
             }
+
+            crisisActionSection
+            Divider()
 
             countrySection
             Divider()
@@ -71,6 +77,34 @@ struct DiplomacyPanelView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
+                }
+            }
+        }
+    }
+
+    private var crisisActionSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Crisis Actions")
+                .font(.subheadline.weight(.semibold))
+
+            if declarationTargetFactions.isEmpty {
+                Text("No declaration targets.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(declarationTargetFactions, id: \.self) { targetFaction in
+                    Button {
+                        onDiplomacyCommand(.declareWar(targetFaction: targetFaction))
+                    } label: {
+                        Label("Declare war on \(targetFaction.displayName)", systemImage: "flag")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!canDeclareWar(on: targetFaction))
+
+                    Text(declarationSummary(for: targetFaction))
+                        .font(.caption)
+                        .foregroundStyle(declarationSummaryColor(for: targetFaction))
                 }
             }
         }
@@ -225,5 +259,69 @@ struct DiplomacyPanelView: View {
             return .orange
         }
         return country.faction == activeFaction ? .primary : .secondary
+    }
+
+    private var activeFactionIsHumanControlled: Bool {
+        gameState.isHumanControlled(gameState.activeFaction) ||
+            gameState.activeFaction == playerFaction
+    }
+
+    private var declarationTargetFactions: [Faction] {
+        let profiledFactions = Set(diplomacyState.countries.map(\.faction))
+        return profiledFactions
+            .filter { targetFaction in
+                targetFaction != activeFaction &&
+                    targetFaction.participatesInTurnOrder &&
+                    !targetFaction.isNeutral
+            }
+            .sorted { lhs, rhs in
+                turnOrderSortIndex(for: lhs) < turnOrderSortIndex(for: rhs)
+            }
+    }
+
+    private func canDeclareWar(on targetFaction: Faction) -> Bool {
+        !observerModeEnabled &&
+            activeFactionIsHumanControlled &&
+            gameState.phase.isActionPhase &&
+            diplomacyState.canDeclareWar(
+                actingFaction: activeFaction,
+                targetFaction: targetFaction
+            )
+    }
+
+    private func declarationSummary(for targetFaction: Faction) -> String {
+        let status = diplomacyState.relationStatus(between: activeFaction, and: targetFaction).displayName
+        let targetCountryNames = diplomacyState.countries(for: targetFaction)
+            .map(\.name)
+            .joined(separator: ", ")
+        let countries = targetCountryNames.isEmpty ? targetFaction.displayName : targetCountryNames
+
+        if observerModeEnabled {
+            return "Observer mode | \(status) | \(countries)"
+        }
+        if !activeFactionIsHumanControlled {
+            return "Waiting for a human-controlled faction | \(status) | \(countries)"
+        }
+        if !gameState.phase.isActionPhase {
+            return "Action phase required | \(status) | \(countries)"
+        }
+        if diplomacyState.relationStatus(between: activeFaction, and: targetFaction) == .atWar {
+            return "Already at war | \(countries)"
+        }
+        if !diplomacyState.canDeclareWar(actingFaction: activeFaction, targetFaction: targetFaction) {
+            return "Declaration unavailable | \(status) | \(countries)"
+        }
+        return "\(activeFaction.displayName) -> \(targetFaction.displayName) | \(status) | \(countries)"
+    }
+
+    private func declarationSummaryColor(for targetFaction: Faction) -> Color {
+        canDeclareWar(on: targetFaction) ? .primary : .secondary
+    }
+
+    private func turnOrderSortIndex(for faction: Faction) -> Int {
+        if let index = gameState.turnOrder.firstIndex(of: faction) {
+            return index
+        }
+        return gameState.turnOrder.count + (Faction.allCases.firstIndex(of: faction) ?? 0)
     }
 }

@@ -269,6 +269,15 @@ final class AppContainer: ObservableObject {
         submit(.economy(command: command))
     }
 
+    func executeDiplomacyCommand(_ command: DiplomacyCommand) {
+        guard !observerModeEnabled else {
+            appendInteractionEvent("Diplomacy order rejected: observer mode is read-only.")
+            return
+        }
+
+        submit(.diplomacy(command: command))
+    }
+
     func queueConstruction(_ kind: ConstructionKind, target: HexCoord) {
         guard !observerModeEnabled else {
             appendInteractionEvent("Construction rejected: observer mode is read-only.")

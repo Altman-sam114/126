@@ -67,6 +67,37 @@ final class BoardInteractionTests: XCTestCase {
         XCTAssertEqual(handler.commands, [.endTurn])
     }
 
+    func testDiplomacyCommandSubmitsThroughHandler() {
+        let handler = MockCommandHandler()
+        let container = makeContainer(handler: handler)
+        let stateBeforeCommand = container.gameState
+
+        container.executeDiplomacyCommand(.declareWar(targetFaction: .germany))
+
+        XCTAssertEqual(handler.commands, [.diplomacy(command: .declareWar(targetFaction: .germany))])
+        XCTAssertEqual(container.gameState, stateBeforeCommand)
+    }
+
+    func testObserverModeRejectsDiplomacyCommandBeforeHandler() {
+        let handler = MockCommandHandler()
+        let container = AppContainer(
+            gameState: Self.testState(),
+            commandHandler: handler,
+            dataLoader: DataLoader(),
+            playerFaction: .allies,
+            observerModeEnabled: true
+        )
+
+        container.executeDiplomacyCommand(.declareWar(targetFaction: .germany))
+
+        XCTAssertTrue(handler.commands.isEmpty)
+        XCTAssertTrue(
+            container.displayEventLog.contains {
+                $0.message == "Diplomacy order rejected: observer mode is read-only."
+            }
+        )
+    }
+
     func testObserverModeSelectingPlayerUnitIsReadOnly() {
         let handler = MockCommandHandler()
         let container = AppContainer(

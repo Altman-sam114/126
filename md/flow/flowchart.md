@@ -202,7 +202,7 @@ flowchart TD
 
 ## 3. v5.5 经济、生产、预算、建设与战争支持链路
 
-这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，`Command.diplomacy(.declareWar)` 可把 active faction 与目标 faction 的关系写为 `atWar` 并刷新前线/部署派生层。这不是完整 `DiplomaticPlay` 或完整围城状态机。
+这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.declareWar)`，把 active faction 与目标 faction 的关系写为 `atWar` 并刷新前线/部署派生层。这不是完整 `DiplomaticPlay` 或完整围城状态机。
 
 ```mermaid
 flowchart TD
@@ -242,7 +242,7 @@ flowchart TD
     RAIL["完成工程<br/>MapState.setTile<br/>target.logisticsTags.insert(.rail / .fieldWorks / .port / .siegeDepot)"]:::authority
     SIEGE["攻城准备修正<br/>CombatRules.effectiveAttack<br/>炮兵从 siegeDepot 攻击城市/要塞 + 轻量加成"]:::rules
     NEXT["切换阵营或外交变化后刷新运行时层<br/>StrategicStateBootstrapper.refreshRuntimeState"]:::rules
-    DIPUI["外交面板<br/>DiplomacyPanelView<br/>scenario war goals + support 只读展示"]:::ui
+    DIPUI["外交面板<br/>DiplomacyPanelView<br/>war goals / support + 受限 declareWar"]:::ui
     GOALS["场景战争目标<br/>GameState.victoryConditions<br/>Open / Holding / Resolved"]:::derived
 
     BOOT --> LEDGER
@@ -250,6 +250,7 @@ flowchart TD
     UI --> QUEUE --> VALIDATE --> PAY --> LEDGER
     UI --> BUDGET --> BVALID --> APPLYB --> LEDGER
     UI --> BUILD --> BLDVALID --> BLDQUEUE --> LEDGER
+    DIPUI --> DIPCMD
     DIPCMD --> DIPVALID --> DIPAPPLY --> DIP
     DIPAPPLY --> NEXT
     GOALS --> DIPUI

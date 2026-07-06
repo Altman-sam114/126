@@ -206,7 +206,10 @@ struct RootGameView: View {
                     )
                 case .diplomacy:
                     DiplomacyPanelView(
-                        gameState: container.gameState
+                        gameState: container.gameState,
+                        playerFaction: container.commandFaction,
+                        observerModeEnabled: container.observerModeEnabled,
+                        onDiplomacyCommand: container.executeDiplomacyCommand
                     )
                 case .agent:
                     AgentPanelView(

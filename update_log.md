@@ -248,6 +248,7 @@
 
 - 2026-07-06：修复 MapEditor 默认黑海资源 roundtrip 的 scenario metadata 保真风险。`MapEditorDocument` 新增 `MapEditorScenarioMetadata`，`MapEditorGameResourceBridge.loadDefaultDocument()` 从 `black_sea_crisis_1853_scenario.json` 保存 factions、turnOrder、playerFaction、aiFaction、humanControlledFactions、victoryConditions 和 dataNotes；`MapEditorExporter` 优先使用该 metadata 导出，只有新建空白文档才退回 legacy Germany / Allies fallback。`MapEditorOutputTests` 同步改为断言黑海默认 Britain / humanAction / 多国 turn order 和原始胜利条件，避免覆盖默认资源时把黑海剧本退回阿登式 metadata。
 - 2026-07-06：新增规则层最小 `DiplomacyCommand.declareWar` 入口。`Command.diplomacy(command:)` 经 `CommandValidator` 限制 action phase、非自身/非 neutral/尚未开战且双方具备 country profile 后，由 `CommandExecutor` 调用 `DiplomacyState.declareWar` 将 active faction 与目标 faction 的全部 country pair 置为 `atWar`，写入 `.diplomacy` 日志并刷新 `FrontLineState` / `WarDeploymentState` 派生层。该切片不直接移动单位、不改变 hex/region controller、不改经济账本，也不是完整 DiplomaticPlay、谈判 UI 或动态战争目标系统。
+- 2026-07-06：接入外交面板受限宣战 UI 入口。`DiplomacyPanelView` 新增 `Crisis Actions` 区，从当前外交 country profile 派生目标，只在非 observer、active faction 可由玩家命令、action phase 且 `canDeclareWar` 通过时启用按钮；点击后经 `AppContainer.executeDiplomacyCommand` 提交 `Command.diplomacy(.declareWar)`，仍由 `RuleEngine` 最终校验和执行。`BoardInteractionTests` 增加容器命令路由与 observer 拒绝语义断言。本切片仍不是完整 DiplomaticPlay、谈判 UI 或动态战争目标系统。
 
 ## v0 - 六角格测试板
 
