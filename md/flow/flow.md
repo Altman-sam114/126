@@ -581,7 +581,8 @@ AppContainer.bootstrap()
   -> StrategicStateBootstrapper().bootstrapIfNeeded(...)
   -> defaultAIFaction(in: bootstrappedState)
   -> GameAgent.defaultCommander(for: defaultAIFaction, from: victorian_personas)
-  -> TurnManager(... commanderPool: buildCommanderPool(state: bootstrappedState))
+  -> MarshalAgentConfig.fromCommander(defaultAgent, state: bootstrappedState)
+  -> TurnManager(... commanderPool: buildCommanderPool(state: bootstrappedState), marshalAgent: persona marshal)
   -> AppContainer(... playerFaction: scenario human faction fallback)
 ```
 
@@ -596,7 +597,7 @@ loadGameState(
 
 `AppContainer` 未显式传入 `playerFaction` 时，会从 `GameState.turnOrder` 与 `humanControlledFactions` 推导默认玩家视角势力；黑海危机默认落到 Britain，而不是 legacy `.allies`。`resetGame()` 重载初始 state 后也会重新推导该值，除非调用方显式注入了玩家势力覆盖值。玩家命令门禁不再只看该默认视角值：当前 `activeFaction` 若属于 `humanControlledFactions` 且处于 action phase，就作为 `commandFaction` 允许操作，避免黑海 Britain / France / Ottoman 多个人控回合被 AI 跳过后无法命令。
 
-默认 AI 身份不再从 bootstrap 固定创建 Guderian。`GameAgent.defaultCommander(for:from:state:)` 优先读取 `victorian_personas.json` 中与当前 faction 匹配的 agent；黑海默认 Russia AI 会使用 Menshikov，Britain / France / Ottoman 等在 observer 模式或非人控配置下也可映射到 Raglan、Saint-Arnaud、Omar Pasha。找不到 persona 时才 fallback 到通用 General Staff；legacy Germany 仍可走 Guderian fallback。`MockAIClient` 仍是 deterministic provider 实现，但主 UI / Agent 记录的 provider 名称显示为 `Simulated Staff`。
+默认 AI 身份不再从 bootstrap 固定创建 Guderian。`GameAgent.defaultCommander(for:from:state:)` 优先读取 `victorian_personas.json` 中与当前 faction 匹配的 agent；黑海默认 Russia AI 会使用 Menshikov，Britain / France / Ottoman 等在 observer 模式或非人控配置下也可映射到 Raglan、Saint-Arnaud、Omar Pasha。找不到 persona 时才 fallback 到通用 General Staff；legacy Germany 仍可走 Guderian fallback。`AppContainer` 会用同一个 `GameAgent` 派生 `MarshalAgentConfig`，使 theater directive raw payload、compiled directive envelope、`AgentDecisionRecord` 与 `WarDirectiveRecord` 的 issuer / commander audit identity 保持一致。`MockAIClient` 仍是 deterministic provider 实现，但主 UI / Agent 记录的 provider 名称显示为 `Simulated Staff`。
 
 如果失败，会先 fallback 到 legacy `ardennes_v0_scenario` + `ardennes_v02_regions`，再 fallback 到老的 `GameState.initial()` + v0.2 region 叠加路径。
 
@@ -1351,7 +1352,7 @@ TheaterDirective
 
 统治者层是后续预留方向，当前 v0.5 主路径不调用 `RulerAgent`，也不在 `DirectiveEnvelope` 与执行层之间插入姿态塑形。
 
-v5.6 起，`TurnManager` 的 agent identity 优先来自 `victorian_personas.json` 的 faction persona。该身份用于上下文、审计记录和 UI 复盘，不直接修改 `GameState`；真正执行仍由 `MarshalAgent -> TheaterDirectiveDecoder/Compiler -> ZoneDirective -> WarCommandExecutor -> RuleEngine` 完成。persona role 当前支持 `expeditionaryCommander`、`fieldCommander` 与 `generalStaff` 等维多利亚指挥角色，后续 Cabinet / Foreign / War / Treasury 等上游 Agent 会在同一 JSON directive 约束下继续扩展。
+v5.6 起，`TurnManager` 的 agent identity 优先来自 `victorian_personas.json` 的 faction persona。该身份用于上下文、marshal theater directive payload、compiled directive envelope、审计记录和 UI 复盘，不直接修改 `GameState`；真正执行仍由 `MarshalAgent -> TheaterDirectiveDecoder/Compiler -> ZoneDirective -> WarCommandExecutor -> RuleEngine` 完成。persona role 当前支持 `expeditionaryCommander`、`fieldCommander` 与 `generalStaff` 等维多利亚指挥角色，后续 Cabinet / Foreign / War / Treasury 等上游 Agent 会在同一 JSON directive 约束下继续扩展。
 
 Legacy Agent D 仍存在，但只在显式 `.legacyAgentOrder` 分支运行：
 

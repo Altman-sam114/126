@@ -121,4 +121,30 @@ final class ScenarioDataTests: XCTestCase {
         XCTAssertEqual(britishCommander.faction, .britain)
         XCTAssertEqual(britishCommander.role, .expeditionaryCommander)
     }
+
+    func testVictorianMarshalDirectiveUsesRuntimePersonaIdentity() async throws {
+        let loader = DataLoader()
+        var state = loader.loadInitialGameState()
+        state.activeFaction = .russia
+        state.phase = .aiAction
+
+        let commander = GameAgent.defaultCommander(for: .russia, from: loader, state: state)
+        let manager = TurnManager(
+            agent: commander,
+            provider: MockAIClient(),
+            providerName: "Simulated Staff",
+            commandHandler: RuleEngine(),
+            commanderPool: TheaterCommanderPool.automatic(for: state),
+            marshalAgent: MarshalAgent(config: MarshalAgentConfig.fromCommander(commander, state: state))
+        )
+
+        let outcome = await manager.runAITurn(state: state, faction: .russia)
+
+        XCTAssertEqual(commander.id, "menshikov")
+        XCTAssertEqual(outcome.record.agentId, "menshikov")
+        XCTAssertFalse(outcome.directiveRecords.isEmpty)
+        XCTAssertTrue(outcome.directiveRecords.allSatisfy { $0.issuerId == "menshikov" })
+        XCTAssertTrue(outcome.directiveRecords.allSatisfy { $0.commanderAgentId == "menshikov" })
+        XCTAssertFalse(outcome.record.rawJSON?.contains("marshal_russia") == true)
+    }
 }

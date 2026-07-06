@@ -893,9 +893,7 @@ struct MarshalAgentConfig: Codable, Equatable, Identifiable {
     }
 
     static func automatic(for faction: Faction, state: GameState) -> MarshalAgentConfig {
-        let zoneIds = state.warDeploymentState.frontZones.values
-            .filter { $0.faction == faction }
-            .map(\.id)
+        let zoneIds = theaterGroupZoneIds(for: faction, state: state)
         switch faction {
         case .germany:
             return MarshalAgentConfig(
@@ -925,6 +923,39 @@ struct MarshalAgentConfig: Codable, Equatable, Identifiable {
                 theaterGroupZoneIds: zoneIds
             )
         }
+    }
+
+    static func fromCommander(_ agent: GameAgent, state: GameState) -> MarshalAgentConfig {
+        MarshalAgentConfig(
+            id: agent.id,
+            name: agent.name,
+            faction: agent.faction,
+            personality: agent.personality.prompt,
+            strategicBias: strategicBias(for: agent),
+            theaterGroupZoneIds: theaterGroupZoneIds(for: agent.faction, state: state)
+        )
+    }
+
+    private static func theaterGroupZoneIds(for faction: Faction, state: GameState) -> [FrontZoneId] {
+        state.warDeploymentState.frontZones.values
+            .filter { $0.faction == faction }
+            .map(\.id)
+    }
+
+    private static func strategicBias(for agent: GameAgent) -> StrategicBias {
+        if agent.personality.traits.contains("aggressive") ||
+            agent.personality.traits.contains("breakthrough") ||
+            (agent.personality.aggression >= 70 && agent.personality.riskTolerance >= 60) {
+            return .offensive
+        }
+
+        if agent.personality.traits.contains("cautious") ||
+            agent.personality.aggression <= 40 ||
+            agent.personality.riskTolerance <= 40 {
+            return .defensive
+        }
+
+        return .balanced
     }
 }
 

@@ -126,11 +126,11 @@ struct AgentPanelView: View {
                 }
             }
 
-            Text("Raw JSON")
+            Text("Decision Payload")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text(record?.rawJSON ?? rawJSONPlaceholder)
+            Text(decisionPayload(for: record))
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
@@ -170,12 +170,26 @@ struct AgentPanelView: View {
         return result.message
     }
 
-    private var rawJSONPlaceholder: String {
+    private func decisionPayload(for record: AgentDecisionRecord?) -> String {
+        guard let rawJSON = record?.rawJSON else {
+            return decisionPayloadPlaceholder
+        }
+
+        return sanitizedDecisionPayload(rawJSON)
+    }
+
+    private func sanitizedDecisionPayload(_ payload: String) -> String {
+        TacticName.allCases.reduce(payload) { result, tactic in
+            result.replacingOccurrences(of: tactic.rawValue, with: tactic.displayName)
+        }
+    }
+
+    private var decisionPayloadPlaceholder: String {
         """
         {
           "agentId": "system",
           "status": "placeholder",
-          "orders": []
+          "directives": []
         }
         """
     }

@@ -429,7 +429,7 @@ flowchart TD
     DIPUI["外交面板<br/>DiplomacyPanelView<br/>scenario war goals + warSupport 只读展示"]:::ui
     GOALS["战争目标状态<br/>GameState.victoryConditions + victoryState<br/>Open / Holding / Resolved"]:::state
     BOARD["地图场景<br/>BoardScene<br/>缓存 unit display hex 后排序绘制"]:::ui
-    MARSHAL["模拟参谋链<br/>Persona GameAgent + MarshalAgent<br/>Simulated Staff fallback"]:::ai
+    MARSHAL["模拟参谋链<br/>Persona GameAgent -> MarshalAgentConfig<br/>Simulated Staff fallback"]:::ai
     ZD["战区指令<br/>ZoneDirective<br/>tactic / focus / intensity"]:::command
     WCE["执行解释<br/>WarCommandExecutor<br/>infiltration 限制默认投入"]:::command
     RULE["规则权威<br/>RuleEngine<br/>唯一修改 GameState"]:::rules

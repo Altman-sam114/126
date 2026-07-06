@@ -218,13 +218,16 @@
 - 新增 `GameAgent.defaultCommander(for:from:state:)`：默认 AI 身份优先按 faction 从 `victorian_personas.agents` 选择 persona，缺失时使用通用 General Staff，legacy Germany 仍保留 Guderian fallback。
 - `AppContainer.bootstrap()` 不再固定构造 Guderian / Germany marshal；它会从当前 `GameState.turnOrder` 与 `humanControlledFactions` 推导默认 AI faction，并为该 faction 构造 persona commander 与 marshal agent。
 - `turnManager(for:)` 不再为非 Germany faction 生成 `*_mock_commander`；运行时 AI 审计记录使用 persona id/name，provider 在 UI / 日志中显示为 `Simulated Staff`。
+- `MarshalAgentConfig.fromCommander(_:)` 让 AppContainer 默认 marshal theater payload 与 compiled directive envelope 使用同一个 persona id/name；黑海 Russia 默认路径不再在 marshal 审计链中暴露 `marshal_russia` 这类通用占位身份。
 - `TacticName.displayName` 为 Agent 面板提供兼容显示名，保留 raw value / JSON schema 不变；默认 UI 中 `blitzkrieg` 显示为 `Rapid advance`。
+- `AgentPanelView` 将底层 raw JSON 的可见区改为 `Decision Payload`，展示时把内部 tactic raw value 映射为维多利亚兼容 display name，保留记录中的原始 `rawJSON` 供规则/解码兼容。
 - `tools/validate_black_sea_data.py` 增加 persona agent role 白名单检查，避免 JSON / Swift 角色 schema 分叉时 CI 仍误报通过。
 
 关键文件：
 
 - `WWIIHexV0/Agents/GameAgent.swift`
 - `WWIIHexV0/Agents/AgentConfiguration.swift`
+- `WWIIHexV0/Agents/ZoneCommanderAgent.swift`
 - `WWIIHexV0/App/AppContainer.swift`
 - `WWIIHexV0/Commands/WarDirective.swift`
 - `WWIIHexV0/UI/AgentPanelView.swift`
