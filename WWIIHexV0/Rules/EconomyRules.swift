@@ -89,7 +89,7 @@ struct EconomyRules {
         guard let tile = state.map.tile(at: target),
               tile.isPassable,
               tile.controller == faction,
-              constructionSiteIsValid(kind: kind, tile: tile),
+              constructionSiteIsValid(kind: kind, target: target, faction: faction, in: state),
               !tile.logisticsTags.contains(kind.completedLogisticsTag) else {
             return false
         }
@@ -530,7 +530,7 @@ struct EconomyRules {
             } else {
                 remainingOrders.append(order)
                 state.appendEvent(
-                    "\(order.kind.displayName) at \(order.target.q),\(order.target.r) is ready, but the site is not under \(faction.displayName) control.",
+                    "\(order.kind.displayName) at \(order.target.q),\(order.target.r) is ready, but the site no longer meets control or construction requirements.",
                     category: .supply
                 )
             }
@@ -547,7 +547,7 @@ struct EconomyRules {
         guard var tile = state.map.tile(at: order.target),
               tile.isPassable,
               tile.controller == faction,
-              constructionSiteIsValid(kind: order.kind, tile: tile) else {
+              constructionSiteIsValid(kind: order.kind, target: order.target, faction: faction, in: state) else {
             return false
         }
 
@@ -560,13 +560,38 @@ struct EconomyRules {
         return true
     }
 
-    func constructionSiteIsValid(kind: ConstructionKind, tile: HexTile) -> Bool {
+    func constructionSiteIsValid(
+        kind: ConstructionKind,
+        target: HexCoord,
+        faction: Faction,
+        in state: GameState
+    ) -> Bool {
+        guard let tile = state.map.tile(at: target) else {
+            return false
+        }
+
         switch kind {
         case .portWorks:
             return tile.logisticsTags.contains(.coast)
+        case .siegeDepotWorks:
+            return hasAdjacentEnemyObjective(to: target, faction: faction, in: state)
         case .railway,
              .fieldWorks:
             return true
+        }
+    }
+
+    private func hasAdjacentEnemyObjective(to target: HexCoord, faction: Faction, in state: GameState) -> Bool {
+        target.neighbors.contains { neighbor in
+            guard let tile = state.map.tile(at: neighbor),
+                  let controller = tile.controller,
+                  state.diplomacyState.canAttack(attacker: faction, target: controller) else {
+                return false
+            }
+
+            return tile.baseTerrain.isObjectiveTerrain ||
+                tile.cityName != nil ||
+                tile.fortressName != nil
         }
     }
 

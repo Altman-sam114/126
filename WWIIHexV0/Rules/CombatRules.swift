@@ -78,6 +78,10 @@ struct CombatRules {
             case .plain, .forest, .mountain, .hill:
                 break
             }
+            if isSiegeObjective(defenderTile),
+               state.map.tile(at: attacker.coord)?.logisticsTags.contains(.siegeDepot) == true {
+                multiplier += 0.15
+            }
         }
 
         return max(1, Int((Double(attacker.attack) * multiplier).rounded()))
@@ -128,6 +132,12 @@ struct CombatRules {
 
     private func clamp(_ value: Int, min minValue: Int, max maxValue: Int) -> Int {
         Swift.max(minValue, Swift.min(maxValue, value))
+    }
+
+    private func isSiegeObjective(_ tile: HexTile) -> Bool {
+        tile.baseTerrain.isObjectiveTerrain ||
+            tile.cityName != nil ||
+            tile.fortressName != nil
     }
 
     private func lossRatio(strengthDamage: Int, defender: Division) -> Double {

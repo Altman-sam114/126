@@ -202,7 +202,7 @@ flowchart TD
 
 ## 3. v5.5 经济、生产、预算、建设与战争支持链路
 
-这张图看当前初级经济。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算和建设命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；这不是完整 `DiplomaticPlay`。
+这张图看当前初级经济。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算和建设命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；围城补给站建设完成后只给目标 hex 添加 `.siegeDepot`，供炮兵攻城修正读取。这不是完整 `DiplomaticPlay` 或完整围城状态机。
 
 ```mermaid
 flowchart TD
@@ -219,8 +219,8 @@ flowchart TD
     BUDGET["预算命令<br/>Command.economy<br/>Mobilize Reserves / Raise War Loan / Buy Stores"]:::command
     BVALID["预算校验<br/>CommandValidator.validateEconomyCommand<br/>检查 phase、资源和债务上限"]:::rules
     APPLYB["执行预算<br/>EconomyRules.applyEconomyCommand<br/>改 treasury / stores / warDebt"]:::economy
-    BUILD["建设命令<br/>Command.queueConstruction<br/>Railway / Field / Port Works @ selected hex"]:::command
-    BLDVALID["建设校验<br/>CommandValidator.validateConstruction<br/>己控 hex / 港口需 coast / 未有目标标签 / 资源足够"]:::rules
+    BUILD["建设命令<br/>Command.queueConstruction<br/>Railway / Field / Port / Siege Depot Works @ selected hex"]:::command
+    BLDVALID["建设校验<br/>CommandValidator.validateConstruction<br/>己控 hex / 港口需 coast / 围城需邻接敌方城市要塞 / 未有目标标签 / 资源足够"]:::rules
     BLDQUEUE["预付成本并入建设队列<br/>EconomyRules.queueConstruction<br/>constructionQueue"]:::economy
     DIP["外交状态<br/>DiplomacyState<br/>国家 warSupport"]:::diplomacy
 
@@ -236,7 +236,8 @@ flowchart TD
     DEPLOY{"有合格后方部署点吗?"}:::decision
     SPAWN["部署新单位<br/>首都/城镇/工厂/高基建/高补给或 supply source<br/>必须己控、空置、非敌邻"]:::rules
     WAIT["保留订单<br/>本回合无安全 hex，等待后续回合"]:::economy
-    RAIL["完成工程<br/>MapState.setTile<br/>target.logisticsTags.insert(.rail / .fieldWorks / .port)"]:::authority
+    RAIL["完成工程<br/>MapState.setTile<br/>target.logisticsTags.insert(.rail / .fieldWorks / .port / .siegeDepot)"]:::authority
+    SIEGE["攻城准备修正<br/>CombatRules.effectiveAttack<br/>炮兵从 siegeDepot 攻击城市/要塞 + 轻量加成"]:::rules
     NEXT["切换阵营并刷新运行时层<br/>StrategicStateBootstrapper.refreshRuntimeState"]:::rules
     DIPUI["外交面板<br/>DiplomacyPanelView<br/>scenario war goals + support 只读展示"]:::ui
     GOALS["场景战争目标<br/>GameState.victoryConditions<br/>Open / Holding / Resolved"]:::derived
@@ -256,6 +257,7 @@ flowchart TD
     SHORT -->|足够| REINF
     REINF --> PROD --> CONST
     CONST --> RAIL --> DEPLOY
+    RAIL --> SIEGE
     CONST --> DEPLOY
     DEPLOY -->|有| SPAWN --> NEXT
     DEPLOY -->|没有| WAIT --> NEXT

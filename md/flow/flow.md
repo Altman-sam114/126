@@ -534,22 +534,22 @@ EconomyRules.applyWarSupportPressure
 
 当前 war support 压力仍以 faction 级经济账本为来源，因此一个 faction 下所有国家会一起受影响。这是财政/舆论桥接切片，不是完整国家级财政、议会或报纸舆论系统。
 
-铁路、野战工事与港口工程建设由 `Command.queueConstruction(kind:target:)` 进入同一规则系统：
+铁路、野战工事、港口工程与围城补给站建设由 `Command.queueConstruction(kind:target:)` 进入同一规则系统：
 
 ```text
 EconomyPanelView selected hex
   -> AppContainer.queueConstruction
-  -> Command.queueConstruction(kind: .railway / .fieldWorks / .portWorks, target: HexCoord)
+  -> Command.queueConstruction(kind: .railway / .fieldWorks / .portWorks / .siegeDepotWorks, target: HexCoord)
   -> RuleEngine
   -> CommandValidator.validateConstruction
   -> CommandExecutor.executeQueueConstruction
   -> EconomyRules.queueConstruction
   -> FactionEconomyLedger.constructionQueue
   -> EconomyRules.resolveFactionTurn / advanceConstruction
-  -> MapState.setTile(tile with logisticsTags.insert(.rail / .fieldWorks / .port))
+  -> MapState.setTile(tile with logisticsTags.insert(.rail / .fieldWorks / .port / .siegeDepot))
 ```
 
-当前 `ConstructionKind` 包含 `railway`、`fieldWorks` 与 `portWorks` 起步动作。校验要求目标 hex 存在、可通行、由当前行动势力控制、尚无对应完成物流标签、同一目标未重复排队且账本资源足够。`portWorks` 额外要求目标 hex 已有 `.coast` 物流标签，完成时添加 `.port`，并自然进入现有港口补给锚点逻辑。完成时只修改该 hex 的 `logisticsTags`，不改变 `HexTile.controller`、region controller、`regionToTheater`、`hexToTheater`、`hexToFrontZone` 或前线。`.fieldWorks` 是轻量野战工事标签，防守方在该 hex 上通过 `CombatRules.terrainDefenseBonus` 获得防御加成。主地图 `BoardScene` 只读取当前可见 hex 的 `logisticsTags` 绘制铁路、港口、电报、depot 和野战工事小标记；`.coast` 保留作规则标签，不默认渲染为地图标记。
+当前 `ConstructionKind` 包含 `railway`、`fieldWorks`、`portWorks` 与 `siegeDepotWorks` 起步动作。校验要求目标 hex 存在、可通行、由当前行动势力控制、尚无对应完成物流标签、同一目标未重复排队且账本资源足够。`portWorks` 额外要求目标 hex 已有 `.coast` 物流标签，完成时添加 `.port`，并自然进入现有港口补给锚点逻辑。`siegeDepotWorks` 额外要求目标己控 hex 邻接一个外交上可攻击方控制的城市或要塞 hex；完成时添加 `.siegeDepot`，炮兵从该 hex 攻击城市/要塞时通过 `CombatRules.effectiveAttack` 获得轻量攻城准备加成。完成时只修改该 hex 的 `logisticsTags`，不改变 `HexTile.controller`、region controller、`regionToTheater`、`hexToTheater`、`hexToFrontZone` 或前线。`.fieldWorks` 是轻量野战工事标签，防守方在该 hex 上通过 `CombatRules.terrainDefenseBonus` 获得防御加成。主地图 `BoardScene` 只读取当前可见 hex 的 `logisticsTags` 绘制铁路、港口、电报、depot 和野战工事小标记；`.coast` 保留作规则标签，不默认渲染为地图标记。
 
 自动补员在 active faction 结束回合时发生，只处理：
 
@@ -1257,6 +1257,7 @@ EconomyRules.resolveFactionTurn(for: activeFaction)
   -> debt service / supplies 短缺时下调同 faction 国家 warSupport
   -> 安全后方自动补员
   -> 推进生产队列并部署完成单位
+  -> 推进建设队列并完成 railway / fieldWorks / portWorks / siegeDepotWorks
 SupplyRules.advanceRetreats
 SupplyRules.applyEncirclementAttrition
 VictoryRules.updateVictoryState

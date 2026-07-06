@@ -179,7 +179,12 @@ struct CommandValidator {
             return .invalid(.wrongFaction)
         }
 
-        guard EconomyRules().constructionSiteIsValid(kind: kind, tile: tile) else {
+        guard EconomyRules().constructionSiteIsValid(
+            kind: kind,
+            target: target,
+            faction: state.activeFaction,
+            in: state
+        ) else {
             return .invalid(.invalidConstructionSite)
         }
 

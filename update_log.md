@@ -203,6 +203,10 @@
 - 经济仍是 faction 级总账，因此 `adjustWarSupport(for faction:)` 会影响该 faction 下所有国家；后续若引入国家级经济账本，需要把支持度压力收窄到具体国家或 coalition 成员。
 - 战争目标来源仍是 scenario `victoryConditions`，尚未提供玩家/AI 动态提出、修改或谈判战争目标的命令入口。
 
+后续迭代：
+
+- 2026-07-06：新增 `Siege Depot Works` 围城补给站建设切片。`ConstructionKind.siegeDepotWorks` 从经济面板选中己控 hex 后经 `Command.queueConstruction -> RuleEngine -> EconomyRules` 扣费入队；站点必须邻接外交上可攻击方控制的城市或要塞 hex，完成时只给目标 hex 添加 `.siegeDepot` 物流标签。炮兵从带 `.siegeDepot` 的 hex 攻击城市/要塞时获得轻量攻城准备加成。该切片不改变 hex controller、region controller、`regionToTheater`、`hexToTheater`、`hexToFrontZone` 或前线。
+
 ## v0 - 六角格测试板
 
 完成日期：2026-06-14 至 2026-06-15
