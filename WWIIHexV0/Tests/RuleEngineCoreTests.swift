@@ -741,18 +741,24 @@ final class RuleEngineCoreTests: XCTestCase {
                 warGoal: .demandDanubianWithdrawal
             )
         )
+        let concessionCommand = Command.diplomacy(command: .offerConcession(playId: "play_1"))
 
         let data = try JSONEncoder().encode(command)
         let decoded = try JSONDecoder().decode(Command.self, from: data)
         let playData = try JSONEncoder().encode(playCommand)
         let decodedPlay = try JSONDecoder().decode(Command.self, from: playData)
+        let concessionData = try JSONEncoder().encode(concessionCommand)
+        let decodedConcession = try JSONDecoder().decode(Command.self, from: concessionData)
 
         XCTAssertEqual(decoded, command)
         XCTAssertEqual(decodedPlay, playCommand)
+        XCTAssertEqual(decodedConcession, concessionCommand)
         XCTAssertNil(command.actingDivisionId)
         XCTAssertNil(playCommand.actingDivisionId)
+        XCTAssertNil(concessionCommand.actingDivisionId)
         XCTAssertFalse(command.isRecoveryCommand)
         XCTAssertFalse(playCommand.isRecoveryCommand)
+        XCTAssertFalse(concessionCommand.isRecoveryCommand)
     }
 
     func testCreateDiplomaticPlayRecordsCrisisWithoutOpeningWar() {
@@ -847,6 +853,119 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertTrue(wrongPhase.state.diplomacyState.activeDiplomaticPlays.isEmpty)
     }
 
+    func testOfferConcessionSettlesDiplomaticPlayWithoutOpeningWar() {
+        var state = DataLoader().loadInitialGameState()
+        state.activeFaction = .britain
+        state.phase = .humanAction
+
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: state
+        )
+        XCTAssertTrue(created.succeeded)
+        let play = created.state.diplomacyState.activeDiplomaticPlays[0]
+        let originalMap = created.state.map
+        let originalDivisions = created.state.divisions
+        let originalFrontLineState = created.state.frontLineState
+        let originalWarDeploymentState = created.state.warDeploymentState
+        let originalRelations = created.state.diplomacyState.relations
+        let originalCountries = created.state.diplomacyState.countries
+        let originalEconomyState = created.state.economyState
+
+        let settled = RuleEngine().execute(
+            .diplomacy(command: .offerConcession(playId: play.id)),
+            in: created.state
+        )
+
+        XCTAssertTrue(settled.succeeded)
+        XCTAssertEqual(settled.state.map, originalMap)
+        XCTAssertEqual(settled.state.divisions, originalDivisions)
+        XCTAssertEqual(settled.state.frontLineState, originalFrontLineState)
+        XCTAssertEqual(settled.state.warDeploymentState, originalWarDeploymentState)
+        XCTAssertEqual(settled.state.diplomacyState.relations, originalRelations)
+        XCTAssertEqual(settled.state.diplomacyState.countries, originalCountries)
+        XCTAssertEqual(settled.state.economyState, originalEconomyState)
+        XCTAssertEqual(settled.state.diplomacyState.diplomaticPlay(id: play.id)?.outcome, .negotiatedSettlement)
+        XCTAssertTrue(settled.state.diplomacyState.activeDiplomaticPlays.isEmpty)
+        XCTAssertEqual(settled.state.diplomacyState.relationStatus(between: .britain, and: .austria), .neutral)
+        XCTAssertFalse(settled.state.diplomacyState.canAttack(attacker: .britain, target: .austria))
+        XCTAssertEqual(settled.state.diplomacyState.lastUpdatedTurn, state.turn)
+        XCTAssertTrue(
+            settled.state.eventLog.contains {
+                $0.category == .diplomacy &&
+                    $0.relatedRecordId == play.id &&
+                    $0.message == "Britain offered concessions to Austria, settling the diplomatic play: Weaken prestige."
+            }
+        )
+
+        let reopened = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: settled.state
+        )
+        XCTAssertTrue(reopened.succeeded)
+        XCTAssertNotEqual(reopened.state.diplomacyState.activeDiplomaticPlays.first?.id, play.id)
+    }
+
+    func testOfferConcessionRejectsMissingWrongFactionAndAtWarPlay() {
+        let missingState = Self.diplomaticPlayTestState()
+        let missing = RuleEngine().execute(
+            .diplomacy(command: .offerConcession(playId: "missing_play")),
+            in: missingState
+        )
+        XCTAssertFalse(missing.succeeded)
+        XCTAssertEqual(missing.validation.errors, [.diplomaticPlayNotFound])
+        XCTAssertEqual(missing.state, missingState)
+
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: Self.diplomaticPlayTestState()
+        )
+        XCTAssertTrue(created.succeeded)
+        let play = created.state.diplomacyState.activeDiplomaticPlays[0]
+
+        var wrongFactionState = created.state
+        wrongFactionState.activeFaction = .russia
+        wrongFactionState.turnOrder = [.britain, .austria, .russia]
+        let wrongFaction = RuleEngine().execute(
+            .diplomacy(command: .offerConcession(playId: play.id)),
+            in: wrongFactionState
+        )
+        XCTAssertFalse(wrongFaction.succeeded)
+        XCTAssertEqual(wrongFaction.validation.errors, [.wrongFaction])
+        XCTAssertEqual(wrongFaction.state, wrongFactionState)
+
+        let atWar = RuleEngine().execute(
+            .diplomacy(command: .declareWar(targetFaction: .austria)),
+            in: created.state
+        )
+        XCTAssertTrue(atWar.succeeded)
+        let concessionAfterWar = RuleEngine().execute(
+            .diplomacy(command: .offerConcession(playId: play.id)),
+            in: atWar.state
+        )
+        XCTAssertFalse(concessionAfterWar.succeeded)
+        XCTAssertEqual(concessionAfterWar.validation.errors, [.alreadyAtWar])
+        XCTAssertEqual(concessionAfterWar.state, atWar.state)
+    }
+
     func testDiplomaticPlayAdvancesOnlyAfterFullTurnCycle() {
         let created = RuleEngine().execute(
             .diplomacy(
@@ -913,6 +1032,14 @@ final class RuleEngineCoreTests: XCTestCase {
                     $0.message == "Diplomatic play Weaken prestige escalated to war: Britain against Austria."
             }
         )
+
+        let concessionAfterDeadlineWar = RuleEngine().execute(
+            .diplomacy(command: .offerConcession(playId: play?.id ?? "missing_play")),
+            in: state
+        )
+        XCTAssertFalse(concessionAfterDeadlineWar.succeeded)
+        XCTAssertEqual(concessionAfterDeadlineWar.validation.errors, [.diplomaticPlayNotFound])
+        XCTAssertEqual(concessionAfterDeadlineWar.state, state)
     }
 
     func testDiplomaticPlayDeadlineKeepsActiveWhenWarDeclarationFails() {
@@ -932,8 +1059,8 @@ final class RuleEngineCoreTests: XCTestCase {
             blocs: [],
             relations: [],
             rulerRecords: [],
-            lastUpdatedTurn: 1,
-            diplomaticPlays: [play]
+            diplomaticPlays: [play],
+            lastUpdatedTurn: 1
         )
 
         let records = diplomacy.advanceDiplomaticPlays(turn: 2)

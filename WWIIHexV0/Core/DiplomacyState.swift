@@ -486,6 +486,10 @@ struct DiplomacyState: Codable, Equatable {
         return relations.first { $0.id == key }
     }
 
+    func diplomaticPlay(id: String) -> DiplomaticPlay? {
+        diplomaticPlays.first { $0.id == id }
+    }
+
     func canCreateDiplomaticPlay(
         issuerFaction: Faction,
         targetFaction: Faction,
@@ -531,13 +535,17 @@ struct DiplomacyState: Codable, Equatable {
             return nil
         }
 
+        let baseId = Self.diplomaticPlayId(
+            issuerFaction: issuerFaction,
+            targetFaction: targetFaction,
+            regionId: regionId,
+            warGoal: warGoal,
+            turn: turn
+        )
         let play = DiplomaticPlay(
-            id: Self.diplomaticPlayId(
-                issuerFaction: issuerFaction,
-                targetFaction: targetFaction,
-                regionId: regionId,
-                warGoal: warGoal,
-                turn: turn
+            id: Self.uniqueDiplomaticPlayId(
+                baseId: baseId,
+                existingIds: Set(diplomaticPlays.map(\.id))
             ),
             issuerFaction: issuerFaction,
             targetFaction: targetFaction,
@@ -552,6 +560,29 @@ struct DiplomacyState: Codable, Equatable {
         diplomaticPlays.sort { $0.id < $1.id }
         lastUpdatedTurn = turn
         return play
+    }
+
+    func canOfferConcession(actingFaction: Faction, playId: String) -> Bool {
+        guard actingFaction.participatesInTurnOrder,
+              let play = diplomaticPlay(id: playId),
+              play.outcome == .active,
+              play.issuerFaction == actingFaction || play.targetFaction == actingFaction else {
+            return false
+        }
+
+        return relationStatus(between: play.issuerFaction, and: play.targetFaction) != .atWar
+    }
+
+    @discardableResult
+    mutating func offerConcession(playId: String, actingFaction: Faction, turn: Int) -> DiplomaticPlay? {
+        guard canOfferConcession(actingFaction: actingFaction, playId: playId),
+              let index = diplomaticPlays.firstIndex(where: { $0.id == playId }) else {
+            return nil
+        }
+
+        diplomaticPlays[index].outcome = .negotiatedSettlement
+        lastUpdatedTurn = turn
+        return diplomaticPlays[index]
     }
 
     @discardableResult
@@ -938,6 +969,18 @@ struct DiplomacyState: Codable, Equatable {
     ) -> String {
         let regionComponent = regionId?.rawValue ?? "general"
         return "play_\(max(1, turn))_\(issuerFaction.rawValue)_\(targetFaction.rawValue)_\(regionComponent)_\(warGoal.rawValue)"
+    }
+
+    private static func uniqueDiplomaticPlayId(baseId: String, existingIds: Set<String>) -> String {
+        guard existingIds.contains(baseId) else {
+            return baseId
+        }
+
+        var suffix = 2
+        while existingIds.contains("\(baseId)_\(suffix)") {
+            suffix += 1
+        }
+        return "\(baseId)_\(suffix)"
     }
 
     private func advanceRecord(for play: DiplomaticPlay, didEscalateToWar: Bool) -> DiplomaticPlayAdvanceRecord {

@@ -113,6 +113,16 @@ struct DiplomacyPanelView: View {
                         Text("Backers: \(factionNames(play.backers)) | Opposing: \(factionNames(play.opposingBackers)) | Deadline: turn \(play.deadlineTurn)")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+
+                        Button {
+                            onDiplomacyCommand(.offerConcession(playId: play.id))
+                        } label: {
+                            Label("Offer concession", systemImage: "hand.raised")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled(!canOfferConcession(in: play))
                     }
                 }
             }
@@ -349,6 +359,16 @@ struct DiplomacyPanelView: View {
             diplomacyState.canDeclareWar(
                 actingFaction: activeFaction,
                 targetFaction: targetFaction
+            )
+    }
+
+    private func canOfferConcession(in play: DiplomaticPlay) -> Bool {
+        !observerModeEnabled &&
+            activeFactionIsHumanControlled &&
+            gameState.phase.isActionPhase &&
+            diplomacyState.canOfferConcession(
+                actingFaction: activeFaction,
+                playId: play.id
             )
     }
 

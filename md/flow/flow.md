@@ -133,7 +133,7 @@ playerCommandState
 - `frontLineState` 从动态战区相邻 hex 派生。
 - `warDeploymentState` 从动态战区/前线/单位位置派生，供 AI 调度单位。
 - `economyState` 保存 manpower、industry、supplies、生产/建设队列、warDebt、上回合收入/维护费/补员消耗，不直接改变战术占领权。
-- `diplomacyState` 保存国家、集团、关系、`CountryProfile.warSupport` 和最小 `DiplomaticPlay` 记录。v5.1 起移动、攻击、补给、AI 目标选择的敌我判断优先通过 `DiplomacyState.canAttack` / `canEnterTerritory`，不再走 `Faction.opponent` 主路径；v5.5 起 `EconomyRules.resolveFactionTurn` 可通过 `DiplomacyState.adjustWarSupport` 写入战争支持压力；v5.6 起 `Command.diplomacy(command:)` 提供规则层外交入口，`createDiplomaticPlay` 记录危机状态，整轮完成后 `advanceDiplomaticPlays` 推进 escalation，deadline 到期会尝试升级为战争，`declareWar(targetFaction:)` 只把 active faction 与目标 faction 的国家关系写为 `atWar` 并刷新前线/部署派生层。
+- `diplomacyState` 保存国家、集团、关系、`CountryProfile.warSupport` 和最小 `DiplomaticPlay` 记录。v5.1 起移动、攻击、补给、AI 目标选择的敌我判断优先通过 `DiplomacyState.canAttack` / `canEnterTerritory`，不再走 `Faction.opponent` 主路径；v5.5 起 `EconomyRules.resolveFactionTurn` 可通过 `DiplomacyState.adjustWarSupport` 写入战争支持压力；v5.6 起 `Command.diplomacy(command:)` 提供规则层外交入口，`createDiplomaticPlay` 记录危机状态，`offerConcession` 可把 active play 收束为 `negotiatedSettlement`，整轮完成后 `advanceDiplomaticPlays` 推进 escalation，deadline 到期会尝试升级为战争，`declareWar(targetFaction:)` 只把 active faction 与目标 faction 的国家关系写为 `atWar` 并刷新前线/部署派生层。
 - `turnOrder` 保存本局参战势力行动顺序，`humanControlledFactions` 保存人类控制势力；旧阿登数据默认兼容为 Germany -> Allies，Allies 为玩家。
 - `eventLog` 给 UI 和调试看。
 - `warDirectiveRecords` 记录战争指令执行回放，供 v0.36+ 后续接 LLM / 聊天命令审计。
@@ -1148,6 +1148,11 @@ Command.diplomacy(command: .createDiplomaticPlay(targetFaction, regionId, warGoa
   -> targetFaction 不是 active faction、不是 neutral、双方都有 country profile、尚未 atWar、无重复 active play、region 若提供必须存在
   -> DiplomacyState.createDiplomaticPlay
 
+Command.diplomacy(command: .offerConcession(playId))
+  -> phaseAllowsCommands
+  -> play 必须 active，activeFaction 必须是 issuer 或 target，双方尚未 atWar
+  -> DiplomacyState.offerConcession
+
 Command.diplomacy(command: .declareWar(targetFaction))
   -> phaseAllowsCommands
   -> targetFaction 不是 active faction、不是 neutral、双方都有 country profile、尚未 atWar
@@ -1155,7 +1160,7 @@ Command.diplomacy(command: .declareWar(targetFaction))
 
 `phaseAllowsCommands` 在 v5.1 后不再硬编码 `.germanAI` / `.alliedPlayer`，而是要求 `state.phase.isActionPhase` 且 `activeFaction.participatesInTurnOrder`。
 
-当前外交命令实现两层最小入口：`createDiplomaticPlay` 创建 active play，记录 issuer、target、region、warGoal、escalation、backers、opposingBackers、deadline 和 outcome，创建时不改变外交关系、不刷新前线；`Command.endTurn` 完成一整轮 turnOrder 后调用 `DiplomacyState.advanceDiplomaticPlays`，每个 active play 增加 escalation，到 deadline 时调用 `declareWar` 并在宣战成功或双方已交战后把 play outcome 标为 `escalatedToWar`。`declareWar` 通过 `DiplomacyState.declareWar` 把 active faction 与目标 faction 的全部 country pair 置为 `.atWar`，写入 `.diplomacy` 日志，并调用 `StrategicStateBootstrapper.refreshRuntimeState` 让 `FrontLineState` 与 `WarDeploymentState` 立刻按新敌我关系重建。外交命令仍由 `CommandValidator` / `RuleEngine` 作最终校验，不直接移动单位、不改变 hex / region controller、不改经济账本；当前仍不是完整谈判、支持者选择、停战或动态胜利条件系统。
+当前外交命令实现三层最小入口：`createDiplomaticPlay` 创建 active play，记录 issuer、target、region、warGoal、escalation、backers、opposingBackers、deadline 和 outcome，创建时不改变外交关系、不刷新前线；`offerConcession` 允许 active play 的 issuer 或 target 在 action phase 让步，把 play outcome 标为 `negotiatedSettlement` 并写 `.diplomacy` 日志，不改变外交关系、不调整 `CountryProfile.warSupport`、不刷新前线；`Command.endTurn` 完成一整轮 turnOrder 后调用 `DiplomacyState.advanceDiplomaticPlays`，每个 active play 增加 escalation，到 deadline 时调用 `declareWar` 并在宣战成功或双方已交战后把 play outcome 标为 `escalatedToWar`。`declareWar` 通过 `DiplomacyState.declareWar` 把 active faction 与目标 faction 的全部 country pair 置为 `.atWar`，写入 `.diplomacy` 日志，并调用 `StrategicStateBootstrapper.refreshRuntimeState` 让 `FrontLineState` 与 `WarDeploymentState` 立刻按新敌我关系重建。外交命令仍由 `CommandValidator` / `RuleEngine` 作最终校验，不直接移动单位、不改变 hex / region controller、不改经济账本；当前仍不是完整支持者选择、停战或动态胜利条件系统。
 
 ### 5.3 移动与占领
 
@@ -1327,7 +1332,7 @@ appendEvent("Turn advanced ...")
 
 `VictoryRules` 当前先读 `GameState.victoryConditions`。黑海危机等 v5 数据局会使用 scenario JSON 中的 `controlObjective`、`controlObjectives`、`holdObjectives` 条件，并按 `DiplomacyState` 将 allied / coBelligerent 控制计入同一战争目标侧；没有数据条件的 legacy 阿登局才回退到 Bastogne / St. Vith / German armor 旧规则。
 
-v5.5 起，`DiplomacyPanelView` 读取完整 `GameState`，把 `victoryConditions` 作为 scenario war goals 展示，并根据 `victoryState.resolvedConditionId` 与 `conditionSatisfiedSinceTurn` 标记 `Open`、`Holding` 或 `Resolved`。v5.6 后续切片新增最小 active `DiplomaticPlay` 展示和创建入口；play 会在整轮完成后推进 escalation，并在 deadline 到期时尝试升级为战争，但当前还不能谈判、追加或放弃战争目标。
+v5.5 起，`DiplomacyPanelView` 读取完整 `GameState`，把 `victoryConditions` 作为 scenario war goals 展示，并根据 `victoryState.resolvedConditionId` 与 `conditionSatisfiedSinceTurn` 标记 `Open`、`Holding` 或 `Resolved`。v5.6 迭代已有最小 active `DiplomaticPlay` 展示、创建入口和 `Offer concession` 让步入口；play 会在整轮完成后推进 escalation，并在 deadline 到期时尝试升级为战争，但当前还不能支持者谈判、追加或放弃战争目标。
 
 ---
 
@@ -1956,7 +1961,7 @@ MapEditorGameResourceBridge.loadDefaultDocument
 - `RegionCommand` / AgentOrder v2 仍可桥接到 hex command，但当前默认战争 AI 是 ZoneDirective。
 - 地图编辑器的 theater assignment 是初始战区划分，不是运行时动态战区脚本。
 - 历史回退的 Cabinet/Minister/StrategicDirective 污染管线仍不得恢复；当前只保留受限 Cabinet posture 记录层，不恢复部长状态机或内阁直接执行器。
-- v5.5-v5.6 当前实现战争目标可视化、战争支持压力桥、最小 `DiplomaticPlay` 创建记录和 deadline 到期宣战尝试；宣战成功或双方已交战后才关闭 play。尚未实现玩家/AI 支持者选择、让步谈判、投降、议会、新闻报纸、战争厌倦或国家级财政。
+- v5.5-v5.6 当前实现战争目标可视化、战争支持压力桥、最小 `DiplomaticPlay` 创建记录、`Offer concession` 让步收束和 deadline 到期宣战尝试；宣战成功、双方已交战或让步收束后才关闭 play。尚未实现玩家/AI 支持者选择、完整多方谈判、投降、议会、新闻报纸、战争厌倦或国家级财政。
 
 ---
 
