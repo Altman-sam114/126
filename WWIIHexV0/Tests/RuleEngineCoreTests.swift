@@ -970,8 +970,34 @@ final class RuleEngineCoreTests: XCTestCase {
             in: atWar.state
         )
         XCTAssertFalse(concessionAfterWar.succeeded)
-        XCTAssertEqual(concessionAfterWar.validation.errors, [.alreadyAtWar])
+        XCTAssertEqual(concessionAfterWar.validation.errors, [.diplomaticPlayNotFound])
         XCTAssertEqual(concessionAfterWar.state, atWar.state)
+    }
+
+    func testDeclareWarClosesActiveDiplomaticPlayImmediately() {
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: Self.diplomaticPlayTestState()
+        )
+        XCTAssertTrue(created.succeeded)
+        let play = created.state.diplomacyState.activeDiplomaticPlays[0]
+
+        let atWar = RuleEngine().execute(
+            .diplomacy(command: .declareWar(targetFaction: .austria)),
+            in: created.state
+        )
+
+        XCTAssertTrue(atWar.succeeded)
+        XCTAssertTrue(atWar.state.diplomacyState.activeDiplomaticPlays.isEmpty)
+        XCTAssertEqual(atWar.state.diplomacyState.diplomaticPlay(id: play.id)?.outcome, .escalatedToWar)
+        XCTAssertEqual(atWar.state.diplomacyState.diplomaticPlay(id: play.id)?.escalation, 100)
+        XCTAssertEqual(atWar.state.diplomacyState.relationStatus(between: .britain, and: .austria), .atWar)
     }
 
     func testSupportDiplomaticPlayUpdatesBackersWithoutOpeningWar() {
@@ -1163,7 +1189,7 @@ final class RuleEngineCoreTests: XCTestCase {
             in: atWar.state
         )
         XCTAssertFalse(supportAtWar.succeeded)
-        XCTAssertEqual(supportAtWar.validation.errors, [.alreadyAtWar])
+        XCTAssertEqual(supportAtWar.validation.errors, [.diplomaticPlayNotFound])
         XCTAssertEqual(supportAtWar.state, atWar.state)
     }
 
@@ -1241,6 +1267,63 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertFalse(concessionAfterDeadlineWar.succeeded)
         XCTAssertEqual(concessionAfterDeadlineWar.validation.errors, [.diplomaticPlayNotFound])
         XCTAssertEqual(concessionAfterDeadlineWar.state, state)
+    }
+
+    func testDiplomaticPlayDeadlineEscalatesBackedSidesToWar() {
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: Self.diplomaticPlaySupportTestState()
+        )
+        XCTAssertTrue(created.succeeded)
+        let play = created.state.diplomacyState.activeDiplomaticPlays[0]
+
+        var franceState = created.state
+        franceState.activeFaction = .france
+        franceState.phase = .humanAction
+        let franceBackedIssuer = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .issuer)),
+            in: franceState
+        )
+        XCTAssertTrue(franceBackedIssuer.succeeded)
+
+        var ottomanState = franceBackedIssuer.state
+        ottomanState.activeFaction = .ottoman
+        ottomanState.phase = .humanAction
+        let ottomanBackedTarget = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .target)),
+            in: ottomanState
+        )
+        XCTAssertTrue(ottomanBackedTarget.succeeded)
+
+        var state = ottomanBackedTarget.state
+        while state.turn < 4 {
+            let result = RuleEngine().execute(.endTurn, in: state)
+            XCTAssertTrue(result.succeeded)
+            state = result.state
+        }
+
+        let resolvedPlay = state.diplomacyState.diplomaticPlay(id: play.id)
+        XCTAssertEqual(resolvedPlay?.outcome, .escalatedToWar)
+        XCTAssertEqual(resolvedPlay?.backers, [.britain, .france])
+        XCTAssertEqual(resolvedPlay?.opposingBackers, [.austria, .ottoman])
+        XCTAssertEqual(state.diplomacyState.relationStatus(between: .britain, and: .austria), .atWar)
+        XCTAssertEqual(state.diplomacyState.relationStatus(between: .britain, and: .ottoman), .atWar)
+        XCTAssertEqual(state.diplomacyState.relationStatus(between: .france, and: .austria), .atWar)
+        XCTAssertEqual(state.diplomacyState.relationStatus(between: .france, and: .ottoman), .atWar)
+        XCTAssertTrue(state.diplomacyState.canAttack(attacker: .france, target: .ottoman))
+        XCTAssertTrue(
+            state.eventLog.contains {
+                $0.category == .diplomacy &&
+                    $0.relatedRecordId == play.id &&
+                    $0.message == "Diplomatic play Weaken prestige escalated to war: Britain, France against Austria, Ottoman Empire."
+            }
+        )
     }
 
     func testDiplomaticPlayDeadlineKeepsActiveWhenWarDeclarationFails() {

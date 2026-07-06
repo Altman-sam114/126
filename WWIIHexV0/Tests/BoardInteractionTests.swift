@@ -150,6 +150,29 @@ final class BoardInteractionTests: XCTestCase {
         XCTAssertTrue(handler.commands.isEmpty)
     }
 
+    func testSuccessfulSubmitRefreshesRuntimeDerivedState() {
+        var staleState = StrategicStateBootstrapper().refreshRuntimeState(DataLoader().loadInitialGameState())
+        staleState.turn = 5
+        staleState.frontLineState.lastUpdatedTurn = -1
+        staleState.warDeploymentState.lastUpdatedTurn = -1
+        XCTAssertFalse(staleState.map.regions.isEmpty)
+        XCTAssertFalse(staleState.warDeploymentState.frontZones.isEmpty)
+
+        let handler = StateReturningCommandHandler(stateToReturn: staleState)
+        let container = AppContainer(
+            gameState: staleState,
+            commandHandler: handler,
+            dataLoader: DataLoader(),
+            playerFaction: staleState.activeFaction
+        )
+
+        container.submit(.queueProduction(kind: .lineInfantryCorps))
+
+        XCTAssertEqual(handler.commands, [.queueProduction(kind: .lineInfantryCorps)])
+        XCTAssertEqual(container.gameState.frontLineState.lastUpdatedTurn, staleState.turn)
+        XCTAssertEqual(container.gameState.warDeploymentState.lastUpdatedTurn, staleState.turn)
+    }
+
     private func makeContainer(handler: GameCommandHandling = MockCommandHandler()) -> AppContainer {
         AppContainer(
             gameState: Self.testState(),
@@ -208,5 +231,19 @@ private final class MockCommandHandler: GameCommandHandling {
     func execute(_ command: Command, in state: GameState) -> CommandResult {
         commands.append(command)
         return CommandResult(command: command, validation: .valid, state: state, message: "Mock command handled.")
+    }
+}
+
+private final class StateReturningCommandHandler: GameCommandHandling {
+    private(set) var commands: [Command] = []
+    let stateToReturn: GameState
+
+    init(stateToReturn: GameState) {
+        self.stateToReturn = stateToReturn
+    }
+
+    func execute(_ command: Command, in state: GameState) -> CommandResult {
+        commands.append(command)
+        return CommandResult(command: command, validation: .valid, state: stateToReturn, message: "Mock command handled.")
     }
 }

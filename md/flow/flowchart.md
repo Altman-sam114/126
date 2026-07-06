@@ -202,7 +202,7 @@ flowchart TD
 
 ## 3. v5.5 经济、生产、预算、建设与战争支持链路
 
-这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)`、`.supportDiplomaticPlay`、`.offerConcession` 或 `.declareWar`：创建命令记录 active diplomatic play，支持命令只更新 backers / opposingBackers，让步命令关闭为 negotiated settlement，整轮完成后推进 escalation，deadline 到期时尝试宣战，宣战成功后升级为战争；宣战命令直接把 active faction 与目标 faction 的关系写为 `atWar` 并刷新前线/部署派生层。这不是完整谈判/AI 支持解释状态机或完整围城状态机。
+这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)`、`.supportDiplomaticPlay`、`.offerConcession` 或 `.declareWar`：创建命令记录 active diplomatic play，支持命令只更新 backers / opposingBackers 且不立刻参战，让步命令关闭为 negotiated settlement，整轮完成后推进 escalation，deadline 到期时按 backers / opposingBackers 成组宣战，宣战成功后升级为战争；宣战命令直接把 active faction 与目标 faction 的关系写为 `atWar`、关闭相关 active play 并刷新前线/部署派生层。这不是完整谈判/AI 支持解释状态机或完整围城状态机。
 
 ```mermaid
 flowchart TD
@@ -228,8 +228,8 @@ flowchart TD
     DIPPLAY["创建外交危机<br/>DiplomacyState.createDiplomaticPlay<br/>issuer / target / warGoal / backers / deadline"]:::diplomacy
     DIPSUPPORT["加入支持/反对列表<br/>DiplomacyState.supportDiplomaticPlay<br/>只改 backers / opposingBackers"]:::diplomacy
     DIPSETTLE["让步收束危机<br/>DiplomacyState.offerConcession<br/>active play -> negotiatedSettlement"]:::diplomacy
-    DIPADV["整轮完成后推进外交危机<br/>DiplomacyState.advanceDiplomaticPlays<br/>escalation +25 / deadline -> declareWar 尝试"]:::diplomacy
-    DIPAPPLY["执行宣战<br/>DiplomacyState.declareWar<br/>全部 country pair -> atWar"]:::diplomacy
+    DIPADV["整轮完成后推进外交危机<br/>DiplomacyState.advanceDiplomaticPlays<br/>escalation +25 / deadline -> backers x opposingBackers 宣战尝试"]:::diplomacy
+    DIPAPPLY["执行宣战<br/>DiplomacyState.declareWar<br/>全部 country pair -> atWar<br/>关闭跨侧 active play"]:::diplomacy
 
     END["结束当前阵营回合<br/>Command.endTurn<br/>CommandExecutor.executeEndTurn"]:::command
     SUPPLY["补给状态刷新<br/>SupplyRules.updateSupplyStates"]:::rules

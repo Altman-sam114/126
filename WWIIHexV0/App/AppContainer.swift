@@ -91,7 +91,9 @@ final class AppContainer: ObservableObject {
     func submit(_ command: Command) {
         let stateBeforeCommand = gameState
         let result = commandHandler.execute(command, in: gameState)
-        var nextState = StrategicStateBootstrapper().bootstrapIfNeeded(result.state)
+        var nextState = result.succeeded
+            ? refreshedRuntimeState(result.state)
+            : StrategicStateBootstrapper().bootstrapIfNeeded(result.state)
         if result.succeeded {
             nextState = applyPlayerCommandBookkeeping(
                 command,

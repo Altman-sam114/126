@@ -313,6 +313,8 @@ struct DiplomaticPlayAdvanceRecord: Equatable {
     let playId: String
     let issuerFaction: Faction
     let targetFaction: Faction
+    let issuerSideFactions: [Faction]
+    let targetSideFactions: [Faction]
     let warGoal: DiplomaticPlayWarGoal
     let escalation: Int
     let deadlineTurn: Int
@@ -663,16 +665,11 @@ struct DiplomacyState: Codable, Equatable {
 
             if turn >= diplomaticPlays[index].deadlineTurn {
                 diplomaticPlays[index].escalation = 100
-                let didDeclareWar = declareWar(
-                    actingFaction: diplomaticPlays[index].issuerFaction,
-                    targetFaction: diplomaticPlays[index].targetFaction,
+                let didDeclareWar = escalateDiplomaticPlayToWar(
+                    diplomaticPlays[index],
                     turn: turn
                 )
-                if didDeclareWar ||
-                    relationStatus(
-                        between: diplomaticPlays[index].issuerFaction,
-                        and: diplomaticPlays[index].targetFaction
-                    ) == .atWar {
+                if didDeclareWar || diplomaticPlayHasCrossSideWar(diplomaticPlays[index]) {
                     diplomaticPlays[index].escalation = 100
                     diplomaticPlays[index].outcome = .escalatedToWar
                 }
@@ -732,8 +729,61 @@ struct DiplomacyState: Codable, Equatable {
         }
 
         relations.sort { $0.id < $1.id }
+        closeActiveDiplomaticPlaysBetween(actingFaction, and: targetFaction, turn: turn)
         lastUpdatedTurn = turn
         return true
+    }
+
+    private mutating func closeActiveDiplomaticPlaysBetween(_ lhs: Faction, and rhs: Faction, turn: Int) {
+        for index in diplomaticPlays.indices where diplomaticPlays[index].outcome == .active {
+            guard diplomaticPlaySidesAreOpposed(diplomaticPlays[index], lhs, rhs) else {
+                continue
+            }
+
+            diplomaticPlays[index].escalation = 100
+            diplomaticPlays[index].outcome = .escalatedToWar
+        }
+
+        lastUpdatedTurn = turn
+    }
+
+    private func diplomaticPlaySidesAreOpposed(_ play: DiplomaticPlay, _ lhs: Faction, _ rhs: Faction) -> Bool {
+        let issuerSide = Self.sortedUniqueFactions(play.backers + [play.issuerFaction])
+        let targetSide = Self.sortedUniqueFactions(play.opposingBackers + [play.targetFaction])
+
+        return (issuerSide.contains(lhs) && targetSide.contains(rhs)) ||
+            (issuerSide.contains(rhs) && targetSide.contains(lhs))
+    }
+
+    private mutating func escalateDiplomaticPlayToWar(_ play: DiplomaticPlay, turn: Int) -> Bool {
+        let issuerSide = Self.sortedUniqueFactions(play.backers + [play.issuerFaction])
+        let targetSide = Self.sortedUniqueFactions(play.opposingBackers + [play.targetFaction])
+        var didDeclareWar = false
+
+        for issuerFaction in issuerSide {
+            for targetFaction in targetSide where issuerFaction != targetFaction {
+                if declareWar(actingFaction: issuerFaction, targetFaction: targetFaction, turn: turn) {
+                    didDeclareWar = true
+                }
+            }
+        }
+
+        return didDeclareWar
+    }
+
+    private func diplomaticPlayHasCrossSideWar(_ play: DiplomaticPlay) -> Bool {
+        let issuerSide = Self.sortedUniqueFactions(play.backers + [play.issuerFaction])
+        let targetSide = Self.sortedUniqueFactions(play.opposingBackers + [play.targetFaction])
+
+        for issuerFaction in issuerSide {
+            for targetFaction in targetSide where issuerFaction != targetFaction {
+                if relationStatus(between: issuerFaction, and: targetFaction) == .atWar {
+                    return true
+                }
+            }
+        }
+
+        return false
     }
 
     func relationStatus(between lhs: Faction, and rhs: Faction) -> DiplomaticStatus {
@@ -1057,6 +1107,8 @@ struct DiplomacyState: Codable, Equatable {
             playId: play.id,
             issuerFaction: play.issuerFaction,
             targetFaction: play.targetFaction,
+            issuerSideFactions: Self.sortedUniqueFactions(play.backers + [play.issuerFaction]),
+            targetSideFactions: Self.sortedUniqueFactions(play.opposingBackers + [play.targetFaction]),
             warGoal: play.warGoal,
             escalation: play.escalation,
             deadlineTurn: play.deadlineTurn,

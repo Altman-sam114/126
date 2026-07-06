@@ -282,12 +282,16 @@ struct CommandExecutor {
     private func diplomaticPlayAdvanceMessage(_ record: DiplomaticPlayAdvanceRecord) -> String {
         if record.outcome == .escalatedToWar {
             if record.didEscalateToWar {
-                return "Diplomatic play \(record.warGoal.displayName) escalated to war: \(record.issuerFaction.displayName) against \(record.targetFaction.displayName)."
+                return "Diplomatic play \(record.warGoal.displayName) escalated to war: \(diplomaticPlaySideSummary(record.issuerSideFactions)) against \(diplomaticPlaySideSummary(record.targetSideFactions))."
             }
-            return "Diplomatic play \(record.warGoal.displayName) closed after war was already active: \(record.issuerFaction.displayName) and \(record.targetFaction.displayName)."
+            return "Diplomatic play \(record.warGoal.displayName) closed after war was already active: \(diplomaticPlaySideSummary(record.issuerSideFactions)) and \(diplomaticPlaySideSummary(record.targetSideFactions))."
         }
 
         return "Diplomatic play \(record.warGoal.displayName) escalated to \(record.escalation); deadline turn \(record.deadlineTurn)."
+    }
+
+    private func diplomaticPlaySideSummary(_ factions: [Faction]) -> String {
+        factions.map(\.displayName).joined(separator: ", ")
     }
 
     private func resetActionsForActiveFaction(in state: inout GameState) {
