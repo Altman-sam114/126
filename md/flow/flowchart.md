@@ -215,7 +215,7 @@ flowchart TD
     QUEUE["生产命令<br/>Command.queueProduction<br/>玩家/未来 AI 共用底层命令"]:::command
     VALIDATE["生产校验<br/>CommandValidator.validateProduction<br/>检查 phase 与资源是否足够"]:::rules
     PAY["预付成本并入队<br/>EconomyRules.queueProduction<br/>扣 REC/TRE/STO，追加 ProductionOrder"]:::economy
-    BUDGET["预算命令<br/>Command.economy<br/>Raise War Loan / Buy Stores"]:::command
+    BUDGET["预算命令<br/>Command.economy<br/>Mobilize Reserves / Raise War Loan / Buy Stores"]:::command
     BVALID["预算校验<br/>CommandValidator.validateEconomyCommand<br/>检查 phase、资源和债务上限"]:::rules
     APPLYB["执行预算<br/>EconomyRules.applyEconomyCommand<br/>改 treasury / stores / warDebt"]:::economy
     BUILD["建设命令<br/>Command.queueConstruction<br/>Railway / Field / Port Works @ selected hex"]:::command

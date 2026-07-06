@@ -507,10 +507,11 @@ EconomyPanelView
 
 当前 `EconomyCommand` 只包含 v5.4 起步动作：
 
+- `mobilizeReserves`：消耗 treasury / stores，增加 recruits。
 - `raiseWarLoan`：增加 treasury，写入 `warDebt`，后续回合按 debt service 扣 treasury。
 - `buySupplies`：消耗 treasury，增加 stores。
 
-这些预算动作只改 faction 级经济账本，不改变 hex 占领、region controller、动态战区或前线。
+这些预算动作只改 faction 级经济账本，不改变 hex 占领、region controller、动态战区或前线。`mobilizeReserves` 只补充可用 recruits，不直接生成单位；真正新部队仍必须通过生产队列和后方部署规则落地。
 
 铁路、野战工事与港口工程建设由 `Command.queueConstruction(kind:target:)` 进入同一规则系统：
 

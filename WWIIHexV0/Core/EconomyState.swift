@@ -230,6 +230,7 @@ enum ProductionKind: String, Codable, Equatable, CaseIterable, Identifiable {
 }
 
 enum EconomyCommand: String, Codable, Equatable, CaseIterable, Identifiable {
+    case mobilizeReserves
     case raiseWarLoan
     case buySupplies
 
@@ -239,6 +240,8 @@ enum EconomyCommand: String, Codable, Equatable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
+        case .mobilizeReserves:
+            return "Mobilize Reserves"
         case .raiseWarLoan:
             return "Raise War Loan"
         case .buySupplies:
@@ -248,6 +251,8 @@ enum EconomyCommand: String, Codable, Equatable, CaseIterable, Identifiable {
 
     var systemImageName: String {
         switch self {
+        case .mobilizeReserves:
+            return "person.3.fill"
         case .raiseWarLoan:
             return "banknote"
         case .buySupplies:
@@ -257,6 +262,8 @@ enum EconomyCommand: String, Codable, Equatable, CaseIterable, Identifiable {
 
     var cost: EconomyResources {
         switch self {
+        case .mobilizeReserves:
+            return EconomyResources(industry: 45, supplies: 20)
         case .raiseWarLoan:
             return .zero
         case .buySupplies:
@@ -266,6 +273,8 @@ enum EconomyCommand: String, Codable, Equatable, CaseIterable, Identifiable {
 
     var immediateYield: EconomyResources {
         switch self {
+        case .mobilizeReserves:
+            return EconomyResources(manpower: 90)
         case .raiseWarLoan:
             return EconomyResources(industry: 120)
         case .buySupplies:
@@ -275,6 +284,8 @@ enum EconomyCommand: String, Codable, Equatable, CaseIterable, Identifiable {
 
     var debtIncrease: Int {
         switch self {
+        case .mobilizeReserves:
+            return 0
         case .raiseWarLoan:
             return 160
         case .buySupplies:

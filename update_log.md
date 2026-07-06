@@ -119,8 +119,9 @@
 - 生产完成逻辑按新旧 case 分组生成线列步兵军、近卫旅、骑兵旅、攻城炮兵或补给车队效果，不绕过 `Command.queueProduction -> RuleEngine -> EconomyRules` 管线。
 - `EconomyResources.victorianSummary` 统一经济日志、经济面板成本和 region inspector 输出为 `REC/TRE/STO`，减少默认 UI 中 `MP/IC/SUP` 残留。
 - `Division.isInfantryHeavy` 扩展识别 `lineInfantry`、`guardInfantry`、`colonialInfantry` 和 `irregulars`，让维多利亚组件获得既有步兵地形防御规则兼容。
-- 新增 `EconomyCommand` 和 `Command.economy(command:)`，首批支持 `raiseWarLoan` 与 `buySupplies` 两个预算动作，经 `CommandValidator`、`CommandExecutor` 和 `EconomyRules` 统一执行。
+- 新增 `EconomyCommand` 和 `Command.economy(command:)`，支持 `mobilizeReserves`、`raiseWarLoan` 与 `buySupplies` 起步预算/动员动作，经 `CommandValidator`、`CommandExecutor` 和 `EconomyRules` 统一执行。
 - `FactionEconomyLedger` 新增 `warDebt` 兼容字段；战争贷款增加 treasury 和 debt，后续回合通过 debt service 消耗 treasury；购买补给消耗 treasury 并增加 stores。
+- `mobilizeReserves` 消耗 treasury / stores 并增加 recruits，只改 faction 级经济总账，不直接生成单位或绕过生产/部署规则。
 - `EconomyPanelView` 新增 Budget 区块，展示 debt / debt service，并将预算按钮接入 `AppContainer.executeEconomyCommand`。
 - `RegionInspectorView` 新增物流只读展示：所选 hex 显示物流标签，region 显示从 hex 聚合得到的标签数量，继续保持 hex 为物流权威。
 - 新增 `ConstructionKind.railway`、`ConstructionOrder` 和 `Command.queueConstruction(kind:target:)` 起步切片；铁路工程从经济面板选中 hex 后经 `RuleEngine` 扣费入队，回合结算完成时只给目标 hex 添加 `.rail` 物流标签，不改占领、region、theater、front 或 deploy 权威。
