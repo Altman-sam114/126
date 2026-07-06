@@ -85,6 +85,20 @@ enum Command: Codable, Equatable {
     }
 }
 
+enum DiplomaticPlaySupportSide: String, Codable, Equatable, CaseIterable {
+    case issuer
+    case target
+
+    var displayName: String {
+        switch self {
+        case .issuer:
+            return "Issuer"
+        case .target:
+            return "Target"
+        }
+    }
+}
+
 enum DiplomacyCommand: Codable, Equatable {
     case declareWar(targetFaction: Faction)
     case createDiplomaticPlay(
@@ -92,6 +106,7 @@ enum DiplomacyCommand: Codable, Equatable {
         regionId: RegionId?,
         warGoal: DiplomaticPlayWarGoal
     )
+    case supportDiplomaticPlay(playId: String, side: DiplomaticPlaySupportSide)
     case offerConcession(playId: String)
 
     var displayName: String {
@@ -101,6 +116,8 @@ enum DiplomacyCommand: Codable, Equatable {
         case .createDiplomaticPlay(let targetFaction, let regionId, let warGoal):
             let regionDescription = regionId?.rawValue ?? "general"
             return "CreateDiplomaticPlay(\(targetFaction.displayName), \(warGoal.displayName), \(regionDescription))"
+        case .supportDiplomaticPlay(let playId, let side):
+            return "SupportDiplomaticPlay(\(playId), \(side.displayName))"
         case .offerConcession(let playId):
             return "OfferConcession(\(playId))"
         }
@@ -112,6 +129,8 @@ enum DiplomacyCommand: Codable, Equatable {
             return targetFaction
         case .createDiplomaticPlay(let targetFaction, _, _):
             return targetFaction
+        case .supportDiplomaticPlay:
+            return nil
         case .offerConcession:
             return nil
         }

@@ -204,6 +204,23 @@ struct CommandExecutor {
                 category: .diplomacy,
                 relatedRecordId: play.id
             )
+        case .supportDiplomaticPlay(let playId, let side):
+            let actingFaction = state.activeFaction
+            guard let play = state.diplomacyState.supportDiplomaticPlay(
+                playId: playId,
+                actingFaction: actingFaction,
+                side: side,
+                turn: state.turn
+            ) else {
+                return
+            }
+
+            let supportedFaction = side == .issuer ? play.issuerFaction : play.targetFaction
+            state.appendEvent(
+                "\(actingFaction.displayName) backed \(supportedFaction.displayName) in the diplomatic play: \(play.warGoal.displayName).",
+                category: .diplomacy,
+                relatedRecordId: play.id
+            )
         case .offerConcession(let playId):
             let actingFaction = state.activeFaction
             guard let play = state.diplomacyState.offerConcession(

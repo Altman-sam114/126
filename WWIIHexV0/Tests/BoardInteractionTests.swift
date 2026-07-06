@@ -73,12 +73,14 @@ final class BoardInteractionTests: XCTestCase {
         let stateBeforeCommand = container.gameState
 
         container.executeDiplomacyCommand(.declareWar(targetFaction: .germany))
+        container.executeDiplomacyCommand(.supportDiplomaticPlay(playId: "play_1", side: .issuer))
         container.executeDiplomacyCommand(.offerConcession(playId: "play_1"))
 
         XCTAssertEqual(
             handler.commands,
             [
                 .diplomacy(command: .declareWar(targetFaction: .germany)),
+                .diplomacy(command: .supportDiplomaticPlay(playId: "play_1", side: .issuer)),
                 .diplomacy(command: .offerConcession(playId: "play_1"))
             ]
         )
@@ -96,6 +98,7 @@ final class BoardInteractionTests: XCTestCase {
         )
 
         container.executeDiplomacyCommand(.declareWar(targetFaction: .germany))
+        container.executeDiplomacyCommand(.supportDiplomaticPlay(playId: "play_1", side: .issuer))
 
         XCTAssertTrue(handler.commands.isEmpty)
         XCTAssertTrue(

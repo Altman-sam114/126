@@ -114,6 +114,28 @@ struct DiplomacyPanelView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
 
+                        HStack(spacing: 6) {
+                            Button {
+                                onDiplomacyCommand(.supportDiplomaticPlay(playId: play.id, side: .issuer))
+                            } label: {
+                                Label("Back \(play.issuerFaction.displayName)", systemImage: "person.2")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(!canSupport(play, side: .issuer))
+
+                            Button {
+                                onDiplomacyCommand(.supportDiplomaticPlay(playId: play.id, side: .target))
+                            } label: {
+                                Label("Back \(play.targetFaction.displayName)", systemImage: "person.2")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(!canSupport(play, side: .target))
+                        }
+
                         Button {
                             onDiplomacyCommand(.offerConcession(playId: play.id))
                         } label: {
@@ -369,6 +391,17 @@ struct DiplomacyPanelView: View {
             diplomacyState.canOfferConcession(
                 actingFaction: activeFaction,
                 playId: play.id
+            )
+    }
+
+    private func canSupport(_ play: DiplomaticPlay, side: DiplomaticPlaySupportSide) -> Bool {
+        !observerModeEnabled &&
+            activeFactionIsHumanControlled &&
+            gameState.phase.isActionPhase &&
+            diplomacyState.canSupportDiplomaticPlay(
+                actingFaction: activeFaction,
+                playId: play.id,
+                side: side
             )
     }
 

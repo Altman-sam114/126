@@ -585,6 +585,62 @@ struct DiplomacyState: Codable, Equatable {
         return diplomaticPlays[index]
     }
 
+    func canSupportDiplomaticPlay(
+        actingFaction: Faction,
+        playId: String,
+        side: DiplomaticPlaySupportSide
+    ) -> Bool {
+        guard actingFaction.participatesInTurnOrder,
+              !actingFaction.isNeutral,
+              !countries(for: actingFaction).isEmpty,
+              let play = diplomaticPlay(id: playId),
+              play.outcome == .active else {
+            return false
+        }
+
+        guard relationStatus(between: play.issuerFaction, and: play.targetFaction) != .atWar else {
+            return false
+        }
+
+        guard actingFaction != play.issuerFaction,
+              actingFaction != play.targetFaction,
+              !play.backers.contains(actingFaction),
+              !play.opposingBackers.contains(actingFaction) else {
+            return false
+        }
+
+        let sideFaction = faction(for: side, in: play)
+        guard relationStatus(between: actingFaction, and: sideFaction) != .atWar else {
+            return false
+        }
+
+        return true
+    }
+
+    @discardableResult
+    mutating func supportDiplomaticPlay(
+        playId: String,
+        actingFaction: Faction,
+        side: DiplomaticPlaySupportSide,
+        turn: Int
+    ) -> DiplomaticPlay? {
+        guard canSupportDiplomaticPlay(actingFaction: actingFaction, playId: playId, side: side),
+              let index = diplomaticPlays.firstIndex(where: { $0.id == playId }) else {
+            return nil
+        }
+
+        switch side {
+        case .issuer:
+            diplomaticPlays[index].backers.append(actingFaction)
+        case .target:
+            diplomaticPlays[index].opposingBackers.append(actingFaction)
+        }
+        diplomaticPlays[index].backers = Self.sortedUniqueFactions(diplomaticPlays[index].backers)
+        diplomaticPlays[index].opposingBackers = Self.sortedUniqueFactions(diplomaticPlays[index].opposingBackers)
+        lastUpdatedTurn = turn
+        return diplomaticPlays[index]
+    }
+
     @discardableResult
     mutating func advanceDiplomaticPlays(turn: Int, escalationStep: Int = 25) -> [DiplomaticPlayAdvanceRecord] {
         var records: [DiplomaticPlayAdvanceRecord] = []
@@ -981,6 +1037,19 @@ struct DiplomacyState: Codable, Equatable {
             suffix += 1
         }
         return "\(baseId)_\(suffix)"
+    }
+
+    private static func sortedUniqueFactions(_ factions: [Faction]) -> [Faction] {
+        Array(Set(factions)).sorted { $0.rawValue < $1.rawValue }
+    }
+
+    private func faction(for side: DiplomaticPlaySupportSide, in play: DiplomaticPlay) -> Faction {
+        switch side {
+        case .issuer:
+            return play.issuerFaction
+        case .target:
+            return play.targetFaction
+        }
     }
 
     private func advanceRecord(for play: DiplomaticPlay, didEscalateToWar: Bool) -> DiplomaticPlayAdvanceRecord {

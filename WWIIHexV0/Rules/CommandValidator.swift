@@ -210,6 +210,23 @@ struct CommandValidator {
             ) else {
                 return .invalid(.diplomaticPlayAlreadyActive)
             }
+        case .supportDiplomaticPlay(let playId, let side):
+            guard let play = state.diplomacyState.diplomaticPlay(id: playId),
+                  play.outcome == .active else {
+                return .invalid(.diplomaticPlayNotFound)
+            }
+
+            guard state.diplomacyState.relationStatus(between: play.issuerFaction, and: play.targetFaction) != .atWar else {
+                return .invalid(.alreadyAtWar)
+            }
+
+            guard state.diplomacyState.canSupportDiplomaticPlay(
+                actingFaction: state.activeFaction,
+                playId: playId,
+                side: side
+            ) else {
+                return .invalid(.diplomaticPlaySupportUnavailable)
+            }
         case .offerConcession(let playId):
             guard let play = state.diplomacyState.diplomaticPlay(id: playId),
                   play.outcome == .active else {

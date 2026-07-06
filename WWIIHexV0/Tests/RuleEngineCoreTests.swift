@@ -741,23 +741,31 @@ final class RuleEngineCoreTests: XCTestCase {
                 warGoal: .demandDanubianWithdrawal
             )
         )
+        let supportCommand = Command.diplomacy(
+            command: .supportDiplomaticPlay(playId: "play_1", side: .issuer)
+        )
         let concessionCommand = Command.diplomacy(command: .offerConcession(playId: "play_1"))
 
         let data = try JSONEncoder().encode(command)
         let decoded = try JSONDecoder().decode(Command.self, from: data)
         let playData = try JSONEncoder().encode(playCommand)
         let decodedPlay = try JSONDecoder().decode(Command.self, from: playData)
+        let supportData = try JSONEncoder().encode(supportCommand)
+        let decodedSupport = try JSONDecoder().decode(Command.self, from: supportData)
         let concessionData = try JSONEncoder().encode(concessionCommand)
         let decodedConcession = try JSONDecoder().decode(Command.self, from: concessionData)
 
         XCTAssertEqual(decoded, command)
         XCTAssertEqual(decodedPlay, playCommand)
+        XCTAssertEqual(decodedSupport, supportCommand)
         XCTAssertEqual(decodedConcession, concessionCommand)
         XCTAssertNil(command.actingDivisionId)
         XCTAssertNil(playCommand.actingDivisionId)
+        XCTAssertNil(supportCommand.actingDivisionId)
         XCTAssertNil(concessionCommand.actingDivisionId)
         XCTAssertFalse(command.isRecoveryCommand)
         XCTAssertFalse(playCommand.isRecoveryCommand)
+        XCTAssertFalse(supportCommand.isRecoveryCommand)
         XCTAssertFalse(concessionCommand.isRecoveryCommand)
     }
 
@@ -964,6 +972,199 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertFalse(concessionAfterWar.succeeded)
         XCTAssertEqual(concessionAfterWar.validation.errors, [.alreadyAtWar])
         XCTAssertEqual(concessionAfterWar.state, atWar.state)
+    }
+
+    func testSupportDiplomaticPlayUpdatesBackersWithoutOpeningWar() {
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: Self.diplomaticPlaySupportTestState()
+        )
+        XCTAssertTrue(created.succeeded)
+        let play = created.state.diplomacyState.activeDiplomaticPlays[0]
+
+        var franceState = created.state
+        franceState.activeFaction = .france
+        franceState.phase = .humanAction
+        let originalMap = franceState.map
+        let originalDivisions = franceState.divisions
+        let originalFrontLineState = franceState.frontLineState
+        let originalWarDeploymentState = franceState.warDeploymentState
+        let originalRelations = franceState.diplomacyState.relations
+        let originalCountries = franceState.diplomacyState.countries
+        let originalEconomyState = franceState.economyState
+
+        let supportIssuer = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .issuer)),
+            in: franceState
+        )
+
+        XCTAssertTrue(supportIssuer.succeeded)
+        let issuerPlay = supportIssuer.state.diplomacyState.diplomaticPlay(id: play.id)
+        XCTAssertEqual(issuerPlay?.backers, [.britain, .france])
+        XCTAssertEqual(issuerPlay?.opposingBackers, [.austria])
+        XCTAssertEqual(supportIssuer.state.map, originalMap)
+        XCTAssertEqual(supportIssuer.state.divisions, originalDivisions)
+        XCTAssertEqual(supportIssuer.state.frontLineState, originalFrontLineState)
+        XCTAssertEqual(supportIssuer.state.warDeploymentState, originalWarDeploymentState)
+        XCTAssertEqual(supportIssuer.state.diplomacyState.relations, originalRelations)
+        XCTAssertEqual(supportIssuer.state.diplomacyState.countries, originalCountries)
+        XCTAssertEqual(supportIssuer.state.economyState, originalEconomyState)
+        XCTAssertEqual(supportIssuer.state.diplomacyState.relationStatus(between: .britain, and: .austria), .neutral)
+        XCTAssertFalse(supportIssuer.state.diplomacyState.canAttack(attacker: .france, target: .austria))
+        XCTAssertTrue(
+            supportIssuer.state.eventLog.contains {
+                $0.category == .diplomacy &&
+                    $0.relatedRecordId == play.id &&
+                    $0.message == "France backed Britain in the diplomatic play: Weaken prestige."
+            }
+        )
+
+        let duplicateSupport = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .issuer)),
+            in: supportIssuer.state
+        )
+        XCTAssertFalse(duplicateSupport.succeeded)
+        XCTAssertEqual(duplicateSupport.validation.errors, [.diplomaticPlaySupportUnavailable])
+        XCTAssertEqual(duplicateSupport.state, supportIssuer.state)
+
+        let switchSide = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .target)),
+            in: supportIssuer.state
+        )
+        XCTAssertFalse(switchSide.succeeded)
+        XCTAssertEqual(switchSide.validation.errors, [.diplomaticPlaySupportUnavailable])
+        XCTAssertEqual(switchSide.state, supportIssuer.state)
+
+        var ottomanState = supportIssuer.state
+        ottomanState.activeFaction = .ottoman
+        ottomanState.phase = .humanAction
+        let supportTarget = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .target)),
+            in: ottomanState
+        )
+        XCTAssertTrue(supportTarget.succeeded)
+        let targetPlay = supportTarget.state.diplomacyState.diplomaticPlay(id: play.id)
+        XCTAssertEqual(targetPlay?.backers, [.britain, .france])
+        XCTAssertEqual(targetPlay?.opposingBackers, [.austria, .ottoman])
+        XCTAssertEqual(supportTarget.state.map, originalMap)
+        XCTAssertEqual(supportTarget.state.divisions, originalDivisions)
+        XCTAssertEqual(supportTarget.state.frontLineState, originalFrontLineState)
+        XCTAssertEqual(supportTarget.state.warDeploymentState, originalWarDeploymentState)
+        XCTAssertEqual(supportTarget.state.diplomacyState.relations, originalRelations)
+        XCTAssertEqual(supportTarget.state.diplomacyState.countries, originalCountries)
+        XCTAssertEqual(supportTarget.state.economyState, originalEconomyState)
+        XCTAssertEqual(supportTarget.state.diplomacyState.relationStatus(between: .britain, and: .austria), .neutral)
+        XCTAssertFalse(supportTarget.state.diplomacyState.canAttack(attacker: .ottoman, target: .britain))
+        XCTAssertTrue(
+            supportTarget.state.eventLog.contains {
+                $0.category == .diplomacy &&
+                    $0.relatedRecordId == play.id &&
+                    $0.message == "Ottoman Empire backed Austria in the diplomatic play: Weaken prestige."
+            }
+        )
+    }
+
+    func testSupportDiplomaticPlayRejectsMissingSettledAndAtWarPlay() {
+        let missing = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: "missing_play", side: .issuer)),
+            in: Self.diplomaticPlaySupportTestState()
+        )
+        XCTAssertFalse(missing.succeeded)
+        XCTAssertEqual(missing.validation.errors, [.diplomaticPlayNotFound])
+
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: Self.diplomaticPlaySupportTestState()
+        )
+        XCTAssertTrue(created.succeeded)
+        let play = created.state.diplomacyState.activeDiplomaticPlays[0]
+
+        let duplicateIssuer = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .issuer)),
+            in: created.state
+        )
+        XCTAssertFalse(duplicateIssuer.succeeded)
+        XCTAssertEqual(duplicateIssuer.validation.errors, [.diplomaticPlaySupportUnavailable])
+        XCTAssertEqual(duplicateIssuer.state, created.state)
+
+        let issuerSwitchSide = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .target)),
+            in: created.state
+        )
+        XCTAssertFalse(issuerSwitchSide.succeeded)
+        XCTAssertEqual(issuerSwitchSide.validation.errors, [.diplomaticPlaySupportUnavailable])
+        XCTAssertEqual(issuerSwitchSide.state, created.state)
+
+        var targetState = created.state
+        targetState.activeFaction = .austria
+        targetState.phase = .humanAction
+        let targetSwitchSide = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .issuer)),
+            in: targetState
+        )
+        XCTAssertFalse(targetSwitchSide.succeeded)
+        XCTAssertEqual(targetSwitchSide.validation.errors, [.diplomaticPlaySupportUnavailable])
+        XCTAssertEqual(targetSwitchSide.state, targetState)
+
+        var wrongPhaseState = created.state
+        wrongPhaseState.activeFaction = .france
+        wrongPhaseState.phase = .resolution
+        let wrongPhase = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .issuer)),
+            in: wrongPhaseState
+        )
+        XCTAssertFalse(wrongPhase.succeeded)
+        XCTAssertEqual(wrongPhase.validation.errors, [.wrongPhase])
+        XCTAssertEqual(wrongPhase.state, wrongPhaseState)
+
+        var noProfileState = created.state
+        noProfileState.activeFaction = .sardinia
+        noProfileState.phase = .humanAction
+        let noProfile = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .issuer)),
+            in: noProfileState
+        )
+        XCTAssertFalse(noProfile.succeeded)
+        XCTAssertEqual(noProfile.validation.errors, [.diplomaticPlaySupportUnavailable])
+        XCTAssertEqual(noProfile.state, noProfileState)
+
+        let settled = RuleEngine().execute(
+            .diplomacy(command: .offerConcession(playId: play.id)),
+            in: created.state
+        )
+        XCTAssertTrue(settled.succeeded)
+        let supportSettled = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .target)),
+            in: settled.state
+        )
+        XCTAssertFalse(supportSettled.succeeded)
+        XCTAssertEqual(supportSettled.validation.errors, [.diplomaticPlayNotFound])
+        XCTAssertEqual(supportSettled.state, settled.state)
+
+        let atWar = RuleEngine().execute(
+            .diplomacy(command: .declareWar(targetFaction: .austria)),
+            in: created.state
+        )
+        XCTAssertTrue(atWar.succeeded)
+        let supportAtWar = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: play.id, side: .target)),
+            in: atWar.state
+        )
+        XCTAssertFalse(supportAtWar.succeeded)
+        XCTAssertEqual(supportAtWar.validation.errors, [.alreadyAtWar])
+        XCTAssertEqual(supportAtWar.state, atWar.state)
     }
 
     func testDiplomaticPlayAdvancesOnlyAfterFullTurnCycle() {
@@ -1331,6 +1532,24 @@ final class RuleEngineCoreTests: XCTestCase {
             humanControlledFactions: [.britain],
             map: basicMap(width: 4, height: 4, supplySources: []),
             diplomacyState: DiplomacyState.initial(for: [.britain, .austria], turn: 1),
+            divisions: [],
+            victoryState: .ongoing,
+            selectedUnitSummary: nil,
+            eventLog: []
+        )
+    }
+
+    private static func diplomaticPlaySupportTestState() -> GameState {
+        GameState(
+            scenarioId: "diplomatic_play_support_test",
+            turn: 1,
+            maxTurns: 8,
+            activeFaction: .britain,
+            phase: .humanAction,
+            turnOrder: [.britain, .austria, .france, .ottoman],
+            humanControlledFactions: [.britain, .france, .ottoman],
+            map: basicMap(width: 4, height: 4, supplySources: []),
+            diplomacyState: DiplomacyState.initial(for: [.britain, .austria, .france, .ottoman], turn: 1),
             divisions: [],
             victoryState: .ongoing,
             selectedUnitSummary: nil,
