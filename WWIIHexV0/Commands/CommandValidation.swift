@@ -16,6 +16,7 @@ enum CommandValidationError: String, Codable, Equatable {
     case invalidRegionForHex
     case invalidConstructionSite
     case insufficientResources
+    case alreadyAtWar
 }
 
 struct CommandValidation: Codable, Equatable {

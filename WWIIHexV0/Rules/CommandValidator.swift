@@ -19,6 +19,8 @@ struct CommandValidator {
             return validateProduction(kind: kind, in: state)
         case .economy(let command):
             return validateEconomyCommand(command, in: state)
+        case .diplomacy(let command):
+            return validateDiplomacyCommand(command, in: state)
         case .queueConstruction(let kind, let target):
             return validateConstruction(kind: kind, target: target, in: state)
         case .endTurn:
@@ -153,6 +155,36 @@ struct CommandValidator {
 
         guard EconomyRules().canApplyEconomyCommand(command, faction: state.activeFaction, in: state) else {
             return .invalid(.insufficientResources)
+        }
+
+        return .valid
+    }
+
+    private func validateDiplomacyCommand(_ command: DiplomacyCommand, in state: GameState) -> CommandValidation {
+        guard phaseAllowsCommands(in: state) else {
+            return .invalid(.wrongPhase)
+        }
+
+        switch command {
+        case .declareWar(let targetFaction):
+            guard targetFaction != state.activeFaction,
+                  targetFaction.participatesInTurnOrder,
+                  !targetFaction.isNeutral,
+                  !state.diplomacyState.countries(for: state.activeFaction).isEmpty,
+                  !state.diplomacyState.countries(for: targetFaction).isEmpty else {
+                return .invalid(.invalidTargetFaction)
+            }
+
+            guard state.diplomacyState.relationStatus(between: state.activeFaction, and: targetFaction) != .atWar else {
+                return .invalid(.alreadyAtWar)
+            }
+
+            guard state.diplomacyState.canDeclareWar(
+                actingFaction: state.activeFaction,
+                targetFaction: targetFaction
+            ) else {
+                return .invalid(.invalidTargetFaction)
+            }
         }
 
         return .valid

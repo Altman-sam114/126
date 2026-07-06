@@ -347,6 +347,54 @@ struct DiplomacyState: Codable, Equatable {
         return relations.first { $0.id == key }
     }
 
+    func canDeclareWar(actingFaction: Faction, targetFaction: Faction) -> Bool {
+        guard actingFaction != targetFaction,
+              actingFaction.participatesInTurnOrder,
+              targetFaction.participatesInTurnOrder,
+              !targetFaction.isNeutral else {
+            return false
+        }
+
+        guard !countries(for: actingFaction).isEmpty,
+              !countries(for: targetFaction).isEmpty else {
+            return false
+        }
+
+        return relationStatus(between: actingFaction, and: targetFaction) != .atWar
+    }
+
+    @discardableResult
+    mutating func declareWar(actingFaction: Faction, targetFaction: Faction, turn: Int) -> Bool {
+        guard canDeclareWar(actingFaction: actingFaction, targetFaction: targetFaction) else {
+            return false
+        }
+
+        let actingCountries = countries(for: actingFaction)
+        let targetCountries = countries(for: targetFaction)
+        for actingCountry in actingCountries {
+            for targetCountry in targetCountries where actingCountry.id != targetCountry.id {
+                let relation = DiplomaticRelation(
+                    firstCountryId: actingCountry.id,
+                    secondCountryId: targetCountry.id,
+                    status: .atWar,
+                    tension: 100,
+                    sinceTurn: turn
+                )
+                if let index = relations.firstIndex(where: { $0.id == relation.id }) {
+                    relations[index].status = .atWar
+                    relations[index].tension = 100
+                    relations[index].sinceTurn = max(1, turn)
+                } else {
+                    relations.append(relation)
+                }
+            }
+        }
+
+        relations.sort { $0.id < $1.id }
+        lastUpdatedTurn = turn
+        return true
+    }
+
     func relationStatus(between lhs: Faction, and rhs: Faction) -> DiplomaticStatus {
         guard lhs != rhs else {
             return lhs.isNeutral ? .neutral : .allied

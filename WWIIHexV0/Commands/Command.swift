@@ -8,6 +8,7 @@ enum Command: Codable, Equatable {
     case resupply(divisionId: String)
     case queueProduction(kind: ProductionKind)
     case economy(command: EconomyCommand)
+    case diplomacy(command: DiplomacyCommand)
     case queueConstruction(kind: ConstructionKind, target: HexCoord)
     case endTurn
 
@@ -35,6 +36,8 @@ enum Command: Codable, Equatable {
             return "QueueProduction(\(kind.displayName))"
         case .economy(let command):
             return "Economy(\(command.displayName))"
+        case .diplomacy(let command):
+            return "Diplomacy(\(command.displayName))"
         case .queueConstruction(let kind, let target):
             return "QueueConstruction(\(kind.displayName) @ \(target.q),\(target.r))"
         case .endTurn:
@@ -55,6 +58,8 @@ enum Command: Codable, Equatable {
             return nil
         case .economy:
             return nil
+        case .diplomacy:
+            return nil
         case .queueConstruction:
             return nil
         case .endTurn:
@@ -72,9 +77,28 @@ enum Command: Codable, Equatable {
              .allowRetreat,
              .queueProduction,
              .economy,
+             .diplomacy,
              .queueConstruction,
              .endTurn:
             return false
+        }
+    }
+}
+
+enum DiplomacyCommand: Codable, Equatable {
+    case declareWar(targetFaction: Faction)
+
+    var displayName: String {
+        switch self {
+        case .declareWar(let targetFaction):
+            return "DeclareWar(\(targetFaction.displayName))"
+        }
+    }
+
+    var targetFaction: Faction {
+        switch self {
+        case .declareWar(let targetFaction):
+            return targetFaction
         }
     }
 }

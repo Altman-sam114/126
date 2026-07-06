@@ -91,7 +91,7 @@ flowchart TD
     COMP["元帅意图编译<br/>TheaterDirectiveCompiler<br/>把 TheaterDirective 降级成 ZoneDirective"]:::command
     ZD["战争指令<br/>ZoneDirective<br/>战区级 attack/defend 意图"]:::command
     WCE["指令翻译器<br/>WarCommandExecutor<br/>把战区意图翻成具体单位命令"]:::command
-    CMD["底层命令<br/>Command<br/>move / attack / hold / resupply / queueProduction / endTurn"]:::command
+    CMD["底层命令<br/>Command<br/>move / attack / hold / resupply / queueProduction / economy / diplomacy / construction / endTurn"]:::command
     RE["规则引擎<br/>RuleEngine<br/>先校验，再真正修改 GameState"]:::rules
     SYNC["战略同步器<br/>StrategicStateSynchronizer<br/>占领后刷新省份、战区、前线、部署"]:::rules
 
@@ -202,7 +202,7 @@ flowchart TD
 
 ## 3. v5.5 经济、生产、预算、建设与战争支持链路
 
-这张图看当前初级经济。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算和建设命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；围城补给站建设完成后只给目标 hex 添加 `.siegeDepot`，供炮兵攻城修正读取。这不是完整 `DiplomaticPlay` 或完整围城状态机。
+这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，`Command.diplomacy(.declareWar)` 可把 active faction 与目标 faction 的关系写为 `atWar` 并刷新前线/部署派生层。这不是完整 `DiplomaticPlay` 或完整围城状态机。
 
 ```mermaid
 flowchart TD
@@ -223,6 +223,9 @@ flowchart TD
     BLDVALID["建设校验<br/>CommandValidator.validateConstruction<br/>己控 hex / 港口需 coast / 围城需邻接敌方城市要塞 / 未有目标标签 / 资源足够"]:::rules
     BLDQUEUE["预付成本并入建设队列<br/>EconomyRules.queueConstruction<br/>constructionQueue"]:::economy
     DIP["外交状态<br/>DiplomacyState<br/>国家 warSupport"]:::diplomacy
+    DIPCMD["外交命令<br/>Command.diplomacy<br/>declareWar(targetFaction)"]:::command
+    DIPVALID["外交校验<br/>CommandValidator.validateDiplomacyCommand<br/>action phase / 有国家档案 / 非自身 neutral / 尚未 atWar"]:::rules
+    DIPAPPLY["执行宣战<br/>DiplomacyState.declareWar<br/>全部 country pair -> atWar"]:::diplomacy
 
     END["结束当前阵营回合<br/>Command.endTurn<br/>CommandExecutor.executeEndTurn"]:::command
     SUPPLY["补给状态刷新<br/>SupplyRules.updateSupplyStates"]:::rules
@@ -238,7 +241,7 @@ flowchart TD
     WAIT["保留订单<br/>本回合无安全 hex，等待后续回合"]:::economy
     RAIL["完成工程<br/>MapState.setTile<br/>target.logisticsTags.insert(.rail / .fieldWorks / .port / .siegeDepot)"]:::authority
     SIEGE["攻城准备修正<br/>CombatRules.effectiveAttack<br/>炮兵从 siegeDepot 攻击城市/要塞 + 轻量加成"]:::rules
-    NEXT["切换阵营并刷新运行时层<br/>StrategicStateBootstrapper.refreshRuntimeState"]:::rules
+    NEXT["切换阵营或外交变化后刷新运行时层<br/>StrategicStateBootstrapper.refreshRuntimeState"]:::rules
     DIPUI["外交面板<br/>DiplomacyPanelView<br/>scenario war goals + support 只读展示"]:::ui
     GOALS["场景战争目标<br/>GameState.victoryConditions<br/>Open / Holding / Resolved"]:::derived
 
@@ -247,6 +250,8 @@ flowchart TD
     UI --> QUEUE --> VALIDATE --> PAY --> LEDGER
     UI --> BUDGET --> BVALID --> APPLYB --> LEDGER
     UI --> BUILD --> BLDVALID --> BLDQUEUE --> LEDGER
+    DIPCMD --> DIPVALID --> DIPAPPLY --> DIP
+    DIPAPPLY --> NEXT
     GOALS --> DIPUI
     DIP --> DIPUI
     END --> SUPPLY --> RESOLVE
@@ -398,7 +403,7 @@ flowchart TD
     SCENE["棋盘场景<br/>BoardScene<br/>鼠标点击、拖拽、滚轮/触控板缩放"]:::ui
     TAP["hex 点击回调<br/>onHexTapped(coord)<br/>只传坐标，不改 GameState"]:::input
     CONTAINER["输入解释<br/>AppContainer.handleBoardTap<br/>选中、移动、攻击意图判断"]:::rules
-    COMMAND["统一命令<br/>Command / ZoneDirective<br/>玩家和 AI 共用入口"]:::command
+    COMMAND["统一命令<br/>Command / ZoneDirective<br/>move / attack / economy / diplomacy 等玩家和 AI 共用入口"]:::command
     ENGINE["规则权威<br/>RuleEngine / WarCommandExecutor<br/>校验后修改 GameState"]:::rules
     DATA["默认资源<br/>WWIIHexV0/Data JSON<br/>DEBUG 优先源码文件，bundle 作 fallback"]:::data
 

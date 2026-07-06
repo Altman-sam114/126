@@ -133,7 +133,7 @@ playerCommandState
 - `frontLineState` 从动态战区相邻 hex 派生。
 - `warDeploymentState` 从动态战区/前线/单位位置派生，供 AI 调度单位。
 - `economyState` 保存 manpower、industry、supplies、生产/建设队列、warDebt、上回合收入/维护费/补员消耗，不直接改变战术占领权。
-- `diplomacyState` 保存国家、集团、关系和 `CountryProfile.warSupport`。v5.1 起移动、攻击、补给、AI 目标选择的敌我判断优先通过 `DiplomacyState.canAttack` / `canEnterTerritory`，不再走 `Faction.opponent` 主路径；v5.5 起 `EconomyRules.resolveFactionTurn` 可通过 `DiplomacyState.adjustWarSupport` 写入战争支持压力。
+- `diplomacyState` 保存国家、集团、关系和 `CountryProfile.warSupport`。v5.1 起移动、攻击、补给、AI 目标选择的敌我判断优先通过 `DiplomacyState.canAttack` / `canEnterTerritory`，不再走 `Faction.opponent` 主路径；v5.5 起 `EconomyRules.resolveFactionTurn` 可通过 `DiplomacyState.adjustWarSupport` 写入战争支持压力；v5.6 起 `Command.diplomacy(command:)` 提供最小规则层外交入口，`declareWar(targetFaction:)` 只把 active faction 与目标 faction 的国家关系写为 `atWar` 并刷新前线/部署派生层。
 - `turnOrder` 保存本局参战势力行动顺序，`humanControlledFactions` 保存人类控制势力；旧阿登数据默认兼容为 Germany -> Allies，Allies 为玩家。
 - `eventLog` 给 UI 和调试看。
 - `warDirectiveRecords` 记录战争指令执行回放，供 v0.36+ 后续接 LLM / 聊天命令审计。
@@ -956,7 +956,7 @@ handleBoardTap(coord)
   - AI
 - `UnitTooltipView`。
 
-`DiplomacyPanelView` 当前接收完整 `GameState`，只读展示 scenario war goals、objective 名称、Open / Holding / Resolved 状态、hold duration 和国家 `warSupport`。它不新增外交命令入口，也不直接修改 `GameState`。
+`DiplomacyPanelView` 当前接收完整 `GameState`，只读展示 scenario war goals、objective 名称、Open / Holding / Resolved 状态、hold duration 和国家 `warSupport`。v5.6 的 `declareWar` 只是规则层 `Command.diplomacy` 入口，当前外交面板尚未新增按钮或菜单，也不直接修改 `GameState`。
 
 v5.3 显示适配：
 
@@ -1062,6 +1062,9 @@ hold(divisionId)
 allowRetreat(divisionId)
 resupply(divisionId)
 queueProduction(kind)
+economy(command)
+diplomacy(command)
+queueConstruction(kind, target)
 endTurn
 ```
 
@@ -1125,7 +1128,25 @@ phaseAllowsCommands
 active faction economy ledger 有足够 manpower / industry / supplies
 ```
 
+预算、建设和外交命令：
+
+```text
+Command.economy(command)
+  -> phaseAllowsCommands
+  -> EconomyRules.canApplyEconomyCommand
+
+Command.queueConstruction(kind, target)
+  -> phaseAllowsCommands
+  -> 己控、可通行、站点规则有效、资源足够
+
+Command.diplomacy(command: .declareWar(targetFaction))
+  -> phaseAllowsCommands
+  -> targetFaction 不是 active faction、不是 neutral、双方都有 country profile、尚未 atWar
+```
+
 `phaseAllowsCommands` 在 v5.1 后不再硬编码 `.germanAI` / `.alliedPlayer`，而是要求 `state.phase.isActionPhase` 且 `activeFaction.participatesInTurnOrder`。
+
+当前外交命令只实现最小 `declareWar`：通过 `DiplomacyState.declareWar` 把 active faction 与目标 faction 的全部 country pair 置为 `.atWar`，写入 `.diplomacy` 日志，并调用 `StrategicStateBootstrapper.refreshRuntimeState` 让 `FrontLineState` 与 `WarDeploymentState` 立刻按新敌我关系重建。它不直接移动单位、不改变 hex / region controller、不改经济账本，也不是完整 `DiplomaticPlay`、谈判或动态战争目标系统。
 
 ### 5.3 移动与占领
 

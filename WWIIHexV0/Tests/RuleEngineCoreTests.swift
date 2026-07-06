@@ -732,6 +732,156 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertEqual(state.victoryState.resolvedConditionId, "victory_allied_sevastopol")
     }
 
+    func testDiplomacyCommandCodableRoundTrip() throws {
+        let command = Command.diplomacy(command: .declareWar(targetFaction: .austria))
+
+        let data = try JSONEncoder().encode(command)
+        let decoded = try JSONDecoder().decode(Command.self, from: data)
+
+        XCTAssertEqual(decoded, command)
+        XCTAssertNil(command.actingDivisionId)
+        XCTAssertFalse(command.isRecoveryCommand)
+    }
+
+    func testDeclareWarCommandUpdatesDiplomacyAndAllowsAttack() {
+        var state = DataLoader().loadInitialGameState()
+        state.activeFaction = .britain
+        state.phase = .humanAction
+        let originalMap = state.map
+        let originalDivisions = state.divisions
+
+        XCTAssertEqual(state.diplomacyState.relationStatus(between: .britain, and: .austria), .neutral)
+
+        let result = RuleEngine().execute(
+            .diplomacy(command: .declareWar(targetFaction: .austria)),
+            in: state
+        )
+
+        XCTAssertTrue(result.succeeded)
+        XCTAssertEqual(result.state.map, originalMap)
+        XCTAssertEqual(result.state.divisions, originalDivisions)
+        XCTAssertEqual(result.state.diplomacyState.relationStatus(between: .britain, and: .austria), .atWar)
+        XCTAssertTrue(result.state.diplomacyState.canAttack(attacker: .britain, target: .austria))
+        XCTAssertEqual(result.state.diplomacyState.lastUpdatedTurn, state.turn)
+        XCTAssertTrue(
+            result.state.eventLog.contains {
+                $0.category == .diplomacy && $0.message == "Britain declared war on Austria."
+            }
+        )
+        XCTAssertFalse(result.state.frontLineState.frontLines.isEmpty)
+        XCTAssertFalse(result.state.warDeploymentState.frontZones.isEmpty)
+    }
+
+    func testDeclareWarEnablesAttackWithoutDirectlyMovingUnits() {
+        let british = Self.division(id: "british", faction: .britain, coord: HexCoord(q: 1, r: 1))
+        let austrian = Self.division(id: "austrian", faction: .austria, coord: HexCoord(q: 2, r: 1))
+        let state = Self.testState(
+            activeFaction: .britain,
+            map: Self.basicMap(width: 4, height: 4),
+            diplomacyState: DiplomacyState.initial(for: [.britain, .austria], turn: 1),
+            divisions: [british, austrian]
+        )
+
+        let before = RuleEngine().execute(.attack(attackerId: "british", targetId: "austrian"), in: state)
+        XCTAssertFalse(before.succeeded)
+        XCTAssertEqual(before.validation.errors, [.invalidTargetFaction])
+
+        let declared = RuleEngine().execute(
+            .diplomacy(command: .declareWar(targetFaction: .austria)),
+            in: state
+        )
+        XCTAssertTrue(declared.succeeded)
+        XCTAssertEqual(declared.state.division(id: "british")?.coord, british.coord)
+        XCTAssertEqual(declared.state.division(id: "austrian")?.coord, austrian.coord)
+
+        let after = RuleEngine().execute(.attack(attackerId: "british", targetId: "austrian"), in: declared.state)
+        XCTAssertTrue(after.succeeded)
+    }
+
+    func testDeclareWarRejectsInvalidTargetsAndDuplicates() {
+        var state = DataLoader().loadInitialGameState()
+        state.activeFaction = .britain
+        state.phase = .humanAction
+
+        let duplicate = RuleEngine().execute(
+            .diplomacy(command: .declareWar(targetFaction: .russia)),
+            in: state
+        )
+        XCTAssertFalse(duplicate.succeeded)
+        XCTAssertEqual(duplicate.validation.errors, [.alreadyAtWar])
+
+        let selfTarget = RuleEngine().execute(
+            .diplomacy(command: .declareWar(targetFaction: .britain)),
+            in: state
+        )
+        XCTAssertFalse(selfTarget.succeeded)
+        XCTAssertEqual(selfTarget.validation.errors, [.invalidTargetFaction])
+
+        let neutralTarget = RuleEngine().execute(
+            .diplomacy(command: .declareWar(targetFaction: .neutral)),
+            in: state
+        )
+        XCTAssertFalse(neutralTarget.succeeded)
+        XCTAssertEqual(neutralTarget.validation.errors, [.invalidTargetFaction])
+    }
+
+    func testDeclareWarRejectedOutsideActionPhaseDoesNotModifyDiplomacy() {
+        var state = DataLoader().loadInitialGameState()
+        state.activeFaction = .britain
+        state.phase = .diplomacyResolution
+        let originalDiplomacy = state.diplomacyState
+
+        let result = RuleEngine().execute(
+            .diplomacy(command: .declareWar(targetFaction: .austria)),
+            in: state
+        )
+
+        XCTAssertFalse(result.succeeded)
+        XCTAssertEqual(result.validation.errors, [.wrongPhase])
+        XCTAssertEqual(result.state.diplomacyState, originalDiplomacy)
+        XCTAssertFalse(result.state.diplomacyState.canAttack(attacker: .britain, target: .austria))
+    }
+
+    func testDeclareWarUpdatesAllCountryPairsForFactionRelation() {
+        var diplomacy = DiplomacyState(
+            countries: [
+                CountryProfile(
+                    id: "britain",
+                    name: "British Empire",
+                    faction: .britain,
+                    blocId: "british_bloc",
+                    rulerAgentId: "ruler_britain"
+                ),
+                CountryProfile(
+                    id: "british_india",
+                    name: "British India",
+                    faction: .britain,
+                    blocId: "british_bloc",
+                    rulerAgentId: "ruler_india"
+                ),
+                CountryProfile(
+                    id: "austria",
+                    name: "Austrian Empire",
+                    faction: .austria,
+                    blocId: "austrian_bloc",
+                    rulerAgentId: "ruler_austria"
+                )
+            ],
+            blocs: [],
+            relations: [],
+            lastUpdatedTurn: 1
+        )
+
+        XCTAssertTrue(diplomacy.declareWar(actingFaction: .britain, targetFaction: .austria, turn: 3))
+
+        XCTAssertEqual(diplomacy.relationStatus(between: .britain, and: .austria), .atWar)
+        XCTAssertEqual(diplomacy.lastUpdatedTurn, 3)
+        XCTAssertEqual(diplomacy.relations.count, 2)
+        XCTAssertTrue(diplomacy.relations.allSatisfy { $0.status == .atWar && $0.tension == 100 && $0.sinceTurn == 3 })
+        XCTAssertNotNil(diplomacy.relation(between: "britain", and: "austria"))
+        XCTAssertNotNil(diplomacy.relation(between: "british_india", and: "austria"))
+    }
+
     func testInvalidCommandDoesNotModifyGameState() {
         let state = Self.testState(
             activeFaction: .allies,

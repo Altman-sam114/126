@@ -1290,6 +1290,7 @@ struct WarCommandExecutor {
             return attackerId
         case .queueProduction,
              .economy,
+             .diplomacy,
              .queueConstruction,
              .endTurn:
             return nil

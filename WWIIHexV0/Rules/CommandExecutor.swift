@@ -26,6 +26,8 @@ struct CommandExecutor {
             executeQueueProduction(kind: kind, in: &nextState)
         case .economy(let command):
             executeEconomyCommand(command, in: &nextState)
+        case .diplomacy(let command):
+            executeDiplomacyCommand(command, in: &nextState)
         case .queueConstruction(let kind, let target):
             executeQueueConstruction(kind: kind, target: target, in: &nextState)
         case .endTurn:
@@ -165,6 +167,26 @@ struct CommandExecutor {
 
     private func executeEconomyCommand(_ command: EconomyCommand, in state: inout GameState) {
         _ = EconomyRules().applyEconomyCommand(command, faction: state.activeFaction, in: &state)
+    }
+
+    private func executeDiplomacyCommand(_ command: DiplomacyCommand, in state: inout GameState) {
+        switch command {
+        case .declareWar(let targetFaction):
+            let actingFaction = state.activeFaction
+            guard state.diplomacyState.declareWar(
+                actingFaction: actingFaction,
+                targetFaction: targetFaction,
+                turn: state.turn
+            ) else {
+                return
+            }
+
+            state.appendEvent(
+                "\(actingFaction.displayName) declared war on \(targetFaction.displayName).",
+                category: .diplomacy
+            )
+            state = StrategicStateBootstrapper().refreshRuntimeState(state)
+        }
     }
 
     private func executeQueueConstruction(kind: ConstructionKind, target: HexCoord, in state: inout GameState) {
