@@ -228,7 +228,7 @@ flowchart TD
     DIPPLAY["创建外交危机<br/>DiplomacyState.createDiplomaticPlay<br/>issuer / target / warGoal / backers / deadline"]:::diplomacy
     DIPSUPPORT["加入支持/反对列表<br/>DiplomacyState.supportDiplomaticPlay<br/>只改 backers / opposingBackers"]:::diplomacy
     DIPRESP["AI 危机回应<br/>DiplomacyState.recordDiplomaticPlayStance<br/>低 warSupport 可使 AI 中立；支持/反对复用支持列表"]:::diplomacy
-    DIPSETTLE["让步收束危机<br/>DiplomacyState.offerConcession<br/>active play -> negotiatedSettlement"]:::diplomacy
+    DIPSETTLE["让步收束危机<br/>DiplomacyState.offerConcession<br/>settlementRecord + warSupport delta"]:::diplomacy
     DIPADV["整轮完成后推进外交危机<br/>DiplomacyState.advanceDiplomaticPlays<br/>escalation +25 / deadline -> backers x opposingBackers 宣战尝试"]:::diplomacy
     DIPAPPLY["执行宣战<br/>DiplomacyState.declareWar<br/>全部 country pair -> atWar<br/>关闭跨侧 active play"]:::diplomacy
 

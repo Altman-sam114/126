@@ -240,8 +240,13 @@ struct CommandExecutor {
             }
 
             let otherFaction = play.issuerFaction == actingFaction ? play.targetFaction : play.issuerFaction
+            let settlementSummary = play.settlementRecord.map {
+                let concedingDelta = Self.signedWarSupportDelta($0.concedingWarSupportDelta)
+                let beneficiaryDelta = Self.signedWarSupportDelta($0.beneficiaryWarSupportDelta)
+                return " \($0.summary) War support \(actingFaction.displayName) \(concedingDelta), \(otherFaction.displayName) \(beneficiaryDelta)."
+            } ?? ""
             state.appendEvent(
-                "\(actingFaction.displayName) offered concessions to \(otherFaction.displayName), settling the diplomatic play: \(play.warGoal.displayName).",
+                "\(actingFaction.displayName) offered concessions to \(otherFaction.displayName), settling the diplomatic play: \(play.warGoal.displayName).\(settlementSummary)",
                 category: .diplomacy,
                 relatedRecordId: play.id
             )
@@ -540,6 +545,10 @@ struct CommandExecutor {
         }
 
         return parts.joined(separator: "; ") + "."
+    }
+
+    private static func signedWarSupportDelta(_ delta: Int) -> String {
+        delta > 0 ? "+\(delta)" : "\(delta)"
     }
 }
 

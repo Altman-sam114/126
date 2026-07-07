@@ -1098,7 +1098,7 @@ createDiplomaticPlay
   -> war goals feed victory evaluation
 ```
 
-当前源码已先落地最小 `supportDiplomaticPlay` 和 `respondToDiplomaticPlay`：未加入且非主当事方的 faction 可选择支持 issuer 或 target，只写入 `backers` / `opposingBackers`，不改变外交关系、不自动参战、不刷新前线/部署、不调整战争支持或经济账本；AI 可经 `RulerAgent -> TurnManager -> Command.diplomacy(.respondToDiplomaticPlay) -> RuleEngine` 留下支持、反对或中立解释记录。`RulerAgent` 已开始读取 warSupport 来影响 Cabinet posture、attackThresholdAdjustment、reserveBias 和外交危机回应倾向；低 warSupport 可让 AI 中立并在 rationale 中说明避免升级。条件交换、多方谈判和动态战争目标仍是后续任务。
+当前源码已先落地最小 `supportDiplomaticPlay` 和 `respondToDiplomaticPlay`：未加入且非主当事方的 faction 可选择支持 issuer 或 target，只写入 `backers` / `opposingBackers`，不改变外交关系、不自动参战、不刷新前线/部署；AI 可经 `RulerAgent -> TurnManager -> Command.diplomacy(.respondToDiplomaticPlay) -> RuleEngine` 留下支持、反对或中立解释记录。`RulerAgent` 已开始读取 warSupport 来影响 Cabinet posture、attackThresholdAdjustment、reserveBias 和外交危机回应倾向；低 warSupport 可让 AI 中立并在 rationale 中说明避免升级。`offerConcession` 已开始写入 `settlementRecord`，对让步方/受益方做最小 warSupport 结算，记录值按 0-100 钳制后的实际变化，并阻止同回合重开同一危机。完整条件交换、多方谈判和动态战争目标仍是后续任务。
 
 首版战争目标：
 

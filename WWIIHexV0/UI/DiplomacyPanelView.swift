@@ -377,7 +377,8 @@ struct DiplomacyPanelView: View {
             diplomacyState.canCreateDiplomaticPlay(
                 issuerFaction: activeFaction,
                 targetFaction: targetFaction,
-                regionId: nil
+                regionId: nil,
+                turn: gameState.turn
             )
     }
 

@@ -206,7 +206,8 @@ struct CommandValidator {
             guard state.diplomacyState.canCreateDiplomaticPlay(
                 issuerFaction: state.activeFaction,
                 targetFaction: targetFaction,
-                regionId: regionId
+                regionId: regionId,
+                turn: state.turn
             ) else {
                 return .invalid(.diplomaticPlayAlreadyActive)
             }

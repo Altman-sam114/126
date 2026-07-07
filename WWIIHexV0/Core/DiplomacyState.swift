@@ -353,6 +353,40 @@ enum DiplomaticPlayOutcome: String, Codable, Equatable {
     }
 }
 
+struct DiplomaticPlaySettlementRecord: Identifiable, Codable, Equatable {
+    let id: String
+    let playId: String
+    let turn: Int
+    let concedingFaction: Faction
+    let beneficiaryFaction: Faction
+    let warGoal: DiplomaticPlayWarGoal
+    let summary: String
+    let concedingWarSupportDelta: Int
+    let beneficiaryWarSupportDelta: Int
+
+    init(
+        id: String? = nil,
+        playId: String,
+        turn: Int,
+        concedingFaction: Faction,
+        beneficiaryFaction: Faction,
+        warGoal: DiplomaticPlayWarGoal,
+        summary: String,
+        concedingWarSupportDelta: Int,
+        beneficiaryWarSupportDelta: Int
+    ) {
+        self.id = id ?? "settlement_\(playId)_turn_\(max(1, turn))_\(concedingFaction.rawValue)"
+        self.playId = playId
+        self.turn = max(1, turn)
+        self.concedingFaction = concedingFaction
+        self.beneficiaryFaction = beneficiaryFaction
+        self.warGoal = warGoal
+        self.summary = summary
+        self.concedingWarSupportDelta = concedingWarSupportDelta
+        self.beneficiaryWarSupportDelta = beneficiaryWarSupportDelta
+    }
+}
+
 struct DiplomaticPlay: Identifiable, Codable, Equatable {
     let id: String
     let issuerFaction: Faction
@@ -366,6 +400,7 @@ struct DiplomaticPlay: Identifiable, Codable, Equatable {
     let deadlineTurn: Int
     var outcome: DiplomaticPlayOutcome
     var aiStanceRecords: [DiplomaticPlayStanceRecord]
+    var settlementRecord: DiplomaticPlaySettlementRecord?
 
     init(
         id: String,
@@ -379,7 +414,8 @@ struct DiplomaticPlay: Identifiable, Codable, Equatable {
         createdTurn: Int,
         deadlineTurn: Int,
         outcome: DiplomaticPlayOutcome = .active,
-        aiStanceRecords: [DiplomaticPlayStanceRecord] = []
+        aiStanceRecords: [DiplomaticPlayStanceRecord] = [],
+        settlementRecord: DiplomaticPlaySettlementRecord? = nil
     ) {
         self.id = id
         self.issuerFaction = issuerFaction
@@ -393,6 +429,7 @@ struct DiplomaticPlay: Identifiable, Codable, Equatable {
         self.deadlineTurn = max(self.createdTurn + 1, deadlineTurn)
         self.outcome = outcome
         self.aiStanceRecords = aiStanceRecords
+        self.settlementRecord = settlementRecord
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -408,6 +445,7 @@ struct DiplomaticPlay: Identifiable, Codable, Equatable {
         case deadlineTurn
         case outcome
         case aiStanceRecords
+        case settlementRecord
     }
 
     init(from decoder: Decoder) throws {
@@ -424,7 +462,8 @@ struct DiplomaticPlay: Identifiable, Codable, Equatable {
             createdTurn: try container.decode(Int.self, forKey: .createdTurn),
             deadlineTurn: try container.decode(Int.self, forKey: .deadlineTurn),
             outcome: try container.decode(DiplomaticPlayOutcome.self, forKey: .outcome),
-            aiStanceRecords: try container.decodeIfPresent([DiplomaticPlayStanceRecord].self, forKey: .aiStanceRecords) ?? []
+            aiStanceRecords: try container.decodeIfPresent([DiplomaticPlayStanceRecord].self, forKey: .aiStanceRecords) ?? [],
+            settlementRecord: try container.decodeIfPresent(DiplomaticPlaySettlementRecord.self, forKey: .settlementRecord)
         )
     }
 
@@ -442,6 +481,7 @@ struct DiplomaticPlay: Identifiable, Codable, Equatable {
         try container.encode(deadlineTurn, forKey: .deadlineTurn)
         try container.encode(outcome, forKey: .outcome)
         try container.encode(aiStanceRecords, forKey: .aiStanceRecords)
+        try container.encodeIfPresent(settlementRecord, forKey: .settlementRecord)
     }
 }
 
@@ -637,7 +677,8 @@ struct DiplomacyState: Codable, Equatable {
     func canCreateDiplomaticPlay(
         issuerFaction: Faction,
         targetFaction: Faction,
-        regionId: RegionId?
+        regionId: RegionId?,
+        turn: Int? = nil
     ) -> Bool {
         guard issuerFaction != targetFaction,
               issuerFaction.participatesInTurnOrder,
@@ -655,10 +696,23 @@ struct DiplomacyState: Codable, Equatable {
             return false
         }
 
-        return !activeDiplomaticPlays.contains { play in
-            let samePair = (play.issuerFaction == issuerFaction && play.targetFaction == targetFaction) ||
-                (play.issuerFaction == targetFaction && play.targetFaction == issuerFaction)
-            return samePair && play.regionId == regionId
+        guard !activeDiplomaticPlays.contains(where: {
+            Self.matchesDiplomaticPlay($0, lhs: issuerFaction, rhs: targetFaction, regionId: regionId)
+        }) else {
+            return false
+        }
+
+        guard let turn else {
+            return true
+        }
+
+        return !diplomaticPlays.contains {
+            guard $0.outcome == .negotiatedSettlement,
+                  let settlement = $0.settlementRecord,
+                  Self.matchesDiplomaticPlay($0, lhs: issuerFaction, rhs: targetFaction, regionId: regionId) else {
+                return false
+            }
+            return turn <= settlement.turn
         }
     }
 
@@ -674,7 +728,8 @@ struct DiplomacyState: Codable, Equatable {
         guard canCreateDiplomaticPlay(
             issuerFaction: issuerFaction,
             targetFaction: targetFaction,
-            regionId: regionId
+            regionId: regionId,
+            turn: turn
         ) else {
             return nil
         }
@@ -724,6 +779,34 @@ struct DiplomacyState: Codable, Equatable {
             return nil
         }
 
+        let play = diplomaticPlays[index]
+        let beneficiaryFaction = play.issuerFaction == actingFaction ? play.targetFaction : play.issuerFaction
+        let concedingOldWarSupport = primaryCountry(for: actingFaction)?.warSupport
+        let beneficiaryOldWarSupport = primaryCountry(for: beneficiaryFaction)?.warSupport
+        _ = adjustWarSupport(for: actingFaction, delta: -4, turn: turn)
+        _ = adjustWarSupport(for: beneficiaryFaction, delta: 2, turn: turn)
+        let concedingWarSupportDelta = Self.warSupportDelta(
+            from: concedingOldWarSupport,
+            to: primaryCountry(for: actingFaction)?.warSupport
+        )
+        let beneficiaryWarSupportDelta = Self.warSupportDelta(
+            from: beneficiaryOldWarSupport,
+            to: primaryCountry(for: beneficiaryFaction)?.warSupport
+        )
+        diplomaticPlays[index].settlementRecord = DiplomaticPlaySettlementRecord(
+            playId: playId,
+            turn: turn,
+            concedingFaction: actingFaction,
+            beneficiaryFaction: beneficiaryFaction,
+            warGoal: play.warGoal,
+            summary: Self.settlementSummary(
+                warGoal: play.warGoal,
+                concedingFaction: actingFaction,
+                beneficiaryFaction: beneficiaryFaction
+            ),
+            concedingWarSupportDelta: concedingWarSupportDelta,
+            beneficiaryWarSupportDelta: beneficiaryWarSupportDelta
+        )
         diplomaticPlays[index].outcome = .negotiatedSettlement
         lastUpdatedTurn = turn
         return diplomaticPlays[index]
@@ -1149,6 +1232,43 @@ struct DiplomacyState: Codable, Equatable {
             }
         }
         return relations
+    }
+
+    private static func warSupportDelta(from oldValue: Int?, to newValue: Int?) -> Int {
+        guard let oldValue, let newValue else {
+            return 0
+        }
+        return newValue - oldValue
+    }
+
+    private static func settlementSummary(
+        warGoal: DiplomaticPlayWarGoal,
+        concedingFaction: Faction,
+        beneficiaryFaction: Faction
+    ) -> String {
+        switch warGoal {
+        case .protectOttomanTerritory:
+            return "\(concedingFaction.displayName) accepts protections for Ottoman territory demanded by \(beneficiaryFaction.displayName)."
+        case .demandDanubianWithdrawal:
+            return "\(concedingFaction.displayName) accepts a Danubian withdrawal formula favoring \(beneficiaryFaction.displayName)."
+        case .controlBlackSeaPort:
+            return "\(concedingFaction.displayName) accepts port access terms favoring \(beneficiaryFaction.displayName)."
+        case .keepStraitsOpen:
+            return "\(concedingFaction.displayName) accepts open Straits guarantees favoring \(beneficiaryFaction.displayName)."
+        case .weakenPrestige:
+            return "\(concedingFaction.displayName) concedes prestige to keep \(beneficiaryFaction.displayName) out of war."
+        }
+    }
+
+    private static func matchesDiplomaticPlay(
+        _ play: DiplomaticPlay,
+        lhs: Faction,
+        rhs: Faction,
+        regionId: RegionId?
+    ) -> Bool {
+        let samePair = (play.issuerFaction == lhs && play.targetFaction == rhs) ||
+            (play.issuerFaction == rhs && play.targetFaction == lhs)
+        return samePair && play.regionId == regionId
     }
 
     private static func makeBlackSeaCrisisRelations(countries: [CountryProfile], turn: Int) -> [DiplomaticRelation] {

@@ -896,7 +896,8 @@ final class RuleEngineCoreTests: XCTestCase {
         let originalFrontLineState = created.state.frontLineState
         let originalWarDeploymentState = created.state.warDeploymentState
         let originalRelations = created.state.diplomacyState.relations
-        let originalCountries = created.state.diplomacyState.countries
+        let originalBritainWarSupport = created.state.diplomacyState.primaryCountry(for: .britain)?.warSupport
+        let originalAustriaWarSupport = created.state.diplomacyState.primaryCountry(for: .austria)?.warSupport
         let originalEconomyState = created.state.economyState
 
         let settled = RuleEngine().execute(
@@ -910,9 +911,27 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertEqual(settled.state.frontLineState, originalFrontLineState)
         XCTAssertEqual(settled.state.warDeploymentState, originalWarDeploymentState)
         XCTAssertEqual(settled.state.diplomacyState.relations, originalRelations)
-        XCTAssertEqual(settled.state.diplomacyState.countries, originalCountries)
         XCTAssertEqual(settled.state.economyState, originalEconomyState)
-        XCTAssertEqual(settled.state.diplomacyState.diplomaticPlay(id: play.id)?.outcome, .negotiatedSettlement)
+        let settledPlay = settled.state.diplomacyState.diplomaticPlay(id: play.id)
+        XCTAssertEqual(settledPlay?.outcome, .negotiatedSettlement)
+        XCTAssertEqual(settledPlay?.settlementRecord?.concedingFaction, .britain)
+        XCTAssertEqual(settledPlay?.settlementRecord?.beneficiaryFaction, .austria)
+        XCTAssertEqual(settledPlay?.settlementRecord?.warGoal, .weakenPrestige)
+        XCTAssertEqual(settledPlay?.settlementRecord?.concedingWarSupportDelta, -4)
+        XCTAssertEqual(settledPlay?.settlementRecord?.beneficiaryWarSupportDelta, 2)
+        XCTAssertEqual(settledPlay?.settlementRecord?.turn, state.turn)
+        XCTAssertEqual(
+            settledPlay?.settlementRecord?.summary,
+            "Britain concedes prestige to keep Austria out of war."
+        )
+        XCTAssertEqual(
+            settled.state.diplomacyState.primaryCountry(for: .britain)?.warSupport,
+            originalBritainWarSupport.map { $0 - 4 }
+        )
+        XCTAssertEqual(
+            settled.state.diplomacyState.primaryCountry(for: .austria)?.warSupport,
+            originalAustriaWarSupport.map { $0 + 2 }
+        )
         XCTAssertTrue(settled.state.diplomacyState.activeDiplomaticPlays.isEmpty)
         XCTAssertEqual(settled.state.diplomacyState.relationStatus(between: .britain, and: .austria), .neutral)
         XCTAssertFalse(settled.state.diplomacyState.canAttack(attacker: .britain, target: .austria))
@@ -921,11 +940,11 @@ final class RuleEngineCoreTests: XCTestCase {
             settled.state.eventLog.contains {
                 $0.category == .diplomacy &&
                     $0.relatedRecordId == play.id &&
-                    $0.message == "Britain offered concessions to Austria, settling the diplomatic play: Weaken prestige."
+                    $0.message == "Britain offered concessions to Austria, settling the diplomatic play: Weaken prestige. Britain concedes prestige to keep Austria out of war. War support Britain -4, Austria +2."
             }
         )
 
-        let reopened = RuleEngine().execute(
+        let blockedReopen = RuleEngine().execute(
             .diplomacy(
                 command: .createDiplomaticPlay(
                     targetFaction: .austria,
@@ -935,8 +954,74 @@ final class RuleEngineCoreTests: XCTestCase {
             ),
             in: settled.state
         )
+        XCTAssertFalse(blockedReopen.succeeded)
+        XCTAssertEqual(blockedReopen.validation.errors, [.diplomaticPlayAlreadyActive])
+        XCTAssertEqual(blockedReopen.state, settled.state)
+
+        var nextTurnState = settled.state
+        nextTurnState.turn += 1
+        let reopened = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: nextTurnState
+        )
         XCTAssertTrue(reopened.succeeded)
         XCTAssertNotEqual(reopened.state.diplomacyState.activeDiplomaticPlays.first?.id, play.id)
+    }
+
+    func testOfferConcessionRecordsClampedWarSupportDeltas() {
+        var state = DataLoader().loadInitialGameState()
+        state.activeFaction = .britain
+        state.phase = .humanAction
+
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: state
+        )
+        XCTAssertTrue(created.succeeded)
+        let play = created.state.diplomacyState.activeDiplomaticPlays[0]
+
+        var boundaryState = created.state
+        for index in boundaryState.diplomacyState.countries.indices {
+            switch boundaryState.diplomacyState.countries[index].faction {
+            case .britain:
+                boundaryState.diplomacyState.countries[index].warSupport = 1
+            case .austria:
+                boundaryState.diplomacyState.countries[index].warSupport = 100
+            default:
+                break
+            }
+        }
+
+        let settled = RuleEngine().execute(
+            .diplomacy(command: .offerConcession(playId: play.id)),
+            in: boundaryState
+        )
+
+        XCTAssertTrue(settled.succeeded)
+        let settlement = settled.state.diplomacyState.diplomaticPlay(id: play.id)?.settlementRecord
+        XCTAssertEqual(settlement?.concedingWarSupportDelta, -1)
+        XCTAssertEqual(settlement?.beneficiaryWarSupportDelta, 0)
+        XCTAssertEqual(settled.state.diplomacyState.primaryCountry(for: .britain)?.warSupport, 0)
+        XCTAssertEqual(settled.state.diplomacyState.primaryCountry(for: .austria)?.warSupport, 100)
+        XCTAssertTrue(
+            settled.state.eventLog.contains {
+                $0.category == .diplomacy &&
+                    $0.relatedRecordId == play.id &&
+                    $0.message == "Britain offered concessions to Austria, settling the diplomatic play: Weaken prestige. Britain concedes prestige to keep Austria out of war. War support Britain -1, Austria 0."
+            }
+        )
     }
 
     func testOfferConcessionRejectsMissingWrongFactionAndAtWarPlay() {
@@ -1576,6 +1661,7 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertEqual(decoded.issuerFaction, .britain)
         XCTAssertEqual(decoded.targetFaction, .austria)
         XCTAssertTrue(decoded.aiStanceRecords.isEmpty)
+        XCTAssertNil(decoded.settlementRecord)
     }
 
     func testDeclareWarCommandUpdatesDiplomacyAndAllowsAttack() {
