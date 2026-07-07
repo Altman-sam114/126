@@ -133,7 +133,7 @@ playerCommandState
 - `frontLineState` 从动态战区相邻 hex 派生。
 - `warDeploymentState` 从动态战区/前线/单位位置派生，供 AI 调度单位。
 - `economyState` 保存 manpower、industry、supplies、生产/建设队列、warDebt、上回合收入/维护费/补员消耗，不直接改变战术占领权。
-- `diplomacyState` 保存国家、集团、关系、`CountryProfile.warSupport` 和最小 `DiplomaticPlay` 记录。v5.1 起移动、攻击、补给、AI 目标选择的敌我判断优先通过 `DiplomacyState.canAttack` / `canEnterTerritory`，不再走 `Faction.opponent` 主路径；v5.5 起 `EconomyRules.resolveFactionTurn` 可通过 `DiplomacyState.adjustWarSupport` 写入战争支持压力；v5.6 起 `Command.diplomacy(command:)` 提供规则层外交入口，`createDiplomaticPlay` 记录危机状态，`supportDiplomaticPlay` 允许未加入且非主当事方的 faction 加入 issuer 或 target 支持列表但不立刻参战，`offerConcession` 可把 active play 收束为 `negotiatedSettlement`，整轮完成后 `advanceDiplomaticPlays` 推进 escalation，deadline 到期会按 `backers × opposingBackers` 成组升级为战争；`declareWar(targetFaction:)` 把 active faction 与目标 faction 的国家关系写为 `atWar`、立即关闭双方跨侧的 active play，并刷新前线/部署派生层。
+- `diplomacyState` 保存国家、集团、关系、`CountryProfile.warSupport` 和最小 `DiplomaticPlay` 记录。v5.1 起移动、攻击、补给、AI 目标选择的敌我判断优先通过 `DiplomacyState.canAttack` / `canEnterTerritory`，不再走 `Faction.opponent` 主路径；v5.5 起 `EconomyRules.resolveFactionTurn` 可通过 `DiplomacyState.adjustWarSupport` 写入战争支持压力；v5.6 起 `Command.diplomacy(command:)` 提供规则层外交入口，`createDiplomaticPlay` 记录危机状态，`supportDiplomaticPlay` 允许未加入且非主当事方的 faction 加入 issuer 或 target 支持列表但不立刻参战，`offerConcession` 可把 active play 收束为 `negotiatedSettlement`，整轮完成后 `advanceDiplomaticPlays` 推进 escalation，deadline 到期会按 `backers × opposingBackers` 成组升级为战争；`declareWar(targetFaction:)` 把 active faction 与目标 faction 的国家关系写为 `atWar`、立即关闭双方跨侧的 active play，并刷新前线/部署派生层。`RulerAgent` 只读取 warSupport 来调整 AI 姿态、风险阈值、预备队倾向和外交危机回应，不直接改写该值。
 - `turnOrder` 保存本局参战势力行动顺序，`humanControlledFactions` 保存人类控制势力；旧阿登数据默认兼容为 Germany -> Allies，Allies 为玩家。
 - `eventLog` 给 UI 和调试看。
 - `warDirectiveRecords` 记录战争指令执行回放，供 v0.36+ 后续接 LLM / 聊天命令审计。
@@ -401,13 +401,13 @@ isCoreZone
 
 ### 1.7 Cabinet posture 层
 
-v5.6 起，默认 `.marshalDirective` AI 主路径会接入 `RulerAgent` 作为源码兼容承载的 Cabinet posture 层。它位于元帅层和执行层之间：先由 `MarshalAgent` 产出并编译 `DirectiveEnvelope`，再由 Cabinet posture 根据外交摘要、前线压力和历史 directive 记录调整攻守姿态、预备队倾向和目标排序，最后仍交给 `WarCommandExecutor -> RuleEngine`。当前最小外交 AI 回应也由 `RulerAgent` 生成 `DiplomaticPlayStanceRecord`，但 `TurnManager` 必须把它转成 `Command.diplomacy(.respondToDiplomaticPlay)` 并经 `RuleEngine` 执行。
+v5.6 起，默认 `.marshalDirective` AI 主路径会接入 `RulerAgent` 作为源码兼容承载的 Cabinet posture 层。它位于元帅层和执行层之间：先由 `MarshalAgent` 产出并编译 `DirectiveEnvelope`，再由 Cabinet posture 根据外交摘要、warSupport、前线压力和历史 directive 记录调整攻守姿态、预备队倾向和目标排序，最后仍交给 `WarCommandExecutor -> RuleEngine`。当前最小外交 AI 回应也由 `RulerAgent` 生成 `DiplomaticPlayStanceRecord`，低 warSupport 会让 AI 更倾向中立和避免升级；但 `TurnManager` 必须把回应转成 `Command.diplomacy(.respondToDiplomaticPlay)` 并经 `RuleEngine` 执行。
 
 边界：
 
 - Cabinet posture 不直接生成底层 `Command`，不得绕过 `MarshalAgent` / `ZoneDirective`。
 - Cabinet posture 不直接修改 `HexTile.controller`、`Division.coord`、`regionToTheater`、`hexToTheater` 或 `hexToFrontZone`。
-- Cabinet posture 不直接修改外交关系、战争支持或经济账本；`TurnManager` 会把 `RulerDecisionRecord` 追加为 audit-only 记录，并把 AI 外交危机回应作为规则命令执行。支持/反对回应可进入 `backers` / `opposingBackers`，中立回应只写 `aiStanceRecords` 和外交日志。
+- Cabinet posture 不直接修改外交关系、战争支持或经济账本；warSupport 只作为姿态、阈值、预备队倾向和外交回应的输入。`TurnManager` 会把 `RulerDecisionRecord` 追加为 audit-only 记录，并把 AI 外交危机回应作为规则命令执行。支持/反对回应可进入 `backers` / `opposingBackers`，中立回应只写 `aiStanceRecords` 和外交日志。
 - AI 面板展示最近 Cabinet posture / focus / rationale；外交面板仍可读取 `DiplomacyState.latestRulerRecord`。
 
 ### 1.8 EconomyState / EconomyRules
@@ -1402,7 +1402,7 @@ TheaterDirective
 
 最终执行由 `TurnManager.executeDirectiveEnvelope` 统一完成。`.marshalDirective` 和显式 `.zoneDirective` 共享同一段 WarCommandExecutor 执行、WarDirectiveRecord 记录、endTurn 推进逻辑。
 
-v5.6 起，`RulerAgent` 作为兼容承载的 Cabinet posture 层重新接入默认 `.marshalDirective` 路径。它只读取外交摘要、前线压力、部署和历史 directive 记录，输出 `RulerDecisionRecord`，并在执行前塑形已编译的 `DirectiveEnvelope`；它不生成底层 `Command`，也不绕过 `WarCommandExecutor` / `RuleEngine`。显式 `.zoneDirective` 和 `.legacyAgentOrder` 仍不强制插入 Cabinet 层。
+v5.6 起，`RulerAgent` 作为兼容承载的 Cabinet posture 层重新接入默认 `.marshalDirective` 路径。它只读取外交摘要、warSupport、前线压力、部署和历史 directive 记录，输出 `RulerDecisionRecord`，并在执行前塑形已编译的 `DirectiveEnvelope`；低 warSupport 会提高进攻阈值、增加 reserve bias，并压低进攻姿态。它不生成底层 `Command`，也不绕过 `WarCommandExecutor` / `RuleEngine`。显式 `.zoneDirective` 和 `.legacyAgentOrder` 仍不强制插入 Cabinet 层。
 
 v5.6 起，`TurnManager` 的 agent identity 优先来自 `victorian_personas.json` 的 faction persona。该身份用于上下文、marshal theater directive payload、compiled directive envelope、审计记录和 UI 复盘，不直接修改 `GameState`；真正执行仍由 `MarshalAgent -> TheaterDirectiveDecoder/Compiler -> Cabinet posture -> ZoneDirective -> WarCommandExecutor -> RuleEngine` 完成。persona role 当前支持 `expeditionaryCommander`、`fieldCommander` 与 `generalStaff` 等维多利亚指挥角色，后续 Foreign / War / Treasury / Admiralty / Press 等上游 Agent 会在同一 JSON directive 约束下继续扩展。
 
@@ -1961,7 +1961,7 @@ MapEditorGameResourceBridge.loadDefaultDocument
 - 真 LLM 尚未接入；当前只用 `SimulatedMarshalLLMClient` 模拟 fenced JSON 输出和解码流程。
 - 默认 AI 上游已是 `MarshalAgent -> TheaterDirectiveEnvelope -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler -> Cabinet posture`，下游执行必须是 `ZoneDirective -> WarCommandExecutor -> RuleEngine`。
 - 元帅层不能直接输出底层 `Command`，不能直接修改地图、单位、hex controller 或动态战区权威。
-- Cabinet posture 只塑形 directive envelope；`RulerDecisionRecord` 是 TurnManager 追加的 audit-only 记录，不能直接修改地图、单位、hex controller、外交关系或经济账本。AI 外交危机回应必须额外转成 `Command.diplomacy(.respondToDiplomaticPlay)`，再经 `RuleEngine` 校验执行。
+- Cabinet posture 只塑形 directive envelope；`RulerDecisionRecord` 是 TurnManager 追加的 audit-only 记录，不能直接修改地图、单位、hex controller、外交关系、warSupport 或经济账本。AI 外交危机回应必须额外转成 `Command.diplomacy(.respondToDiplomaticPlay)`，再经 `RuleEngine` 校验执行；低 warSupport 只影响回应倾向和 rationale。
 - 当前工作树存在外交/经济/UI 等非 v0.5 方向残留，合并前需要单独审查文件归属和 public API 冲突。
 - `AttackIntensity.infiltration` 已在 `WarCommandExecutor` 中解释为默认低投入上限；`.limitedCounter` 和 `.allOut` 仍主要依赖 tactic profile 与显式 `maxCommittedUnits`。
 - `TacticConditionChecker` 当前总是允许现有战术。

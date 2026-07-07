@@ -153,6 +153,88 @@ final class ScenarioDataTests: XCTestCase {
         XCTAssertFalse(outcome.record.rawJSON?.contains("marshal_russia") == true)
     }
 
+    func testWarSupportShapesRulerPostureRiskAndReserves() throws {
+        var state = GameState.initial()
+        state.activeFaction = .germany
+        state.phase = .aiAction
+
+        let zoneId = FrontZoneId("germany_test_front")
+        let targetRegionId = RegionId("synthetic_test_front")
+        state.warDeploymentState = WarDeploymentState(
+            frontZones: [
+                zoneId: FrontZone(
+                    id: zoneId,
+                    name: "German Test Front",
+                    faction: .germany,
+                    regionIds: [targetRegionId],
+                    frontSegments: [
+                        FrontZoneSegment(
+                            regionId: targetRegionId,
+                            neighborEnemyZone: "allied_test_front",
+                            strength: 4
+                        )
+                    ],
+                    unitsFront: ["ger_panzer_1"],
+                    unitsDepth: ["ger_motorized_1"],
+                    pressure: 0,
+                    state: .highIntensity
+                )
+            ],
+            regionToFrontZone: [targetRegionId: zoneId]
+        )
+
+        let envelope = DirectiveEnvelope(
+            issuerId: "test_marshal",
+            turn: state.turn,
+            directives: [
+                ZoneDirective(
+                    zoneId: zoneId,
+                    attack: AttackParameters(
+                        targetTheaterId: "allied_test_front",
+                        weightedRegions: [targetRegionId],
+                        intensity: .limitedCounter
+                    )
+                )
+            ],
+            commanderAgentId: "test_marshal"
+        )
+        let ruler = RulerAgent(
+            config: RulerAgentConfig(
+                id: "ruler_test",
+                name: "Test Cabinet",
+                faction: .germany,
+                countryId: "germany",
+                aggression: 92,
+                coalitionDiscipline: 20,
+                riskTolerance: 80
+            )
+        )
+
+        let firmSupport = ruler.adjust(envelope: envelope, in: state)
+        XCTAssertEqual(firmSupport.record.posture, .offensive)
+        XCTAssertLessThan(firmSupport.record.attackThresholdAdjustment, 0)
+        XCTAssertEqual(firmSupport.record.reserveBias, 0)
+        guard case .attack(let firmAttack) = firmSupport.envelope.directives[0].parameters else {
+            XCTFail("Firm war support should preserve an attack directive.")
+            return
+        }
+        XCTAssertEqual(firmAttack.intensity, .allOut)
+
+        var lowSupportState = state
+        lowSupportState.diplomacyState.adjustWarSupport(for: .germany, delta: -60, turn: state.turn)
+        let criticalSupport = ruler.adjust(envelope: envelope, in: lowSupportState)
+
+        XCTAssertEqual(criticalSupport.record.posture, .defensive)
+        XCTAssertGreaterThan(criticalSupport.record.attackThresholdAdjustment, firmSupport.record.attackThresholdAdjustment)
+        XCTAssertGreaterThan(criticalSupport.record.reserveBias, firmSupport.record.reserveBias)
+        XCTAssertTrue(criticalSupport.record.rationale.contains("war support is critical"))
+        guard case .defend(let criticalDefense) = criticalSupport.envelope.directives[0].parameters else {
+            XCTFail("Critical war support should convert attack directive to defense.")
+            return
+        }
+        XCTAssertEqual(criticalDefense.stance, .holdLine)
+    }
+
     func testVictorianRulerRespondsToDiplomaticPlayThroughCommandPipeline() async throws {
         let loader = DataLoader()
         var state = loader.loadInitialGameState()
@@ -207,5 +289,55 @@ final class ScenarioDataTests: XCTestCase {
         )
         XCTAssertTrue(outcome.record.rawJSON?.contains("Diplomatic Response JSON") == true)
         XCTAssertTrue(outcome.record.parsedIntent?.contains("Diplomatic responses: France Support issuer") == true)
+    }
+
+    func testVictorianRulerStaysNeutralInDiplomaticPlayWhenWarSupportIsCritical() async throws {
+        let loader = DataLoader()
+        var state = loader.loadInitialGameState()
+        state.activeFaction = .britain
+        state.phase = .humanAction
+
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: state
+        )
+        XCTAssertTrue(created.succeeded)
+        let play = try XCTUnwrap(created.state.diplomacyState.activeDiplomaticPlays.first)
+
+        state = created.state
+        state.activeFaction = .france
+        state.phase = .aiAction
+        state.diplomacyState.adjustWarSupport(for: .france, delta: -55, turn: state.turn)
+
+        let commander = GameAgent.defaultCommander(for: .france, from: loader, state: state)
+        let manager = TurnManager(
+            agent: commander,
+            provider: MockAIClient(),
+            providerName: "Simulated Staff",
+            commandHandler: RuleEngine(),
+            commanderPool: TheaterCommanderPool.automatic(for: state),
+            marshalAgent: MarshalAgent(config: MarshalAgentConfig.fromCommander(commander, state: state)),
+            rulerAgent: RulerAgent.automatic(for: .france, in: state)
+        )
+
+        let outcome = await manager.runAITurn(state: state, faction: .france)
+        let resolvedPlay = try XCTUnwrap(outcome.state.diplomacyState.diplomaticPlay(id: play.id))
+        let record = try XCTUnwrap(outcome.state.diplomacyState.latestStanceRecord(for: play.id, faction: .france))
+
+        XCTAssertEqual(record.stance, .neutral)
+        XCTAssertEqual(record.agentId, "ruler_france")
+        XCTAssertEqual(record.countryId, .some(CountryId("france")))
+        XCTAssertFalse(record.didIssueSupportCommand)
+        XCTAssertTrue(record.rationale.contains("war support is critical"))
+        XCTAssertFalse(resolvedPlay.backers.contains(.france))
+        XCTAssertEqual(outcome.state.diplomacyState.relationStatus(between: .france, and: .austria), .neutral)
+        XCTAssertTrue(outcome.record.rawJSON?.contains("Diplomatic Response JSON") == true)
+        XCTAssertTrue(outcome.record.parsedIntent?.contains("Diplomatic responses: France Neutral") == true)
     }
 }

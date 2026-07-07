@@ -227,7 +227,7 @@ flowchart TD
     DIPVALID["外交校验<br/>CommandValidator.validateDiplomacyCommand<br/>action phase / active play / 有国家档案 / 未加入支持侧 / 非自身 neutral / 尚未 atWar"]:::rules
     DIPPLAY["创建外交危机<br/>DiplomacyState.createDiplomaticPlay<br/>issuer / target / warGoal / backers / deadline"]:::diplomacy
     DIPSUPPORT["加入支持/反对列表<br/>DiplomacyState.supportDiplomaticPlay<br/>只改 backers / opposingBackers"]:::diplomacy
-    DIPRESP["AI 危机回应<br/>DiplomacyState.recordDiplomaticPlayStance<br/>支持/反对复用支持列表，中立只留解释"]:::diplomacy
+    DIPRESP["AI 危机回应<br/>DiplomacyState.recordDiplomaticPlayStance<br/>低 warSupport 可使 AI 中立；支持/反对复用支持列表"]:::diplomacy
     DIPSETTLE["让步收束危机<br/>DiplomacyState.offerConcession<br/>active play -> negotiatedSettlement"]:::diplomacy
     DIPADV["整轮完成后推进外交危机<br/>DiplomacyState.advanceDiplomaticPlays<br/>escalation +25 / deadline -> backers x opposingBackers 宣战尝试"]:::diplomacy
     DIPAPPLY["执行宣战<br/>DiplomacyState.declareWar<br/>全部 country pair -> atWar<br/>关闭跨侧 active play"]:::diplomacy
@@ -299,9 +299,9 @@ flowchart TD
 
 ## 4. AI / 元帅决策链：AI 怎么下命令
 
-这张图看当前默认 AI 主路径。AI 不直接控制单位，也不直接改地图；元帅读取降维战场摘要，模拟 LLM 输出 `TheaterDirectiveEnvelope` JSON，经 decoder 校验和 compiler 降级后形成战区级 `DirectiveEnvelope`。Cabinet posture 再记录姿态并塑形已编译的 envelope；若存在 active diplomatic play，`RulerAgent` 可给出 AI 支持、反对或中立回应，但必须由 `TurnManager` 转成外交命令进入 `RuleEngine`；`WarCommandExecutor` 把最终战术翻译成底层 `Command`，最后也交给 `RuleEngine`。
+这张图看当前默认 AI 主路径。AI 不直接控制单位，也不直接改地图；元帅读取降维战场摘要，模拟 LLM 输出 `TheaterDirectiveEnvelope` JSON，经 decoder 校验和 compiler 降级后形成战区级 `DirectiveEnvelope`。Cabinet posture 再读取 warSupport、记录姿态并塑形已编译的 envelope；若存在 active diplomatic play，`RulerAgent` 可给出 AI 支持、反对或中立回应，低 warSupport 会提高避免升级的权重，但必须由 `TurnManager` 转成外交命令进入 `RuleEngine`；`WarCommandExecutor` 把最终战术翻译成底层 `Command`，最后也交给 `RuleEngine`。
 
-当前默认 AI 主线是 `MarshalAgent -> TheaterDirective JSON -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler -> Cabinet posture -> ZoneDirective -> WarCommandExecutor -> RuleEngine`，并在同一 AI action phase 内追加 `RulerAgent.diplomaticPlayResponses -> Command.diplomacy(.respondToDiplomaticPlay) -> RuleEngine` 的最小外交回应路径。旧 v0.37 `TheaterCommanderPool -> ZoneCommanderAgent` 作为 fallback 和显式 `.zoneDirective` 路径保留。Cabinet posture 由 `RulerAgent` 兼容层承载，`TurnManager` 把 `RulerDecisionRecord` 作为 audit-only 记录写入 `DiplomacyState`，并塑形 directive envelope；外交回应也必须经命令校验执行，不直接改地图、单位、外交关系或经济账本。旧 Agent D 管线仍保留，但默认不走。
+当前默认 AI 主线是 `MarshalAgent -> TheaterDirective JSON -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler -> Cabinet posture -> ZoneDirective -> WarCommandExecutor -> RuleEngine`，并在同一 AI action phase 内追加 `RulerAgent.diplomaticPlayResponses -> Command.diplomacy(.respondToDiplomaticPlay) -> RuleEngine` 的最小外交回应路径。旧 v0.37 `TheaterCommanderPool -> ZoneCommanderAgent` 作为 fallback 和显式 `.zoneDirective` 路径保留。Cabinet posture 由 `RulerAgent` 兼容层承载，`TurnManager` 把 `RulerDecisionRecord` 作为 audit-only 记录写入 `DiplomacyState`，并塑形 directive envelope；warSupport 只影响姿态、阈值、预备队倾向和外交回应，不直接改地图、单位、外交关系、warSupport 或经济账本。旧 Agent D 管线仍保留，但默认不走。
 
 ```mermaid
 flowchart TD
@@ -314,7 +314,7 @@ flowchart TD
     LLM["模拟 LLM 客户端<br/>SimulatedMarshalLLMClient<br/>输出 fenced JSON，不接真实网络或模型"]:::ai
     DEC["元帅 JSON 解码器<br/>TheaterDirectiveDecoder<br/>提取 JSON、解码、校验 schema/zone/region/tactic"]:::command
     COMP["元帅意图编译器<br/>TheaterDirectiveCompiler<br/>TheaterDirective -> ZoneDirective<br/>传递 focus/convergence/coordinated 参数"]:::command
-    CAB["Cabinet posture<br/>RulerAgent.adjust<br/>记录 posture/rationale，塑形已编译 envelope"]:::ai
+    CAB["Cabinet posture<br/>RulerAgent.adjust<br/>warSupport + front pressure -> posture/rationale"]:::ai
     DIPAI["外交危机回应<br/>RulerAgent.diplomaticPlayResponses<br/>支持 / 反对 / 中立 + rationale"]:::ai
     DIPCMD2["外交回应命令<br/>Command.diplomacy(.respondToDiplomaticPlay)<br/>进入 RuleEngine 校验执行"]:::command
     ENV["指令信封<br/>DirectiveEnvelope<br/>收集编译后的 ZoneDirective"]:::command

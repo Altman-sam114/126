@@ -355,7 +355,7 @@ Bottom Strip:
 | v5.2 | 黑海危机地图、剧本数据和地图编辑器迁移 | 已接入 `black_sea_crisis_1853` 默认入口、维多利亚 regions、powers、unit templates、personas、terrain rules，并保留 legacy 阿登加载入口 | MapEditor 新字段编辑能力仍需后续补齐 |
 | v5.3 | 维多利亚军队、铁路补给、港口远征和围城规则 | 已开始接入 typed `logisticsTags`、铁路移动成本、己方/同盟港口补给锚点、炮兵攻城修正、维多利亚 `ComponentType` case、黑海单位模板 schema 和单位/生产玩家可见显示 adapter | 完整围城状态、海权封锁、港口/铁路 UI 可视化和旧生产 kind raw value 仍未完成 |
 | v5.4 | 工业经济、预算、动员和建设命令 | 国库、工业、补给、铁路运输力、船运量、威望、战争支持，建设/动员命令 | 不做完整全球市场 |
-| v5.5 | 外交危机、战争目标、列强干预和舆论压力 | 最小 `DiplomaticPlay` 创建、支持/反对列表加入、AI 支持/反对/中立解释记录、整轮 escalation 推进、deadline 宣战尝试、`Offer concession` 让步收束和战争支持压力桥已开始落地 | 外交不直接占领 hex；多方谈判、条件交换和动态战争目标仍未完成 |
+| v5.5 | 外交危机、战争目标、列强干预和舆论压力 | 最小 `DiplomaticPlay` 创建、支持/反对列表加入、AI 支持/反对/中立解释记录、整轮 escalation 推进、deadline 宣战尝试、`Offer concession` 让步收束、战争支持压力桥和 warSupport 影响 AI 风险阈值已开始落地 | 外交不直接占领 hex；多方谈判、条件交换和动态战争目标仍未完成 |
 | v5.6 | 维多利亚 Agent 指挥链和结构化 JSON 合同 | HeadOfState / Cabinet / Foreign / War / Treasury / Admiralty / GeneralStaff / Theater Agent | 真实 LLM 单独版本，不硬编码密钥 |
 | v5.7 | 发布级 UI、地图视觉、报纸战报和可访问性 | 维多利亚视觉系统、地图优先布局、内阁/外交/经济/军队/报纸信息架构 | 视觉验证需人工或授权运行 |
 | v5.8 | 内容扩展、事件、历史人物和多剧本框架 | 事件系统、多剧本选择、历史人物与报纸事件 | 事件不得绕过规则 |
@@ -367,8 +367,8 @@ Bottom Strip:
 - `DataLoader` 默认资源已开始切到黑海危机；`DiplomacyState` 对 `black_sea_crisis_1853` 有场景化初始关系，英法奥斯曼撒丁对俄开战，奥地利保持武装中立压力；Guderian 专项校验只限 legacy 阿登数据，旧 `playerFaction` / `aiFaction` 字段仍保留作 schema 兼容。
 - `HexTile.logisticsTags` 已开始承载铁路、港口、电报、远征 depot 和围城 depot；`SupplyRules` 可把本方或 allied / coBelligerent 控制的港口作为补给锚点，单纯 `militaryAccess` 不算共同补给。
 - `ComponentType.tank/motorizedInfantry` 仍作为 legacy 兼容 case 保留；黑海默认 `victorian_unit_templates.json` 已使用维多利亚组件，规则和 AI 新增 `isShockFormation` / `isMobileFormation` 作为兼容判断。`ProductionKind` 默认生产项已切到 `lineInfantryCorps`、`guardBrigade`、`cavalryBrigade`、`siegeArtilleryBattery`、`supplyConvoy`，legacy `panzerDivision` 等 case 继续保留兼容；`EconomyCommand` 已有 `raiseWarLoan` / `buySupplies` 起步预算动作；`EconomyResources.manpower/industry/supplies` 仍是源码兼容名，完整经济资源 schema 和建设命令迁移仍是 v5.4 后续必修点。
-- `DiplomacyState` 已有 `CountryProfile` 基础，并开始支持 Black Sea Crisis 多国家默认关系；最小 `DiplomaticPlay` 创建、第三方支持/反对列表加入、AI 支持/反对/中立解释记录、整轮升级、deadline 宣战尝试和 `offerConcession` 让步收束已迁入规则状态，后续仍需把条件交换、停战、多方谈判和动态战争目标补齐。
-- `VictoryRules` 对黑海危机已改为读取 scenario `victoryConditions`，但外交危机、谈判结果、威望和战争支持仍未接入完整战争目标系统。
+- `DiplomacyState` 已有 `CountryProfile` 基础，并开始支持 Black Sea Crisis 多国家默认关系；最小 `DiplomaticPlay` 创建、第三方支持/反对列表加入、AI 支持/反对/中立解释记录、warSupport 影响 AI 姿态/外交风险阈值、整轮升级、deadline 宣战尝试和 `offerConcession` 让步收束已迁入规则状态，后续仍需把条件交换、停战、多方谈判和动态战争目标补齐。
+- `VictoryRules` 对黑海危机已改为读取 scenario `victoryConditions`，但外交危机、谈判结果、威望和战争支持仍未接入完整战争目标系统；当前 warSupport 只对 AI 姿态和外交回应形成最小反馈。
 
 ## 7. 多 Agent 分工大纲
 

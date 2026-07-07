@@ -36,6 +36,10 @@ struct RulerAgentConfig: Codable, Equatable, Identifiable {
 struct RulerAgent {
     let config: RulerAgentConfig
 
+    private static let criticalWarSupportThreshold = 35
+    private static let strainedWarSupportThreshold = 50
+    private static let confidentWarSupportThreshold = 70
+
     func adjust(envelope: DirectiveEnvelope, in state: GameState) -> RulerDirectiveAdjustment {
         let snapshot = RulerStrategicSnapshot(faction: config.faction, state: state)
         let posture = choosePosture(snapshot: snapshot)
@@ -51,8 +55,8 @@ struct RulerAgent {
             posture: posture,
             preferredFrontZoneId: preferredZoneId,
             targetRegionIds: targetRegionIds,
-            attackThresholdAdjustment: thresholdAdjustment(for: posture),
-            reserveBias: reserveBias(for: posture),
+            attackThresholdAdjustment: thresholdAdjustment(for: posture, snapshot: snapshot),
+            reserveBias: reserveBias(for: posture, snapshot: snapshot),
             diplomacySummary: state.diplomacyState.summary(for: config.faction),
             rationale: rationale(for: posture, snapshot: snapshot)
         )
@@ -106,6 +110,11 @@ struct RulerAgent {
         for play: DiplomaticPlay,
         in state: GameState
     ) -> DiplomaticPlayAIStance {
+        let warSupport = cabinetWarSupport(in: state)
+        if shouldAvoidDiplomaticEscalation(warSupport: warSupport, play: play) {
+            return .neutral
+        }
+
         let issuerCanBeSupported = state.diplomacyState.canSupportDiplomaticPlay(
             actingFaction: config.faction,
             playId: play.id,
@@ -138,6 +147,7 @@ struct RulerAgent {
         let relationToSide = state.diplomacyState.relationStatus(between: config.faction, and: sideFaction)
         let relationToOpposing = state.diplomacyState.relationStatus(between: config.faction, and: opposingFaction)
         var score = relationshipScore(relationToSide)
+        let warSupport = cabinetWarSupport(in: state)
 
         switch relationToOpposing {
         case .atWar:
@@ -156,6 +166,11 @@ struct RulerAgent {
             score += 1
         }
         if config.riskTolerance < 35 && play.escalation >= 70 {
+            score -= 1
+        }
+        if warSupport >= Self.confidentWarSupportThreshold {
+            score += 1
+        } else if warSupport <= Self.strainedWarSupportThreshold {
             score -= 1
         }
         return score
@@ -187,17 +202,27 @@ struct RulerAgent {
     ) -> String {
         let issuerStatus = state.diplomacyState.relationStatus(between: config.faction, and: play.issuerFaction).displayName
         let targetStatus = state.diplomacyState.relationStatus(between: config.faction, and: play.targetFaction).displayName
+        let supportClause = diplomaticWarSupportClause(cabinetWarSupport(in: state))
         switch stance {
         case .supportIssuer:
-            return "Cabinet favors \(play.issuerFaction.displayName): issuer relation \(issuerStatus), target relation \(targetStatus)."
+            return "Cabinet favors \(play.issuerFaction.displayName): issuer relation \(issuerStatus), target relation \(targetStatus). \(supportClause)"
         case .supportTarget:
-            return "Cabinet favors \(play.targetFaction.displayName): target relation \(targetStatus), issuer relation \(issuerStatus)."
+            return "Cabinet favors \(play.targetFaction.displayName): target relation \(targetStatus), issuer relation \(issuerStatus). \(supportClause)"
         case .neutral:
-            return "Cabinet remains neutral: issuer relation \(issuerStatus), target relation \(targetStatus)."
+            return "Cabinet remains neutral: issuer relation \(issuerStatus), target relation \(targetStatus). \(supportClause)"
         }
     }
 
     private func choosePosture(snapshot: RulerStrategicSnapshot) -> RulerStrategicPosture {
+        if snapshot.averageWarSupport <= Self.criticalWarSupportThreshold && snapshot.frontZoneCount > 0 {
+            if snapshot.averageZonePressure >= 2 ||
+                snapshot.outnumberedFrontZoneCount > 0 ||
+                snapshot.hostileCountryCount > 0 {
+                return .defensive
+            }
+            return .stabilizeFront
+        }
+
         if snapshot.hostileCountryCount > 1 && config.coalitionDiscipline >= 55 {
             return .coalitionMaintenance
         }
@@ -210,7 +235,10 @@ struct RulerAgent {
             return .stabilizeFront
         }
 
-        let aggressionScore = config.aggression + config.riskTolerance / 2 + snapshot.advantagedFrontZoneCount * 8
+        let aggressionScore = config.aggression +
+            config.riskTolerance / 2 +
+            snapshot.advantagedFrontZoneCount * 8 +
+            warSupportAggressionModifier(snapshot.averageWarSupport)
         if aggressionScore >= 95 && snapshot.frontZoneCount > 0 {
             return .offensive
         }
@@ -302,43 +330,136 @@ struct RulerAgent {
         }
     }
 
-    private func thresholdAdjustment(for posture: RulerStrategicPosture) -> Double {
+    private func thresholdAdjustment(for posture: RulerStrategicPosture, snapshot: RulerStrategicSnapshot) -> Double {
+        let baseAdjustment: Double
         switch posture {
         case .offensive:
-            return -0.15
+            baseAdjustment = -0.15
         case .defensive:
-            return 0.20
+            baseAdjustment = 0.20
         case .coalitionMaintenance:
-            return 0.05
+            baseAdjustment = 0.05
         case .stabilizeFront:
-            return 0.10
+            baseAdjustment = 0.10
         }
+        let supportAdjustment = warSupportThresholdAdjustment(snapshot.averageWarSupport)
+        return max(-0.20, min(0.35, baseAdjustment + supportAdjustment))
     }
 
-    private func reserveBias(for posture: RulerStrategicPosture) -> Int {
+    private func reserveBias(for posture: RulerStrategicPosture, snapshot: RulerStrategicSnapshot) -> Int {
+        let baseBias: Int
         switch posture {
         case .offensive:
-            return 0
+            baseBias = 0
         case .defensive:
-            return 2
+            baseBias = 2
         case .coalitionMaintenance:
-            return 2
+            baseBias = 2
         case .stabilizeFront:
-            return 1
+            baseBias = 1
         }
+        return min(4, baseBias + warSupportReserveBias(snapshot.averageWarSupport))
     }
 
     private func rationale(for posture: RulerStrategicPosture, snapshot: RulerStrategicSnapshot) -> String {
+        let supportClause = rulerWarSupportClause(snapshot.averageWarSupport)
         switch posture {
         case .offensive:
-            return "Cabinet sees \(snapshot.advantagedFrontZoneCount) advantaged command sector(s) and accepts offensive risk."
+            return "Cabinet sees \(snapshot.advantagedFrontZoneCount) advantaged command sector(s) and accepts offensive risk. \(supportClause)"
         case .defensive:
-            return "Cabinet sees pressure \(snapshot.averageZonePressure) and \(snapshot.outnumberedFrontZoneCount) outnumbered command sector(s)."
+            return "Cabinet sees pressure \(snapshot.averageZonePressure) and \(snapshot.outnumberedFrontZoneCount) outnumbered command sector(s). \(supportClause)"
         case .coalitionMaintenance:
-            return "Cabinet preserves coalition reserves across \(snapshot.frontZoneCount) active command sector(s)."
+            return "Cabinet preserves coalition reserves across \(snapshot.frontZoneCount) active command sector(s). \(supportClause)"
         case .stabilizeFront:
-            return "Cabinet avoids overextension while contested forward presence is resolved."
+            return "Cabinet avoids overextension while contested forward presence is resolved. \(supportClause)"
         }
+    }
+
+    private func cabinetWarSupport(in state: GameState) -> Int {
+        let countries = state.diplomacyState.countries(for: config.faction)
+        if let countryId = config.countryId,
+           let country = countries.first(where: { $0.id == countryId }) {
+            return country.warSupport
+        }
+        return Self.averageWarSupport(in: countries)
+    }
+
+    private func shouldAvoidDiplomaticEscalation(warSupport: Int, play: DiplomaticPlay) -> Bool {
+        if warSupport <= Self.criticalWarSupportThreshold {
+            return true
+        }
+        return warSupport <= Self.strainedWarSupportThreshold &&
+            play.escalation >= 60 &&
+            config.riskTolerance < 60
+    }
+
+    private func warSupportAggressionModifier(_ warSupport: Int) -> Int {
+        if warSupport <= Self.criticalWarSupportThreshold {
+            return -50
+        }
+        if warSupport <= Self.strainedWarSupportThreshold {
+            return -20
+        }
+        if warSupport >= 75 {
+            return 5
+        }
+        return 0
+    }
+
+    private func warSupportThresholdAdjustment(_ warSupport: Int) -> Double {
+        if warSupport <= Self.criticalWarSupportThreshold {
+            return 0.10
+        }
+        if warSupport <= Self.strainedWarSupportThreshold {
+            return 0.05
+        }
+        if warSupport >= 75 {
+            return -0.03
+        }
+        return 0
+    }
+
+    private func warSupportReserveBias(_ warSupport: Int) -> Int {
+        if warSupport <= Self.criticalWarSupportThreshold {
+            return 2
+        }
+        if warSupport <= Self.strainedWarSupportThreshold {
+            return 1
+        }
+        return 0
+    }
+
+    private func rulerWarSupportClause(_ warSupport: Int) -> String {
+        if warSupport <= Self.criticalWarSupportThreshold {
+            return "Current war support is critical at \(warSupport), raising attack thresholds and reserve bias."
+        }
+        if warSupport <= Self.strainedWarSupportThreshold {
+            return "Current war support is strained at \(warSupport), tempering offensive risk."
+        }
+        if warSupport >= Self.confidentWarSupportThreshold {
+            return "Current war support is firm at \(warSupport), allowing normal risk tolerance."
+        }
+        return "Current war support is \(warSupport), keeping risk tolerance measured."
+    }
+
+    private func diplomaticWarSupportClause(_ warSupport: Int) -> String {
+        if warSupport <= Self.criticalWarSupportThreshold {
+            return "Current war support is critical at \(warSupport); cabinet avoids escalation."
+        }
+        if warSupport <= Self.strainedWarSupportThreshold {
+            return "Current war support is strained at \(warSupport); cabinet discounts new commitments."
+        }
+        if warSupport >= Self.confidentWarSupportThreshold {
+            return "Current war support is firm at \(warSupport); cabinet can accept limited risk."
+        }
+        return "Current war support is \(warSupport); cabinet keeps commitments measured."
+    }
+
+    private static func averageWarSupport(in countries: [CountryProfile]) -> Int {
+        guard !countries.isEmpty else {
+            return 50
+        }
+        return countries.reduce(0) { $0 + $1.warSupport } / countries.count
     }
 
     private func appendRulerContext(_ context: String?, record: RulerDecisionRecord) -> String {
@@ -363,6 +484,7 @@ struct RulerAgent {
 struct RulerStrategicSnapshot {
     let frontZoneCount: Int
     let averageZonePressure: Int
+    let averageWarSupport: Int
     let advantagedFrontZoneCount: Int
     let outnumberedFrontZoneCount: Int
     let contestedFriendlyPresenceCount: Int
@@ -377,6 +499,8 @@ struct RulerStrategicSnapshot {
             .filter { $0.faction == faction && !$0.frontSegments.isEmpty }
         frontZoneCount = zones.count
         averageZonePressure = zones.isEmpty ? 0 : zones.reduce(0) { $0 + $1.pressure } / zones.count
+        let countries = state.diplomacyState.countries(for: faction)
+        averageWarSupport = countries.isEmpty ? 50 : countries.reduce(0) { $0 + $1.warSupport } / countries.count
         hostileCountryCount = state.diplomacyState.hostileCountryIds(to: faction).count
 
         var advantaged = 0
