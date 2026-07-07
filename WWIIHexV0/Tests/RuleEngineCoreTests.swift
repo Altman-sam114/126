@@ -2085,6 +2085,29 @@ final class RuleEngineCoreTests: XCTestCase {
         )
         XCTAssertFalse(reopen.succeeded)
         XCTAssertEqual(reopen.validation.errors, [.diplomaticPlayAlreadyActive])
+
+        var expiredState = truce.state
+        expiredState.turn += DiplomacyState.defaultTruceDuration + 1
+
+        let redeclareAfterExpiry = RuleEngine().execute(
+            .diplomacy(command: .declareWar(targetFaction: .austria)),
+            in: expiredState
+        )
+        XCTAssertTrue(redeclareAfterExpiry.succeeded)
+
+        var reopenedState = truce.state
+        reopenedState.turn += DiplomacyState.defaultTruceDuration + 1
+        let reopenAfterExpiry = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: reopenedState
+        )
+        XCTAssertTrue(reopenAfterExpiry.succeeded)
     }
 
     func testTruceDoesNotRewriteNonBelligerentBackersAfterDirectWar() {

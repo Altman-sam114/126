@@ -530,6 +530,8 @@ struct DiplomaticPlayAdvanceRecord: Equatable {
 }
 
 struct DiplomacyState: Codable, Equatable {
+    static let defaultTruceDuration = 2
+
     var countries: [CountryProfile]
     var blocs: [DiplomaticBloc]
     var relations: [DiplomaticRelation]
@@ -701,6 +703,33 @@ struct DiplomacyState: Codable, Equatable {
         return relations.first { $0.id == key }
     }
 
+    func truceExpiresTurn(between lhs: Faction, and rhs: Faction) -> Int? {
+        guard relationStatus(between: lhs, and: rhs) == .truce else {
+            return nil
+        }
+
+        let lhsCountries = countries(for: lhs)
+        let rhsCountries = countries(for: rhs)
+        var expiryTurns: [Int] = []
+        for lhsCountry in lhsCountries {
+            for rhsCountry in rhsCountries {
+                guard let relation = relation(between: lhsCountry.id, and: rhsCountry.id),
+                      relation.status == .truce else {
+                    continue
+                }
+                expiryTurns.append(relation.sinceTurn + Self.defaultTruceDuration)
+            }
+        }
+        return expiryTurns.max()
+    }
+
+    func truceIsActive(between lhs: Faction, and rhs: Faction, turn: Int) -> Bool {
+        guard let expiresTurn = truceExpiresTurn(between: lhs, and: rhs) else {
+            return false
+        }
+        return turn <= expiresTurn
+    }
+
     func diplomaticPlay(id: String) -> DiplomaticPlay? {
         diplomaticPlays.first { $0.id == id }
     }
@@ -724,8 +753,14 @@ struct DiplomacyState: Codable, Equatable {
         }
 
         let relation = relationStatus(between: issuerFaction, and: targetFaction)
-        guard relation != .atWar, relation != .truce else {
+        guard relation != .atWar else {
             return false
+        }
+        if relation == .truce {
+            guard let turn,
+                  !truceIsActive(between: issuerFaction, and: targetFaction, turn: turn) else {
+                return false
+            }
         }
 
         guard !activeDiplomaticPlays.contains(where: {
@@ -1002,7 +1037,7 @@ struct DiplomacyState: Codable, Equatable {
         return records
     }
 
-    func canDeclareWar(actingFaction: Faction, targetFaction: Faction) -> Bool {
+    func canDeclareWar(actingFaction: Faction, targetFaction: Faction, turn: Int) -> Bool {
         guard actingFaction != targetFaction,
               actingFaction.participatesInTurnOrder,
               targetFaction.participatesInTurnOrder,
@@ -1016,12 +1051,20 @@ struct DiplomacyState: Codable, Equatable {
         }
 
         let relation = relationStatus(between: actingFaction, and: targetFaction)
-        return relation != .atWar && relation != .truce
+        guard relation != .atWar else {
+            return false
+        }
+        if relation == .truce {
+            guard !truceIsActive(between: actingFaction, and: targetFaction, turn: turn) else {
+                return false
+            }
+        }
+        return true
     }
 
     @discardableResult
     mutating func declareWar(actingFaction: Faction, targetFaction: Faction, turn: Int) -> Bool {
-        guard canDeclareWar(actingFaction: actingFaction, targetFaction: targetFaction) else {
+        guard canDeclareWar(actingFaction: actingFaction, targetFaction: targetFaction, turn: turn) else {
             return false
         }
 

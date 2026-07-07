@@ -181,7 +181,8 @@ struct CommandValidator {
 
             guard state.diplomacyState.canDeclareWar(
                 actingFaction: state.activeFaction,
-                targetFaction: targetFaction
+                targetFaction: targetFaction,
+                turn: state.turn
             ) else {
                 return .invalid(.invalidTargetFaction)
             }

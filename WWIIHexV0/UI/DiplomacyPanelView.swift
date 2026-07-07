@@ -426,7 +426,8 @@ struct DiplomacyPanelView: View {
             gameState.phase.isActionPhase &&
             diplomacyState.canDeclareWar(
                 actingFaction: activeFaction,
-                targetFaction: targetFaction
+                targetFaction: targetFaction,
+                turn: gameState.turn
             )
     }
 
@@ -480,7 +481,15 @@ struct DiplomacyPanelView: View {
         if diplomacyState.relationStatus(between: activeFaction, and: targetFaction) == .atWar {
             return "Already at war | \(countries)"
         }
-        if !diplomacyState.canDeclareWar(actingFaction: activeFaction, targetFaction: targetFaction) {
+        if let expiresTurn = diplomacyState.truceExpiresTurn(between: activeFaction, and: targetFaction),
+           diplomacyState.truceIsActive(between: activeFaction, and: targetFaction, turn: gameState.turn) {
+            return "Truce until turn \(expiresTurn) | \(countries)"
+        }
+        if !diplomacyState.canDeclareWar(
+            actingFaction: activeFaction,
+            targetFaction: targetFaction,
+            turn: gameState.turn
+        ) {
             return "Declaration unavailable | \(status) | \(countries)"
         }
         return "\(activeFaction.displayName) -> \(targetFaction.displayName) | \(status) | \(countries)"
