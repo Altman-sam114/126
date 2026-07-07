@@ -448,7 +448,8 @@ struct DiplomacyPanelView: View {
             diplomacyState.canSupportDiplomaticPlay(
                 actingFaction: activeFaction,
                 playId: play.id,
-                side: side
+                side: side,
+                turn: gameState.turn
             )
     }
 

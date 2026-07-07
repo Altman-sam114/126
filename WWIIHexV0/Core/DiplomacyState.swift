@@ -882,7 +882,8 @@ struct DiplomacyState: Codable, Equatable {
     func canSupportDiplomaticPlay(
         actingFaction: Faction,
         playId: String,
-        side: DiplomaticPlaySupportSide
+        side: DiplomaticPlaySupportSide,
+        turn: Int
     ) -> Bool {
         guard actingFaction.participatesInTurnOrder,
               !actingFaction.isNeutral,
@@ -893,6 +894,10 @@ struct DiplomacyState: Codable, Equatable {
         }
 
         guard relationStatus(between: play.issuerFaction, and: play.targetFaction) != .atWar else {
+            return false
+        }
+
+        guard !truceIsActive(between: play.issuerFaction, and: play.targetFaction, turn: turn) else {
             return false
         }
 
@@ -908,13 +913,19 @@ struct DiplomacyState: Codable, Equatable {
             return false
         }
 
+        guard !truceIsActive(between: actingFaction, and: play.issuerFaction, turn: turn),
+              !truceIsActive(between: actingFaction, and: play.targetFaction, turn: turn) else {
+            return false
+        }
+
         return true
     }
 
     func canRespondToDiplomaticPlay(
         actingFaction: Faction,
         playId: String,
-        stance: DiplomaticPlayAIStance
+        stance: DiplomaticPlayAIStance,
+        turn: Int
     ) -> Bool {
         guard actingFaction.participatesInTurnOrder,
               !actingFaction.isNeutral,
@@ -936,7 +947,7 @@ struct DiplomacyState: Codable, Equatable {
         }
 
         if let side = stance.supportSide {
-            return canSupportDiplomaticPlay(actingFaction: actingFaction, playId: playId, side: side)
+            return canSupportDiplomaticPlay(actingFaction: actingFaction, playId: playId, side: side, turn: turn)
         }
 
         return relationStatus(between: actingFaction, and: play.issuerFaction) != .atWar &&
@@ -950,7 +961,7 @@ struct DiplomacyState: Codable, Equatable {
         side: DiplomaticPlaySupportSide,
         turn: Int
     ) -> DiplomaticPlay? {
-        guard canSupportDiplomaticPlay(actingFaction: actingFaction, playId: playId, side: side),
+        guard canSupportDiplomaticPlay(actingFaction: actingFaction, playId: playId, side: side, turn: turn),
               let index = diplomaticPlays.firstIndex(where: { $0.id == playId }) else {
             return nil
         }

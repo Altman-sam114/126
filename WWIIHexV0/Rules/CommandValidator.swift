@@ -225,7 +225,8 @@ struct CommandValidator {
             guard state.diplomacyState.canSupportDiplomaticPlay(
                 actingFaction: state.activeFaction,
                 playId: playId,
-                side: side
+                side: side,
+                turn: state.turn
             ) else {
                 return .invalid(.diplomaticPlaySupportUnavailable)
             }
@@ -242,7 +243,8 @@ struct CommandValidator {
             guard state.diplomacyState.canRespondToDiplomaticPlay(
                 actingFaction: state.activeFaction,
                 playId: playId,
-                stance: stance
+                stance: stance,
+                turn: state.turn
             ) else {
                 return .invalid(.diplomaticPlaySupportUnavailable)
             }

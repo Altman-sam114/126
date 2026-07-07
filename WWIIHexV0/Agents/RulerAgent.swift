@@ -90,7 +90,8 @@ struct RulerAgent {
         guard state.diplomacyState.canRespondToDiplomaticPlay(
             actingFaction: config.faction,
             playId: play.id,
-            stance: stance
+            stance: stance,
+            turn: state.turn
         ) else {
             return nil
         }
@@ -118,12 +119,14 @@ struct RulerAgent {
         let issuerCanBeSupported = state.diplomacyState.canSupportDiplomaticPlay(
             actingFaction: config.faction,
             playId: play.id,
-            side: .issuer
+            side: .issuer,
+            turn: state.turn
         )
         let targetCanBeSupported = state.diplomacyState.canSupportDiplomaticPlay(
             actingFaction: config.faction,
             playId: play.id,
-            side: .target
+            side: .target,
+            turn: state.turn
         )
         let issuerScore = issuerCanBeSupported ? diplomaticSupportScore(for: .issuer, in: play, state: state) : Int.min
         let targetScore = targetCanBeSupported ? diplomaticSupportScore(for: .target, in: play, state: state) : Int.min

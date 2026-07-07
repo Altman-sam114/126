@@ -2086,6 +2086,27 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertFalse(reopen.succeeded)
         XCTAssertEqual(reopen.validation.errors, [.diplomaticPlayAlreadyActive])
 
+        let thirdPartyPlay = DiplomaticPlay(
+            id: "play_truce_third_party",
+            issuerFaction: .russia,
+            targetFaction: .austria,
+            regionId: nil,
+            warGoal: .weakenPrestige,
+            backers: [.russia],
+            opposingBackers: [.austria],
+            createdTurn: truce.state.turn,
+            deadlineTurn: truce.state.turn + 3
+        )
+        var activeTruceSupportState = truce.state
+        activeTruceSupportState.diplomacyState.diplomaticPlays.append(thirdPartyPlay)
+
+        let supportAgainstTruceTarget = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: thirdPartyPlay.id, side: .issuer)),
+            in: activeTruceSupportState
+        )
+        XCTAssertFalse(supportAgainstTruceTarget.succeeded)
+        XCTAssertEqual(supportAgainstTruceTarget.validation.errors, [.diplomaticPlaySupportUnavailable])
+
         var expiredState = truce.state
         expiredState.turn += DiplomacyState.defaultTruceDuration + 1
 
@@ -2108,6 +2129,14 @@ final class RuleEngineCoreTests: XCTestCase {
             in: reopenedState
         )
         XCTAssertTrue(reopenAfterExpiry.succeeded)
+
+        var expiredSupportState = activeTruceSupportState
+        expiredSupportState.turn += DiplomacyState.defaultTruceDuration + 1
+        let supportAfterExpiry = RuleEngine().execute(
+            .diplomacy(command: .supportDiplomaticPlay(playId: thirdPartyPlay.id, side: .issuer)),
+            in: expiredSupportState
+        )
+        XCTAssertTrue(supportAfterExpiry.succeeded)
     }
 
     func testTruceDoesNotRewriteNonBelligerentBackersAfterDirectWar() {
