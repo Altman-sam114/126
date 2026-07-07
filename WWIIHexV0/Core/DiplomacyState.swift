@@ -331,6 +331,25 @@ enum DiplomaticPlayWarGoal: String, Codable, Equatable, CaseIterable {
             return "Weaken prestige"
         }
     }
+
+    var dynamicVictoryObjectiveIds: [String] {
+        Array(Set(dynamicVictoryObjectiveGroups.flatMap { $0 })).sorted()
+    }
+
+    var dynamicVictoryObjectiveGroups: [[String]] {
+        switch self {
+        case .protectOttomanTerritory:
+            return [["obj_constantinople", "obj_silistra"]]
+        case .demandDanubianWithdrawal:
+            return [["obj_silistra", "obj_danube_mouth"]]
+        case .controlBlackSeaPort:
+            return [["obj_sevastopol"], ["obj_odessa"]]
+        case .keepStraitsOpen:
+            return [["obj_constantinople"]]
+        case .weakenPrestige:
+            return []
+        }
+    }
 }
 
 enum DiplomaticPlayOutcome: String, Codable, Equatable {

@@ -186,6 +186,7 @@ struct CommandExecutor {
                 category: .diplomacy
             )
             state = StrategicStateBootstrapper().refreshRuntimeState(state)
+            VictoryRules().updateVictoryState(in: &state)
         case .createDiplomaticPlay(let targetFaction, let regionId, let warGoal):
             let actingFaction = state.activeFaction
             guard let play = state.diplomacyState.createDiplomaticPlay(
@@ -340,6 +341,7 @@ struct CommandExecutor {
         if nextFaction.completedCycle {
             state.turn += 1
             advanceDiplomaticPlaysForNewTurn(in: &state)
+            victoryRules.updateVictoryState(in: &state)
         }
 
         resetActionsForActiveFaction(in: &state)

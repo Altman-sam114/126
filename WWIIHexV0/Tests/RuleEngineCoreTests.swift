@@ -1507,6 +1507,7 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertEqual(state.diplomacyState.relationStatus(between: .britain, and: .austria), .atWar)
         XCTAssertTrue(state.diplomacyState.canAttack(attacker: .britain, target: .austria))
         XCTAssertEqual(state.diplomacyState.lastUpdatedTurn, 4)
+        XCTAssertNil(state.victoryState.winner)
         XCTAssertTrue(
             state.eventLog.contains {
                 $0.category == .diplomacy &&
@@ -1522,6 +1523,319 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertFalse(concessionAfterDeadlineWar.succeeded)
         XCTAssertEqual(concessionAfterDeadlineWar.validation.errors, [.diplomaticPlayNotFound])
         XCTAssertEqual(concessionAfterDeadlineWar.state, state)
+    }
+
+    func testEscalatedDiplomaticWarGoalCanResolveDynamicObjectiveVictory() {
+        var map = Self.basicMap(width: 4, height: 4, supplySources: [])
+        let sevastopol = HexCoord(q: 1, r: 1)
+        let odessa = HexCoord(q: 2, r: 1)
+        map.objectives = [
+            Objective(id: "obj_sevastopol", name: "Sevastopol", coord: sevastopol, type: .fortress),
+            Objective(id: "obj_odessa", name: "Odessa", coord: odessa, type: .city)
+        ]
+        if var sevastopolTile = map.tile(at: sevastopol) {
+            sevastopolTile.controller = .britain
+            map.setTile(sevastopolTile)
+        }
+        let state = GameState(
+            scenarioId: "dynamic_war_goal_test",
+            turn: 1,
+            maxTurns: 8,
+            activeFaction: .britain,
+            phase: .humanAction,
+            turnOrder: [.britain, .russia],
+            humanControlledFactions: [.britain],
+            map: map,
+            diplomacyState: DiplomacyState.initial(for: [.britain, .russia], turn: 1),
+            divisions: [],
+            victoryState: .ongoing,
+            selectedUnitSummary: nil,
+            eventLog: []
+        )
+
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .russia,
+                    regionId: nil,
+                    warGoal: .controlBlackSeaPort
+                )
+            ),
+            in: state
+        )
+        XCTAssertTrue(created.succeeded)
+        let playId = created.state.diplomacyState.activeDiplomaticPlays[0].id
+
+        var advancedState = created.state
+        while advancedState.turn < 4 {
+            let result = RuleEngine().execute(.endTurn, in: advancedState)
+            XCTAssertTrue(result.succeeded)
+            advancedState = result.state
+        }
+
+        XCTAssertEqual(advancedState.diplomacyState.diplomaticPlay(id: playId)?.outcome, .escalatedToWar)
+        XCTAssertEqual(advancedState.diplomacyState.relationStatus(between: .britain, and: .russia), .atWar)
+        XCTAssertEqual(advancedState.victoryState.winner, .britain)
+        XCTAssertEqual(advancedState.victoryState.reason, .diplomaticWarGoalAchieved)
+        XCTAssertEqual(advancedState.victoryState.resolvedConditionId, "diplomatic_\(playId)")
+    }
+
+    func testDeclareWarResolvesSatisfiedDynamicWarGoalImmediately() {
+        let state = Self.diplomaticObjectiveTestState(
+            map: Self.objectiveMap(
+                [
+                    (
+                        Objective(id: "obj_sevastopol", name: "Sevastopol", coord: HexCoord(q: 1, r: 1), type: .fortress),
+                        .britain
+                    ),
+                    (
+                        Objective(id: "obj_odessa", name: "Odessa", coord: HexCoord(q: 2, r: 1), type: .city),
+                        .russia
+                    )
+                ]
+            )
+        )
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .russia,
+                    regionId: nil,
+                    warGoal: .controlBlackSeaPort
+                )
+            ),
+            in: state
+        )
+        XCTAssertTrue(created.succeeded)
+        let playId = created.state.diplomacyState.activeDiplomaticPlays[0].id
+
+        let declared = RuleEngine().execute(
+            .diplomacy(command: .declareWar(targetFaction: .russia)),
+            in: created.state
+        )
+
+        XCTAssertTrue(declared.succeeded)
+        XCTAssertEqual(declared.state.diplomacyState.diplomaticPlay(id: playId)?.outcome, .escalatedToWar)
+        XCTAssertEqual(declared.state.diplomacyState.relationStatus(between: .britain, and: .russia), .atWar)
+        XCTAssertEqual(declared.state.victoryState.winner, .britain)
+        XCTAssertEqual(declared.state.victoryState.reason, .diplomaticWarGoalAchieved)
+        XCTAssertEqual(declared.state.victoryState.resolvedConditionId, "diplomatic_\(playId)")
+    }
+
+    func testDynamicDiplomaticWarGoalRequiresEveryObjectiveInGroup() {
+        let constantinople = HexCoord(q: 0, r: 0)
+        let silistra = HexCoord(q: 1, r: 0)
+        var state = Self.diplomaticObjectiveTestState(
+            map: Self.objectiveMap(
+                [
+                    (
+                        Objective(id: "obj_constantinople", name: "Constantinople", coord: constantinople, type: .city),
+                        .britain
+                    ),
+                    (
+                        Objective(id: "obj_silistra", name: "Silistra", coord: silistra, type: .fortress),
+                        .russia
+                    )
+                ]
+            ),
+            diplomacyState: DiplomacyState(
+                diplomaticPlays: [
+                    DiplomaticPlay(
+                        id: "play_and_goal",
+                        issuerFaction: .britain,
+                        targetFaction: .russia,
+                        regionId: nil,
+                        warGoal: .protectOttomanTerritory,
+                        escalation: 100,
+                        backers: [],
+                        opposingBackers: [],
+                        createdTurn: 1,
+                        deadlineTurn: 4,
+                        outcome: .escalatedToWar
+                    )
+                ]
+            )
+        )
+
+        VictoryRules().updateVictoryState(in: &state)
+        XCTAssertNil(state.victoryState.winner)
+
+        if var silistraTile = state.map.tile(at: silistra) {
+            silistraTile.controller = .britain
+            state.map.setTile(silistraTile)
+        }
+        VictoryRules().updateVictoryState(in: &state)
+
+        XCTAssertEqual(state.victoryState.winner, .britain)
+        XCTAssertEqual(state.victoryState.reason, .diplomaticWarGoalAchieved)
+        XCTAssertEqual(state.victoryState.resolvedConditionId, "diplomatic_play_and_goal")
+    }
+
+    func testScenarioVictoryTakesPriorityOverDynamicDiplomaticWarGoal() {
+        var state = Self.diplomaticObjectiveTestState(
+            map: Self.objectiveMap(
+                [
+                    (
+                        Objective(id: "obj_static_france", name: "French Mandate", coord: HexCoord(q: 0, r: 0), type: .city),
+                        .france
+                    ),
+                    (
+                        Objective(id: "obj_sevastopol", name: "Sevastopol", coord: HexCoord(q: 1, r: 1), type: .fortress),
+                        .britain
+                    )
+                ]
+            ),
+            factions: [.britain, .russia, .france],
+            diplomacyState: DiplomacyState(
+                diplomaticPlays: [
+                    DiplomaticPlay(
+                        id: "play_dynamic_goal",
+                        issuerFaction: .britain,
+                        targetFaction: .russia,
+                        regionId: nil,
+                        warGoal: .controlBlackSeaPort,
+                        escalation: 100,
+                        backers: [],
+                        opposingBackers: [],
+                        createdTurn: 1,
+                        deadlineTurn: 4,
+                        outcome: .escalatedToWar
+                    )
+                ]
+            ),
+            victoryConditions: [
+                VictoryCondition(
+                    id: "victory_static_france",
+                    type: "controlObjective",
+                    faction: .france,
+                    objectiveIds: ["obj_static_france"],
+                    status: "win",
+                    description: "France controls the static objective."
+                )
+            ]
+        )
+
+        VictoryRules().updateVictoryState(in: &state)
+
+        XCTAssertEqual(state.victoryState.winner, .france)
+        XCTAssertEqual(state.victoryState.reason, .scenarioObjectiveControlled)
+        XCTAssertEqual(state.victoryState.resolvedConditionId, "victory_static_france")
+    }
+
+    func testDynamicDiplomaticWarGoalCanResolveAfterUnsatisfiedScenarioConditions() {
+        var state = Self.diplomaticObjectiveTestState(
+            map: Self.objectiveMap(
+                [
+                    (
+                        Objective(id: "obj_static_france", name: "French Mandate", coord: HexCoord(q: 0, r: 0), type: .city),
+                        .russia
+                    ),
+                    (
+                        Objective(id: "obj_sevastopol", name: "Sevastopol", coord: HexCoord(q: 1, r: 1), type: .fortress),
+                        .britain
+                    )
+                ]
+            ),
+            factions: [.britain, .russia, .france],
+            diplomacyState: DiplomacyState(
+                diplomaticPlays: [
+                    DiplomaticPlay(
+                        id: "play_dynamic_after_static",
+                        issuerFaction: .britain,
+                        targetFaction: .russia,
+                        regionId: nil,
+                        warGoal: .controlBlackSeaPort,
+                        escalation: 100,
+                        backers: [],
+                        opposingBackers: [],
+                        createdTurn: 1,
+                        deadlineTurn: 4,
+                        outcome: .escalatedToWar
+                    )
+                ]
+            ),
+            victoryConditions: [
+                VictoryCondition(
+                    id: "victory_static_france",
+                    type: "controlObjective",
+                    faction: .france,
+                    objectiveIds: ["obj_static_france"],
+                    status: "win",
+                    description: "France controls the static objective."
+                )
+            ]
+        )
+
+        VictoryRules().updateVictoryState(in: &state)
+
+        XCTAssertEqual(state.victoryState.winner, .britain)
+        XCTAssertEqual(state.victoryState.reason, .diplomaticWarGoalAchieved)
+        XCTAssertEqual(state.victoryState.resolvedConditionId, "diplomatic_play_dynamic_after_static")
+    }
+
+    func testLegacyVictoryFallbackStillRunsWhenDynamicWarGoalDoesNotMatchMap() {
+        var state = Self.testState(
+            activeFaction: .germany,
+            map: MapState.ardennesV0(),
+            diplomacyState: DiplomacyState(
+                diplomaticPlays: [
+                    DiplomaticPlay(
+                        id: "play_missing_objectives",
+                        issuerFaction: .britain,
+                        targetFaction: .russia,
+                        regionId: nil,
+                        warGoal: .controlBlackSeaPort,
+                        escalation: 100,
+                        backers: [],
+                        opposingBackers: [],
+                        createdTurn: 1,
+                        deadlineTurn: 4,
+                        outcome: .escalatedToWar
+                    )
+                ]
+            ),
+            divisions: []
+        )
+        if var bastogne = state.map.tile(at: HexCoord(q: 5, r: 4)) {
+            bastogne.controller = .germany
+            state.map.setTile(bastogne)
+        }
+        state.turn = 2
+        state.victoryState.germanBastogneHeldSinceTurn = 1
+
+        VictoryRules().updateVictoryState(in: &state)
+
+        XCTAssertEqual(state.victoryState.winner, .germany)
+        XCTAssertEqual(state.victoryState.reason, .bastogneHeldByGermany)
+    }
+
+    func testScenarioVictoryConditionsSuppressLegacyFallback() {
+        var state = Self.testState(
+            activeFaction: .germany,
+            map: MapState.ardennesV0(),
+            divisions: []
+        )
+        if var bastogne = state.map.tile(at: HexCoord(q: 5, r: 4)) {
+            bastogne.controller = .germany
+            state.map.setTile(bastogne)
+        }
+        state.turn = 2
+        state.victoryState.germanBastogneHeldSinceTurn = 1
+        state.victoryConditions = [
+            VictoryCondition(
+                id: "victory_unmet_black_sea",
+                type: "controlObjective",
+                faction: .britain,
+                objectiveIds: ["obj_missing_black_sea"],
+                status: "win",
+                description: "Unmet scenario objective blocks legacy fallback."
+            )
+        ]
+
+        VictoryRules().updateVictoryState(in: &state)
+
+        XCTAssertNil(state.victoryState.winner)
+        XCTAssertNil(state.victoryState.reason)
+        XCTAssertNil(state.victoryState.resolvedConditionId)
     }
 
     func testDiplomaticPlayDeadlineEscalatesBackedSidesToWar() {
@@ -1920,6 +2234,42 @@ final class RuleEngineCoreTests: XCTestCase {
             selectedUnitSummary: nil,
             eventLog: []
         )
+    }
+
+    private static func diplomaticObjectiveTestState(
+        map: MapState,
+        factions: [Faction] = [.britain, .russia],
+        diplomacyState: DiplomacyState? = nil,
+        victoryConditions: [VictoryCondition] = []
+    ) -> GameState {
+        GameState(
+            scenarioId: "diplomatic_objective_test",
+            turn: 1,
+            maxTurns: 8,
+            activeFaction: .britain,
+            phase: .humanAction,
+            turnOrder: factions,
+            humanControlledFactions: [.britain],
+            map: map,
+            diplomacyState: diplomacyState ?? DiplomacyState.initial(for: factions, turn: 1),
+            divisions: [],
+            victoryState: .ongoing,
+            victoryConditions: victoryConditions,
+            selectedUnitSummary: nil,
+            eventLog: []
+        )
+    }
+
+    private static func objectiveMap(_ objectiveControllers: [(Objective, Faction)]) -> MapState {
+        var map = basicMap(width: 4, height: 4, supplySources: [])
+        map.objectives = objectiveControllers.map { $0.0 }
+        for (objective, controller) in objectiveControllers {
+            if var tile = map.tile(at: objective.coord) {
+                tile.controller = controller
+                map.setTile(tile)
+            }
+        }
+        return map
     }
 
     private static func basicMap(

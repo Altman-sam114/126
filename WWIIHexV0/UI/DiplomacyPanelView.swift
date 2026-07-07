@@ -46,6 +46,26 @@ struct DiplomacyPanelView: View {
         gameState.activeFaction
     }
 
+    private var visibleDiplomaticPlays: [DiplomaticPlay] {
+        let activePlayIds = Set(diplomacyState.activeDiplomaticPlays.map(\.id))
+        let unresolvedEscalatedPlays = diplomacyState.diplomaticPlays
+            .filter { play in
+                play.outcome == .escalatedToWar &&
+                    !play.warGoal.dynamicVictoryObjectiveGroups.isEmpty &&
+                    gameState.victoryState.resolvedConditionId != "diplomatic_\(play.id)" &&
+                    dynamicWarGoalStakeDescription(for: play) != nil
+            }
+            .sorted { lhs, rhs in
+                if lhs.deadlineTurn != rhs.deadlineTurn {
+                    return lhs.deadlineTurn < rhs.deadlineTurn
+                }
+                return lhs.id < rhs.id
+            }
+
+        return diplomacyState.activeDiplomaticPlays +
+            unresolvedEscalatedPlays.filter { !activePlayIds.contains($0.id) }
+    }
+
     private var warGoalSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Scenario War Goals")
@@ -90,25 +110,31 @@ struct DiplomacyPanelView: View {
             Text("Diplomatic Plays")
                 .font(.subheadline.weight(.semibold))
 
-            if diplomacyState.activeDiplomaticPlays.isEmpty {
+            if visibleDiplomaticPlays.isEmpty {
                 Text("No active diplomatic plays.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(diplomacyState.activeDiplomaticPlays) { play in
+                ForEach(visibleDiplomaticPlays) { play in
                     VStack(alignment: .leading, spacing: 3) {
                         HStack {
                             Text("\(play.issuerFaction.displayName) -> \(play.targetFaction.displayName)")
                                 .font(.caption.weight(.semibold))
                             Spacer()
-                            Text("\(play.escalation)")
+                            Text(diplomaticPlayStatusText(for: play))
                                 .font(.caption.monospacedDigit().weight(.semibold))
-                                .foregroundStyle(play.escalation >= 70 ? .orange : .secondary)
+                                .foregroundStyle(diplomaticPlayStatusColor(for: play))
                         }
 
                         Text(play.warGoal.displayName)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+
+                        if let stakeDescription = dynamicWarGoalStakeDescription(for: play) {
+                            Text("Victory stake: \(stakeDescription)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
 
                         Text("Backers: \(factionNames(play.backers)) | Opposing: \(factionNames(play.opposingBackers)) | Deadline: turn \(play.deadlineTurn)")
                             .font(.caption2)
@@ -121,37 +147,39 @@ struct DiplomacyPanelView: View {
                                 .lineLimit(2)
                         }
 
-                        HStack(spacing: 6) {
+                        if play.outcome == .active {
+                            HStack(spacing: 6) {
+                                Button {
+                                    onDiplomacyCommand(.supportDiplomaticPlay(playId: play.id, side: .issuer))
+                                } label: {
+                                    Label("Back \(play.issuerFaction.displayName)", systemImage: "person.2")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .disabled(!canSupport(play, side: .issuer))
+
+                                Button {
+                                    onDiplomacyCommand(.supportDiplomaticPlay(playId: play.id, side: .target))
+                                } label: {
+                                    Label("Back \(play.targetFaction.displayName)", systemImage: "person.2")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .disabled(!canSupport(play, side: .target))
+                            }
+
                             Button {
-                                onDiplomacyCommand(.supportDiplomaticPlay(playId: play.id, side: .issuer))
+                                onDiplomacyCommand(.offerConcession(playId: play.id))
                             } label: {
-                                Label("Back \(play.issuerFaction.displayName)", systemImage: "person.2")
+                                Label("Offer concession", systemImage: "hand.raised")
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
-                            .disabled(!canSupport(play, side: .issuer))
-
-                            Button {
-                                onDiplomacyCommand(.supportDiplomaticPlay(playId: play.id, side: .target))
-                            } label: {
-                                Label("Back \(play.targetFaction.displayName)", systemImage: "person.2")
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .disabled(!canSupport(play, side: .target))
+                            .disabled(!canOfferConcession(in: play))
                         }
-
-                        Button {
-                            onDiplomacyCommand(.offerConcession(playId: play.id))
-                        } label: {
-                            Label("Offer concession", systemImage: "hand.raised")
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .disabled(!canOfferConcession(in: play))
                     }
                 }
             }
@@ -451,6 +479,42 @@ struct DiplomacyPanelView: View {
 
     private func factionNames(_ factions: [Faction]) -> String {
         factions.map(\.displayName).joined(separator: ", ")
+    }
+
+    private func dynamicWarGoalStakeDescription(for play: DiplomaticPlay) -> String? {
+        let groupDescriptions = play.warGoal.dynamicVictoryObjectiveGroups.compactMap { objectiveIds -> String? in
+            let objectiveNames = objectiveIds.compactMap {
+                gameState.map.objective(id: $0)?.name
+            }
+            guard objectiveNames.count == objectiveIds.count else {
+                return nil
+            }
+            return objectiveNames.joined(separator: " + ")
+        }
+        guard !groupDescriptions.isEmpty else {
+            return nil
+        }
+        return groupDescriptions.joined(separator: " or ")
+    }
+
+    private func diplomaticPlayStatusText(for play: DiplomaticPlay) -> String {
+        switch play.outcome {
+        case .active:
+            return "\(play.escalation)"
+        case .backedDown, .negotiatedSettlement, .escalatedToWar:
+            return play.outcome.displayName
+        }
+    }
+
+    private func diplomaticPlayStatusColor(for play: DiplomaticPlay) -> Color {
+        switch play.outcome {
+        case .active:
+            return play.escalation >= 70 ? .orange : .secondary
+        case .escalatedToWar:
+            return .red
+        case .backedDown, .negotiatedSettlement:
+            return .secondary
+        }
     }
 
     private func recentStanceRecords(for play: DiplomaticPlay) -> [DiplomaticPlayStanceRecord] {

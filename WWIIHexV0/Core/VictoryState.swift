@@ -10,6 +10,7 @@ enum VictoryReason: String, Codable, Equatable {
     case scenarioObjectiveControlled
     case scenarioObjectivesControlled
     case scenarioObjectivesHeld
+    case diplomaticWarGoalAchieved
 }
 
 struct VictoryCondition: Codable, Equatable, Identifiable {

@@ -7,7 +7,16 @@ struct VictoryRules {
         }
 
         if !state.victoryConditions.isEmpty {
-            updateScenarioVictoryState(in: &state)
+            if updateScenarioVictoryState(in: &state) {
+                return
+            }
+            if updateDiplomaticWarGoalVictoryState(in: &state) {
+                return
+            }
+            return
+        }
+
+        if updateDiplomaticWarGoalVictoryState(in: &state) {
             return
         }
 
@@ -65,7 +74,8 @@ struct VictoryRules {
         }
     }
 
-    private func updateScenarioVictoryState(in state: inout GameState) {
+    @discardableResult
+    private func updateScenarioVictoryState(in state: inout GameState) -> Bool {
         for condition in state.victoryConditions where condition.status == "win" {
             guard isScenarioConditionSatisfied(condition, in: state) else {
                 state.victoryState.conditionSatisfiedSinceTurn[condition.id] = nil
@@ -75,18 +85,44 @@ struct VictoryRules {
             switch condition.type {
             case "controlObjective", "controlObjectives":
                 resolve(condition, reason: reason(for: condition), in: &state)
-                return
+                return true
             case "holdObjectives":
                 let heldSince = state.victoryState.conditionSatisfiedSinceTurn[condition.id] ?? state.turn
                 state.victoryState.conditionSatisfiedSinceTurn[condition.id] = heldSince
                 if holdThresholdMet(condition, heldSince: heldSince, turn: state.turn) {
                     resolve(condition, reason: .scenarioObjectivesHeld, in: &state)
-                    return
+                    return true
                 }
             default:
                 continue
             }
         }
+        return false
+    }
+
+    @discardableResult
+    private func updateDiplomaticWarGoalVictoryState(in state: inout GameState) -> Bool {
+        for play in state.diplomacyState.diplomaticPlays
+            where play.outcome == .escalatedToWar && !play.warGoal.dynamicVictoryObjectiveGroups.isEmpty {
+            let issuerSideFactions = issuerSideFactions(for: play)
+            guard play.warGoal.dynamicVictoryObjectiveGroups.contains(where: { objectiveIds in
+                objectiveIdsExist(objectiveIds, in: state) &&
+                    sideControlsObjectives(
+                        objectiveIds,
+                        sideFactions: issuerSideFactions,
+                        diplomacyState: state.diplomacyState,
+                        map: state.map
+                    )
+            }) else {
+                continue
+            }
+
+            state.victoryState.winner = play.issuerFaction
+            state.victoryState.reason = .diplomaticWarGoalAchieved
+            state.victoryState.resolvedConditionId = "diplomatic_\(play.id)"
+            return true
+        }
+        return false
     }
 
     private func isScenarioConditionSatisfied(_ condition: VictoryCondition, in state: GameState) -> Bool {
@@ -129,6 +165,34 @@ struct VictoryRules {
         case .neutral, .hostile, .atWar, .truce, .militaryAccess, .blockaded:
             return false
         }
+    }
+
+    private func sideControlsObjectives(
+        _ objectiveIds: [String],
+        sideFactions: [Faction],
+        diplomacyState: DiplomacyState,
+        map: MapState
+    ) -> Bool {
+        objectiveIds.allSatisfy { objectiveId in
+            guard let controller = map.controllerOfObjective(id: objectiveId) else {
+                return false
+            }
+            return sideFactions.contains {
+                countsAsObjectiveControl(controller: controller, for: $0, diplomacyState: diplomacyState)
+            }
+        }
+    }
+
+    private func objectiveIdsExist(_ objectiveIds: [String], in state: GameState) -> Bool {
+        objectiveIds.allSatisfy { state.map.objective(id: $0) != nil }
+    }
+
+    private func issuerSideFactions(for play: DiplomaticPlay) -> [Faction] {
+        sortedUniqueFactions(play.backers + [play.issuerFaction])
+    }
+
+    private func sortedUniqueFactions(_ factions: [Faction]) -> [Faction] {
+        Array(Set(factions)).sorted { $0.rawValue < $1.rawValue }
     }
 
     private func holdThresholdMet(_ condition: VictoryCondition, heldSince: Int, turn: Int) -> Bool {

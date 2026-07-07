@@ -202,7 +202,7 @@ flowchart TD
 
 ## 3. v5.5 经济、生产、预算、建设与战争支持链路
 
-这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)`、`.supportDiplomaticPlay`、`.offerConcession` 或 `.declareWar`，AI 可通过 `Command.diplomacy(.respondToDiplomaticPlay)` 留下支持、反对或中立解释：创建命令记录 active diplomatic play，支持命令只更新 backers / opposingBackers 且不立刻参战，AI 中立只写 stance record，让步命令关闭为 negotiated settlement，整轮完成后推进 escalation，deadline 到期时按 backers / opposingBackers 成组宣战，宣战成功后升级为战争；宣战命令直接把 active faction 与目标 faction 的关系写为 `atWar`、关闭相关 active play 并刷新前线/部署派生层。这不是完整谈判状态机或完整围城状态机。
+这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)`、`.supportDiplomaticPlay`、`.offerConcession` 或 `.declareWar`，AI 可通过 `Command.diplomacy(.respondToDiplomaticPlay)` 留下支持、反对或中立解释：创建命令记录 active diplomatic play，支持命令只更新 backers / opposingBackers 且不立刻参战，AI 中立只写 stance record，让步命令关闭为 negotiated settlement，整轮完成后推进 escalation，deadline 到期时按 backers / opposingBackers 成组宣战，宣战成功后升级为战争；objective-backed warGoal 可进入 `VictoryRules`，但宣战和战争目标都不直接改 hex controller；宣战命令直接把 active faction 与目标 faction 的关系写为 `atWar`、关闭相关 active play、刷新前线/部署派生层并补跑动态战争目标判定。这不是完整谈判状态机或完整围城状态机。
 
 ```mermaid
 flowchart TD
@@ -231,6 +231,7 @@ flowchart TD
     DIPSETTLE["让步收束危机<br/>DiplomacyState.offerConcession<br/>settlementRecord + warSupport delta"]:::diplomacy
     DIPADV["整轮完成后推进外交危机<br/>DiplomacyState.advanceDiplomaticPlays<br/>escalation +25 / deadline -> backers x opposingBackers 宣战尝试"]:::diplomacy
     DIPAPPLY["执行宣战<br/>DiplomacyState.declareWar<br/>全部 country pair -> atWar<br/>关闭跨侧 active play"]:::diplomacy
+    DIPVICTORY["动态战争目标判定<br/>VictoryRules<br/>escalated play warGoal -> objective controller"]:::rules
 
     END["结束当前阵营回合<br/>Command.endTurn<br/>CommandExecutor.executeEndTurn"]:::command
     SUPPLY["补给状态刷新<br/>SupplyRules.updateSupplyStates"]:::rules
@@ -248,7 +249,7 @@ flowchart TD
     SIEGE["攻城准备修正<br/>CombatRules.effectiveAttack<br/>炮兵从 siegeDepot 攻击城市/要塞 + 轻量加成"]:::rules
     NEXT["切换阵营或外交变化后刷新运行时层<br/>StrategicStateBootstrapper.refreshRuntimeState"]:::rules
     DIPUI["外交面板<br/>DiplomacyPanelView<br/>war goals / active plays / support + 受限外交动作"]:::ui
-    GOALS["场景战争目标<br/>GameState.victoryConditions<br/>Open / Holding / Resolved"]:::derived
+    GOALS["战争目标状态<br/>GameState.victoryConditions + diplomatic war goals<br/>Open / Holding / Resolved"]:::derived
 
     BOOT --> LEDGER
     HEX --> REGION --> INCOME --> LEDGER
@@ -263,8 +264,9 @@ flowchart TD
     DIPVALID --> DIPSETTLE --> DIP
     DIPVALID --> DIPAPPLY --> DIP
     DIPAPPLY --> NEXT
+    DIPAPPLY --> DIPVICTORY
     END --> DIPADV
-    DIPADV -- "deadline 到期" --> DIPAPPLY
+    DIPADV -- "deadline 到期" --> DIPAPPLY --> DIPVICTORY --> GOALS
     DIPADV -- "未到期或宣战失败" --> DIP
     GOALS --> DIPUI
     DIP --> DIPUI
@@ -452,7 +454,7 @@ flowchart TD
     LOG["日志面板<br/>EventLogView<br/>最近 60 条 LogDisplayEntry"]:::ui
     AIUI["AI 面板<br/>AgentPanelView<br/>Decision Payload + Cabinet posture + zone directives"]:::ui
     DIPUI["外交面板<br/>DiplomacyPanelView<br/>war goals + active plays + warSupport"]:::ui
-    GOALS["战争目标状态<br/>GameState.victoryConditions + victoryState<br/>Open / Holding / Resolved"]:::state
+    GOALS["战争目标状态<br/>GameState.victoryConditions + diplomatic war goals + victoryState<br/>Open / Holding / Resolved"]:::state
     BOARD["地图场景<br/>BoardScene<br/>缓存 unit display hex 后排序绘制"]:::ui
     MARSHAL["模拟参谋链<br/>Persona MarshalAgentConfig -> Cabinet posture<br/>Simulated Staff fallback"]:::ai
     ZD["战区指令<br/>ZoneDirective<br/>tactic / focus / intensity"]:::command
