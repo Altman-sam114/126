@@ -366,6 +366,7 @@ enum DiplomaticPlayOutcome: String, Codable, Equatable {
     case backedDown
     case negotiatedSettlement
     case escalatedToWar
+    case truceSettlement
 
     var displayName: String {
         switch self {
@@ -377,6 +378,8 @@ enum DiplomaticPlayOutcome: String, Codable, Equatable {
             return "Negotiated"
         case .escalatedToWar:
             return "Escalated to war"
+        case .truceSettlement:
+            return "Truce"
         }
     }
 }
@@ -720,7 +723,8 @@ struct DiplomacyState: Codable, Equatable {
             return false
         }
 
-        guard relationStatus(between: issuerFaction, and: targetFaction) != .atWar else {
+        let relation = relationStatus(between: issuerFaction, and: targetFaction)
+        guard relation != .atWar, relation != .truce else {
             return false
         }
 
@@ -1011,7 +1015,8 @@ struct DiplomacyState: Codable, Equatable {
             return false
         }
 
-        return relationStatus(between: actingFaction, and: targetFaction) != .atWar
+        let relation = relationStatus(between: actingFaction, and: targetFaction)
+        return relation != .atWar && relation != .truce
     }
 
     @discardableResult
@@ -1047,6 +1052,50 @@ struct DiplomacyState: Codable, Equatable {
         return true
     }
 
+    func canNegotiateTruce(actingFaction: Faction, playId: String) -> Bool {
+        guard actingFaction.participatesInTurnOrder,
+              let play = diplomaticPlay(id: playId),
+              play.outcome == .escalatedToWar,
+              play.issuerFaction == actingFaction || play.targetFaction == actingFaction else {
+            return false
+        }
+
+        return diplomaticPlayHasCrossSideWar(play)
+    }
+
+    @discardableResult
+    mutating func negotiateTruce(playId: String, actingFaction: Faction, turn: Int) -> DiplomaticPlay? {
+        guard canNegotiateTruce(actingFaction: actingFaction, playId: playId),
+              let index = diplomaticPlays.firstIndex(where: { $0.id == playId }) else {
+            return nil
+        }
+
+        let play = diplomaticPlays[index]
+        let issuerSide = Self.sortedUniqueFactions(play.backers + [play.issuerFaction])
+        let targetSide = Self.sortedUniqueFactions(play.opposingBackers + [play.targetFaction])
+
+        for issuerFaction in issuerSide {
+            for targetFaction in targetSide where issuerFaction != targetFaction {
+                guard relationStatus(between: issuerFaction, and: targetFaction) == .atWar else {
+                    continue
+                }
+                setRelationStatus(
+                    between: issuerFaction,
+                    and: targetFaction,
+                    status: .truce,
+                    tension: Self.tension(for: .truce),
+                    turn: turn
+                )
+            }
+        }
+
+        diplomaticPlays[index].outcome = .truceSettlement
+        diplomaticPlays[index].escalation = 100
+        relations.sort { $0.id < $1.id }
+        lastUpdatedTurn = turn
+        return diplomaticPlays[index]
+    }
+
     private mutating func closeActiveDiplomaticPlaysBetween(_ lhs: Faction, and rhs: Faction, turn: Int) {
         for index in diplomaticPlays.indices where diplomaticPlays[index].outcome == .active {
             guard diplomaticPlaySidesAreOpposed(diplomaticPlays[index], lhs, rhs) else {
@@ -1058,6 +1107,35 @@ struct DiplomacyState: Codable, Equatable {
         }
 
         lastUpdatedTurn = turn
+    }
+
+    private mutating func setRelationStatus(
+        between lhs: Faction,
+        and rhs: Faction,
+        status: DiplomaticStatus,
+        tension: Int,
+        turn: Int
+    ) {
+        let lhsCountries = countries(for: lhs)
+        let rhsCountries = countries(for: rhs)
+        for lhsCountry in lhsCountries {
+            for rhsCountry in rhsCountries where lhsCountry.id != rhsCountry.id {
+                let relation = DiplomaticRelation(
+                    firstCountryId: lhsCountry.id,
+                    secondCountryId: rhsCountry.id,
+                    status: status,
+                    tension: tension,
+                    sinceTurn: turn
+                )
+                if let index = relations.firstIndex(where: { $0.id == relation.id }) {
+                    relations[index].status = status
+                    relations[index].tension = tension
+                    relations[index].sinceTurn = max(1, turn)
+                } else {
+                    relations.append(relation)
+                }
+            }
+        }
     }
 
     private func diplomaticPlaySidesAreOpposed(_ play: DiplomaticPlay, _ lhs: Faction, _ rhs: Faction) -> Bool {

@@ -179,6 +179,16 @@ struct DiplomacyPanelView: View {
                             .buttonStyle(.bordered)
                             .controlSize(.small)
                             .disabled(!canOfferConcession(in: play))
+                        } else if play.outcome == .escalatedToWar {
+                            Button {
+                                onDiplomacyCommand(.negotiateTruce(playId: play.id))
+                            } label: {
+                                Label("Negotiate truce", systemImage: "checkmark.seal")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(!canNegotiateTruce(in: play))
                         }
                     }
                 }
@@ -441,6 +451,16 @@ struct DiplomacyPanelView: View {
             )
     }
 
+    private func canNegotiateTruce(in play: DiplomaticPlay) -> Bool {
+        !observerModeEnabled &&
+            activeFactionIsHumanControlled &&
+            gameState.phase.isActionPhase &&
+            diplomacyState.canNegotiateTruce(
+                actingFaction: activeFaction,
+                playId: play.id
+            )
+    }
+
     private func declarationSummary(for targetFaction: Faction) -> String {
         let status = diplomacyState.relationStatus(between: activeFaction, and: targetFaction).displayName
         let targetCountryNames = diplomacyState.countries(for: targetFaction)
@@ -511,7 +531,7 @@ struct DiplomacyPanelView: View {
         switch play.outcome {
         case .active:
             return "\(play.escalation)"
-        case .backedDown, .negotiatedSettlement, .escalatedToWar:
+        case .backedDown, .negotiatedSettlement, .escalatedToWar, .truceSettlement:
             return play.outcome.displayName
         }
     }
@@ -522,7 +542,7 @@ struct DiplomacyPanelView: View {
             return play.escalation >= 70 ? .orange : .secondary
         case .escalatedToWar:
             return .red
-        case .backedDown, .negotiatedSettlement:
+        case .backedDown, .negotiatedSettlement, .truceSettlement:
             return .secondary
         }
     }

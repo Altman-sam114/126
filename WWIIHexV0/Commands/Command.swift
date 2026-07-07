@@ -114,6 +114,7 @@ enum DiplomacyCommand: Codable, Equatable {
         rationale: String
     )
     case offerConcession(playId: String)
+    case negotiateTruce(playId: String)
 
     var displayName: String {
         switch self {
@@ -128,6 +129,8 @@ enum DiplomacyCommand: Codable, Equatable {
             return "RespondToDiplomaticPlay(\(playId), \(stance.displayName), \(agentId))"
         case .offerConcession(let playId):
             return "OfferConcession(\(playId))"
+        case .negotiateTruce(let playId):
+            return "NegotiateTruce(\(playId))"
         }
     }
 
@@ -142,6 +145,8 @@ enum DiplomacyCommand: Codable, Equatable {
         case .respondToDiplomaticPlay:
             return nil
         case .offerConcession:
+            return nil
+        case .negotiateTruce:
             return nil
         }
     }

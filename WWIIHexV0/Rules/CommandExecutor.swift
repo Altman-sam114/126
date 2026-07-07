@@ -251,6 +251,22 @@ struct CommandExecutor {
                 category: .diplomacy,
                 relatedRecordId: play.id
             )
+        case .negotiateTruce(let playId):
+            let actingFaction = state.activeFaction
+            guard let play = state.diplomacyState.negotiateTruce(
+                playId: playId,
+                actingFaction: actingFaction,
+                turn: state.turn
+            ) else {
+                return
+            }
+
+            state.appendEvent(
+                "\(actingFaction.displayName) negotiated a truce in the diplomatic play: \(play.warGoal.displayName).",
+                category: .diplomacy,
+                relatedRecordId: play.id
+            )
+            state = StrategicStateBootstrapper().refreshRuntimeState(state)
         }
     }
 

@@ -265,6 +265,22 @@ struct CommandValidator {
             ) else {
                 return .invalid(.invalidTargetFaction)
             }
+        case .negotiateTruce(let playId):
+            guard let play = state.diplomacyState.diplomaticPlay(id: playId),
+                  play.outcome == .escalatedToWar else {
+                return .invalid(.diplomaticPlayNotFound)
+            }
+
+            guard play.issuerFaction == state.activeFaction || play.targetFaction == state.activeFaction else {
+                return .invalid(.wrongFaction)
+            }
+
+            guard state.diplomacyState.canNegotiateTruce(
+                actingFaction: state.activeFaction,
+                playId: playId
+            ) else {
+                return .invalid(.invalidTargetFaction)
+            }
         }
 
         return .valid

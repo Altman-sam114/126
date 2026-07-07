@@ -133,7 +133,7 @@ playerCommandState
 - `frontLineState` 从动态战区相邻 hex 派生。
 - `warDeploymentState` 从动态战区/前线/单位位置派生，供 AI 调度单位。
 - `economyState` 保存 manpower、industry、supplies、生产/建设队列、warDebt、上回合收入/维护费/补员消耗，不直接改变战术占领权。
-- `diplomacyState` 保存国家、集团、关系、`CountryProfile.warSupport` 和最小 `DiplomaticPlay` 记录。v5.1 起移动、攻击、补给、AI 目标选择的敌我判断优先通过 `DiplomacyState.canAttack` / `canEnterTerritory`，不再走 `Faction.opponent` 主路径；v5.5 起 `EconomyRules.resolveFactionTurn` 可通过 `DiplomacyState.adjustWarSupport` 写入战争支持压力；v5.6 起 `Command.diplomacy(command:)` 提供规则层外交入口，`createDiplomaticPlay` 记录危机状态，`supportDiplomaticPlay` 允许未加入且非主当事方的 faction 加入 issuer 或 target 支持列表但不立刻参战，`offerConcession` 可把 active play 收束为 `negotiatedSettlement`、写 `settlementRecord` 并做最小 warSupport 结算，整轮完成后 `advanceDiplomaticPlays` 推进 escalation，deadline 到期会按 `backers × opposingBackers` 成组升级为战争；`VictoryRules` 可把已升级为战争且有 objective-backed 映射的 play warGoal 纳入胜利判断，也可让 `weakenPrestige` 在目标方主国家 warSupport 跌到 35 或以下时触发最小外交战争目标胜利；`declareWar(targetFaction:)` 把 active faction 与目标 faction 的国家关系写为 `atWar`、立即关闭双方跨侧的 active play，刷新前线/部署派生层后补跑一次胜利评价。`RulerAgent` 只读取 warSupport 来调整 AI 姿态、风险阈值、预备队倾向和外交危机回应，不直接改写该值。
+- `diplomacyState` 保存国家、集团、关系、`CountryProfile.warSupport` 和最小 `DiplomaticPlay` 记录。v5.1 起移动、攻击、补给、AI 目标选择的敌我判断优先通过 `DiplomacyState.canAttack` / `canEnterTerritory`，不再走 `Faction.opponent` 主路径；v5.5 起 `EconomyRules.resolveFactionTurn` 可通过 `DiplomacyState.adjustWarSupport` 写入战争支持压力；v5.6 起 `Command.diplomacy(command:)` 提供规则层外交入口，`createDiplomaticPlay` 记录危机状态，`supportDiplomaticPlay` 允许未加入且非主当事方的 faction 加入 issuer 或 target 支持列表但不立刻参战，`offerConcession` 可把 active play 收束为 `negotiatedSettlement`、写 `settlementRecord` 并做最小 warSupport 结算，整轮完成后 `advanceDiplomaticPlays` 推进 escalation，deadline 到期会按 `backers × opposingBackers` 成组升级为战争；`negotiateTruce` 可把已升级战争的 play 跨侧 `atWar` 关系收束为 `truce` 并刷新前线/部署；`VictoryRules` 可把已升级为战争且有 objective-backed 映射的 play warGoal 纳入胜利判断，也可让 `weakenPrestige` 在目标方主国家 warSupport 跌到 35 或以下时触发最小外交战争目标胜利；`declareWar(targetFaction:)` 把 active faction 与目标 faction 的国家关系写为 `atWar`、立即关闭双方跨侧的 active play，刷新前线/部署派生层后补跑一次胜利评价。`RulerAgent` 只读取 warSupport 来调整 AI 姿态、风险阈值、预备队倾向和外交危机回应，不直接改写该值。
 - `turnOrder` 保存本局参战势力行动顺序，`humanControlledFactions` 保存人类控制势力；旧阿登数据默认兼容为 Germany -> Allies，Allies 为玩家。
 - `eventLog` 给 UI 和调试看。
 - `warDirectiveRecords` 记录战争指令执行回放，供 v0.36+ 后续接 LLM / 聊天命令审计。
@@ -1163,14 +1163,21 @@ Command.diplomacy(command: .offerConcession(playId))
   -> play 必须 active，activeFaction 必须是 issuer 或 target，双方尚未 atWar
   -> DiplomacyState.offerConcession
 
+Command.diplomacy(command: .negotiateTruce(playId))
+  -> phaseAllowsCommands
+  -> play 必须 escalatedToWar，activeFaction 必须是 issuer 或 target，双方阵营仍存在 cross-side atWar
+  -> DiplomacyState.negotiateTruce
+  -> cross-side country pair 写为 truce，play outcome 标为 truceSettlement
+  -> StrategicStateBootstrapper.refreshRuntimeState
+
 Command.diplomacy(command: .declareWar(targetFaction))
   -> phaseAllowsCommands
-  -> targetFaction 不是 active faction、不是 neutral、双方都有 country profile、尚未 atWar
+  -> targetFaction 不是 active faction、不是 neutral、双方都有 country profile、尚未 atWar 或 truce
 ```
 
 `phaseAllowsCommands` 在 v5.1 后不再硬编码 `.germanAI` / `.alliedPlayer`，而是要求 `state.phase.isActionPhase` 且 `activeFaction.participatesInTurnOrder`。
 
-当前外交命令实现五层最小入口：`createDiplomaticPlay` 创建 active play，记录 issuer、target、region、warGoal、escalation、backers、opposingBackers、deadline 和 outcome，创建时不改变外交关系、不刷新前线；同一双方/region 若刚在同一 turn 通过 `negotiatedSettlement` 收束，会被视为短冷却而不能立即重开。`supportDiplomaticPlay` 允许未加入且非主当事方的 active faction 选择支持 issuer 或 target，只追加到 `backers` / `opposingBackers`、排序去重、更新 `lastUpdatedTurn` 并写 `.diplomacy` 日志，不允许从一侧静默切到另一侧，支持动作本身不立刻参战；`respondToDiplomaticPlay` 给 AI 使用同一规则入口记录支持、反对或中立理由，支持/反对复用支持列表，中立只写 `DiplomaticPlayStanceRecord` 与 `.diplomacy` 日志；`offerConcession` 允许 active play 的 issuer 或 target 在 action phase 让步，把 play outcome 标为 `negotiatedSettlement`，写入 `DiplomaticPlaySettlementRecord`、`.diplomacy` 日志，并按最小规则调整让步方/受益方 `CountryProfile.warSupport`（意图 -4 / +2，记录值按 0-100 钳制后的实际变化），但不改变外交关系、不刷新前线；`Command.endTurn` 完成一整轮 turnOrder 后调用 `DiplomacyState.advanceDiplomaticPlays`，每个 active play 增加 escalation，到 deadline 时对 `backers × opposingBackers` 全部 faction pair 调用 `declareWar`，宣战成功或跨侧已交战后把 play outcome 标为 `escalatedToWar`，并补跑一次 `VictoryRules` 让 objective-backed dynamic warGoal 可在当回合判定。`declareWar` 通过 `DiplomacyState.declareWar` 把 active faction 与目标 faction 的全部 country pair 置为 `.atWar`，同步关闭双方已跨侧交战的 active play，写入 `.diplomacy` 日志，调用 `StrategicStateBootstrapper.refreshRuntimeState` 让 `FrontLineState` 与 `WarDeploymentState` 立刻按新敌我关系重建，并补跑 `VictoryRules` 让已满足的 dynamic warGoal 可立即结算。外交 play 命令不直接移动单位、不改变 hex / region controller、不改经济账本；当前仍不是完整多方条件交换、停战或完整动态胜利条件系统。
+当前外交命令实现六层最小入口：`createDiplomaticPlay` 创建 active play，记录 issuer、target、region、warGoal、escalation、backers、opposingBackers、deadline 和 outcome，创建时不改变外交关系、不刷新前线；同一双方/region 若刚在同一 turn 通过 `negotiatedSettlement` 收束，或双方当前处于 `truce`，不能立即重开。`supportDiplomaticPlay` 允许未加入且非主当事方的 active faction 选择支持 issuer 或 target，只追加到 `backers` / `opposingBackers`、排序去重、更新 `lastUpdatedTurn` 并写 `.diplomacy` 日志，不允许从一侧静默切到另一侧，支持动作本身不立刻参战；`respondToDiplomaticPlay` 给 AI 使用同一规则入口记录支持、反对或中立理由，支持/反对复用支持列表，中立只写 `DiplomaticPlayStanceRecord` 与 `.diplomacy` 日志；`offerConcession` 允许 active play 的 issuer 或 target 在 action phase 让步，把 play outcome 标为 `negotiatedSettlement`，写入 `DiplomaticPlaySettlementRecord`、`.diplomacy` 日志，并按最小规则调整让步方/受益方 `CountryProfile.warSupport`（意图 -4 / +2，记录值按 0-100 钳制后的实际变化），但不改变外交关系、不刷新前线；`Command.endTurn` 完成一整轮 turnOrder 后调用 `DiplomacyState.advanceDiplomaticPlays`，每个 active play 增加 escalation，到 deadline 时对 `backers × opposingBackers` 全部 faction pair 调用 `declareWar`，宣战成功或跨侧已交战后把 play outcome 标为 `escalatedToWar`，并补跑一次 `VictoryRules` 让 objective-backed dynamic warGoal 可在当回合判定。`declareWar` 通过 `DiplomacyState.declareWar` 把 active faction 与目标 faction 的全部 country pair 置为 `.atWar`，同步关闭双方已跨侧交战的 active play，写入 `.diplomacy` 日志，调用 `StrategicStateBootstrapper.refreshRuntimeState` 让 `FrontLineState` 与 `WarDeploymentState` 立刻按新敌我关系重建，并补跑 `VictoryRules` 让已满足的 dynamic warGoal 可立即结算；处于 `truce` 的双方不可直接宣战。`negotiateTruce` 允许已升级战争的 play 由 issuer 或 target 在 action phase 发起，把 issuer side / target side 所有 cross-side `atWar` country pair 写为 `.truce`，play outcome 标为 `truceSettlement`，写 `.diplomacy` 日志，并刷新前线/部署派生层。外交 play 命令不直接移动单位、不改变 hex / region controller、不改经济账本；当前仍不是完整多方条件交换、赔款、割地、和平会议或完整动态胜利条件系统。
 
 ### 5.3 移动与占领
 
