@@ -227,6 +227,23 @@ struct CommandValidator {
             ) else {
                 return .invalid(.diplomaticPlaySupportUnavailable)
             }
+        case .respondToDiplomaticPlay(let playId, let stance, _, _):
+            guard let play = state.diplomacyState.diplomaticPlay(id: playId),
+                  play.outcome == .active else {
+                return .invalid(.diplomaticPlayNotFound)
+            }
+
+            guard state.diplomacyState.relationStatus(between: play.issuerFaction, and: play.targetFaction) != .atWar else {
+                return .invalid(.alreadyAtWar)
+            }
+
+            guard state.diplomacyState.canRespondToDiplomaticPlay(
+                actingFaction: state.activeFaction,
+                playId: playId,
+                stance: stance
+            ) else {
+                return .invalid(.diplomaticPlaySupportUnavailable)
+            }
         case .offerConcession(let playId):
             guard let play = state.diplomacyState.diplomaticPlay(id: playId),
                   play.outcome == .active else {

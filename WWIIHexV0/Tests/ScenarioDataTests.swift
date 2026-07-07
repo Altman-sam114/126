@@ -152,4 +152,60 @@ final class ScenarioDataTests: XCTestCase {
         XCTAssertEqual(outcome.state.diplomacyState.latestRulerRecord?.faction, .russia)
         XCTAssertFalse(outcome.record.rawJSON?.contains("marshal_russia") == true)
     }
+
+    func testVictorianRulerRespondsToDiplomaticPlayThroughCommandPipeline() async throws {
+        let loader = DataLoader()
+        var state = loader.loadInitialGameState()
+        state.activeFaction = .britain
+        state.phase = .humanAction
+
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: state
+        )
+        XCTAssertTrue(created.succeeded)
+        let play = try XCTUnwrap(created.state.diplomacyState.activeDiplomaticPlays.first)
+
+        state = created.state
+        state.activeFaction = .france
+        state.phase = .aiAction
+
+        let commander = GameAgent.defaultCommander(for: .france, from: loader, state: state)
+        let manager = TurnManager(
+            agent: commander,
+            provider: MockAIClient(),
+            providerName: "Simulated Staff",
+            commandHandler: RuleEngine(),
+            commanderPool: TheaterCommanderPool.automatic(for: state),
+            marshalAgent: MarshalAgent(config: MarshalAgentConfig.fromCommander(commander, state: state)),
+            rulerAgent: RulerAgent.automatic(for: .france, in: state)
+        )
+
+        let outcome = await manager.runAITurn(state: state, faction: .france)
+        let resolvedPlay = try XCTUnwrap(outcome.state.diplomacyState.diplomaticPlay(id: play.id))
+        let record = try XCTUnwrap(outcome.state.diplomacyState.latestStanceRecord(for: play.id, faction: .france))
+
+        XCTAssertEqual(record.stance, .supportIssuer)
+        XCTAssertEqual(record.agentId, "ruler_france")
+        XCTAssertEqual(record.countryId, .some(CountryId("france")))
+        XCTAssertEqual(record.commandSucceeded, .some(true))
+        XCTAssertTrue(record.didIssueSupportCommand)
+        XCTAssertTrue(record.rationale.contains("Cabinet favors Britain"))
+        XCTAssertTrue(resolvedPlay.backers.contains(.france))
+        XCTAssertEqual(outcome.state.diplomacyState.relationStatus(between: .france, and: .austria), .neutral)
+        XCTAssertTrue(
+            outcome.record.commandResults.contains {
+                $0.commandDisplayName?.contains("RespondToDiplomaticPlay") == true &&
+                    $0.executed
+            }
+        )
+        XCTAssertTrue(outcome.record.rawJSON?.contains("Diplomatic Response JSON") == true)
+        XCTAssertTrue(outcome.record.parsedIntent?.contains("Diplomatic responses: France Support issuer") == true)
+    }
 }

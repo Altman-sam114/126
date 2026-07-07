@@ -67,6 +67,136 @@ struct RulerAgent {
         return RulerDirectiveAdjustment(envelope: adjustedEnvelope, record: record)
     }
 
+    func diplomaticPlayResponses(in state: GameState) -> [DiplomaticPlayStanceRecord] {
+        guard state.activeFaction == config.faction,
+              state.phase.isActionPhase else {
+            return []
+        }
+
+        return state.diplomacyState.activeDiplomaticPlays.compactMap { play in
+            diplomaticPlayResponse(for: play, in: state)
+        }
+    }
+
+    private func diplomaticPlayResponse(
+        for play: DiplomaticPlay,
+        in state: GameState
+    ) -> DiplomaticPlayStanceRecord? {
+        let stance = chooseDiplomaticPlayStance(for: play, in: state)
+        guard state.diplomacyState.canRespondToDiplomaticPlay(
+            actingFaction: config.faction,
+            playId: play.id,
+            stance: stance
+        ) else {
+            return nil
+        }
+
+        return DiplomaticPlayStanceRecord(
+            playId: play.id,
+            turn: state.turn,
+            faction: config.faction,
+            countryId: config.countryId ?? state.diplomacyState.primaryCountry(for: config.faction)?.id,
+            agentId: config.id,
+            stance: stance,
+            rationale: diplomaticPlayRationale(stance: stance, play: play, in: state)
+        )
+    }
+
+    private func chooseDiplomaticPlayStance(
+        for play: DiplomaticPlay,
+        in state: GameState
+    ) -> DiplomaticPlayAIStance {
+        let issuerCanBeSupported = state.diplomacyState.canSupportDiplomaticPlay(
+            actingFaction: config.faction,
+            playId: play.id,
+            side: .issuer
+        )
+        let targetCanBeSupported = state.diplomacyState.canSupportDiplomaticPlay(
+            actingFaction: config.faction,
+            playId: play.id,
+            side: .target
+        )
+        let issuerScore = issuerCanBeSupported ? diplomaticSupportScore(for: .issuer, in: play, state: state) : Int.min
+        let targetScore = targetCanBeSupported ? diplomaticSupportScore(for: .target, in: play, state: state) : Int.min
+
+        if issuerScore >= max(2, targetScore + 1) {
+            return .supportIssuer
+        }
+        if targetScore >= max(2, issuerScore + 1) {
+            return .supportTarget
+        }
+        return .neutral
+    }
+
+    private func diplomaticSupportScore(
+        for side: DiplomaticPlaySupportSide,
+        in play: DiplomaticPlay,
+        state: GameState
+    ) -> Int {
+        let sideFaction = side == .issuer ? play.issuerFaction : play.targetFaction
+        let opposingFaction = side == .issuer ? play.targetFaction : play.issuerFaction
+        let relationToSide = state.diplomacyState.relationStatus(between: config.faction, and: sideFaction)
+        let relationToOpposing = state.diplomacyState.relationStatus(between: config.faction, and: opposingFaction)
+        var score = relationshipScore(relationToSide)
+
+        switch relationToOpposing {
+        case .atWar:
+            score += 4
+        case .hostile, .blockaded:
+            score += 2
+        case .truce:
+            score += 1
+        case .allied, .coBelligerent, .militaryAccess:
+            score -= 2
+        case .neutral:
+            break
+        }
+
+        if config.coalitionDiscipline >= 60 && relationToSide == .coBelligerent {
+            score += 1
+        }
+        if config.riskTolerance < 35 && play.escalation >= 70 {
+            score -= 1
+        }
+        return score
+    }
+
+    private func relationshipScore(_ status: DiplomaticStatus) -> Int {
+        switch status {
+        case .allied:
+            return 4
+        case .coBelligerent:
+            return 3
+        case .militaryAccess:
+            return 2
+        case .truce:
+            return 1
+        case .neutral:
+            return 0
+        case .hostile, .blockaded:
+            return -2
+        case .atWar:
+            return -100
+        }
+    }
+
+    private func diplomaticPlayRationale(
+        stance: DiplomaticPlayAIStance,
+        play: DiplomaticPlay,
+        in state: GameState
+    ) -> String {
+        let issuerStatus = state.diplomacyState.relationStatus(between: config.faction, and: play.issuerFaction).displayName
+        let targetStatus = state.diplomacyState.relationStatus(between: config.faction, and: play.targetFaction).displayName
+        switch stance {
+        case .supportIssuer:
+            return "Cabinet favors \(play.issuerFaction.displayName): issuer relation \(issuerStatus), target relation \(targetStatus)."
+        case .supportTarget:
+            return "Cabinet favors \(play.targetFaction.displayName): target relation \(targetStatus), issuer relation \(issuerStatus)."
+        case .neutral:
+            return "Cabinet remains neutral: issuer relation \(issuerStatus), target relation \(targetStatus)."
+        }
+    }
+
     private func choosePosture(snapshot: RulerStrategicSnapshot) -> RulerStrategicPosture {
         if snapshot.hostileCountryCount > 1 && config.coalitionDiscipline >= 55 {
             return .coalitionMaintenance

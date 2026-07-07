@@ -232,6 +232,7 @@ struct TurnManager {
                 issuerId: agent.id
             )
             let cabinetAdjustment = rulerAgent?.adjust(envelope: resolution.directiveEnvelope, in: state)
+            let diplomaticResponses = rulerAgent?.diplomaticPlayResponses(in: state) ?? []
             let directiveEnvelope = cabinetAdjustment?.envelope ?? resolution.directiveEnvelope
             let compiledJSON = try Self.canonicalDirectiveJSON(directiveEnvelope)
             var rawJSON = resolution.rawTheaterJSON.map {
@@ -240,6 +241,10 @@ struct TurnManager {
             if let cabinetRecord = cabinetAdjustment?.record {
                 let cabinetJSON = try Self.canonicalRulerJSON(cabinetRecord)
                 rawJSON = "Cabinet Directive JSON:\n\(cabinetJSON)\n\n\(rawJSON)"
+            }
+            if !diplomaticResponses.isEmpty {
+                let responseJSON = try Self.canonicalDiplomaticResponsesJSON(diplomaticResponses)
+                rawJSON = "Diplomatic Response JSON:\n\(responseJSON)\n\n\(rawJSON)"
             }
 
             return executeDirectiveEnvelope(
@@ -250,11 +255,13 @@ struct TurnManager {
                 rawJSON: rawJSON,
                 parsedIntent: parsedIntent(
                     cabinetRecord: cabinetAdjustment?.record,
-                    strategicIntent: resolution.theaterEnvelope?.strategicIntent
+                    strategicIntent: resolution.theaterEnvelope?.strategicIntent,
+                    diplomaticResponses: diplomaticResponses
                 ),
                 providerSuffix: cabinetAdjustment == nil ? "MarshalDirective" : "Cabinet+MarshalDirective",
                 additionalDiagnostics: diagnostics + resolution.diagnostics,
-                rulerRecord: cabinetAdjustment?.record
+                rulerRecord: cabinetAdjustment?.record,
+                diplomaticResponses: diplomaticResponses
             )
         } catch {
             return AgentTurnOutcome(
@@ -293,7 +300,8 @@ struct TurnManager {
         parsedIntent: String,
         providerSuffix: String,
         additionalDiagnostics: [String],
-        rulerRecord: RulerDecisionRecord? = nil
+        rulerRecord: RulerDecisionRecord? = nil,
+        diplomaticResponses: [DiplomaticPlayStanceRecord] = []
     ) -> AgentTurnOutcome {
         var nextState = state
         if let rulerRecord {
@@ -304,6 +312,30 @@ struct TurnManager {
         var errors = additionalDiagnostics
         if envelope.directives.isEmpty {
             errors.append("Commander returned no directives.")
+        }
+
+        for (responseIndex, response) in diplomaticResponses.enumerated() {
+            let command = Command.diplomacy(
+                command: .respondToDiplomaticPlay(
+                    playId: response.playId,
+                    stance: response.stance,
+                    agentId: response.agentId,
+                    rationale: response.rationale
+                )
+            )
+            let result = commandHandler.execute(command, in: nextState)
+            nextState = result.state
+            commandResults.append(
+                .diplomaticResponse(
+                    responseIndex: responseIndex,
+                    response: response,
+                    command: command,
+                    result: result
+                )
+            )
+            if !result.succeeded {
+                errors.append("Diplomatic response \(responseIndex) rejected: \(result.validation.errors.map(\.rawValue).joined(separator: ", ")).")
+            }
         }
 
         for (directiveIndex, directive) in envelope.directives.enumerated() {
@@ -462,11 +494,35 @@ struct TurnManager {
         return String(decoding: data, as: UTF8.self)
     }
 
-    private func parsedIntent(cabinetRecord: RulerDecisionRecord?, strategicIntent: String?) -> String {
+    static func canonicalDiplomaticResponsesJSON(_ records: [DiplomaticPlayStanceRecord]) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(records)
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private func parsedIntent(
+        cabinetRecord: RulerDecisionRecord?,
+        strategicIntent: String?,
+        diplomaticResponses: [DiplomaticPlayStanceRecord] = []
+    ) -> String {
+        let responseSummary: String?
+        if diplomaticResponses.isEmpty {
+            responseSummary = nil
+        } else {
+            let summaries = diplomaticResponses
+                .map { "\($0.faction.displayName) \($0.stance.displayName)" }
+                .joined(separator: ", ")
+            responseSummary = "Diplomatic responses: \(summaries)"
+        }
         guard let cabinetRecord else {
-            return strategicIntent ?? "marshal directives"
+            return [strategicIntent ?? "marshal directives", responseSummary]
+                .compactMap { $0 }
+                .joined(separator: " | ")
         }
         let intent = strategicIntent ?? "marshal directives"
-        return "Cabinet \(cabinetRecord.posture.displayName): \(intent)"
+        return ["Cabinet \(cabinetRecord.posture.displayName): \(intent)", responseSummary]
+            .compactMap { $0 }
+            .joined(separator: " | ")
     }
 }

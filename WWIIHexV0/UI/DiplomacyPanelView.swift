@@ -114,6 +114,13 @@ struct DiplomacyPanelView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
 
+                        ForEach(recentStanceRecords(for: play)) { record in
+                            Text("AI: \(record.faction.displayName) \(record.stance.displayName) - \(record.rationale)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+
                         HStack(spacing: 6) {
                             Button {
                                 onDiplomacyCommand(.supportDiplomaticPlay(playId: play.id, side: .issuer))
@@ -443,6 +450,10 @@ struct DiplomacyPanelView: View {
 
     private func factionNames(_ factions: [Faction]) -> String {
         factions.map(\.displayName).joined(separator: ", ")
+    }
+
+    private func recentStanceRecords(for play: DiplomaticPlay) -> [DiplomaticPlayStanceRecord] {
+        Array(play.aiStanceRecords.suffix(2))
     }
 
     private func declarationSummaryColor(for targetFaction: Faction) -> Color {

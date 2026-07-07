@@ -401,13 +401,13 @@ isCoreZone
 
 ### 1.7 Cabinet posture 层
 
-v5.6 起，默认 `.marshalDirective` AI 主路径会接入 `RulerAgent` 作为源码兼容承载的 Cabinet posture 层。它位于元帅层和执行层之间：先由 `MarshalAgent` 产出并编译 `DirectiveEnvelope`，再由 Cabinet posture 根据外交摘要、前线压力和历史 directive 记录调整攻守姿态、预备队倾向和目标排序，最后仍交给 `WarCommandExecutor -> RuleEngine`。
+v5.6 起，默认 `.marshalDirective` AI 主路径会接入 `RulerAgent` 作为源码兼容承载的 Cabinet posture 层。它位于元帅层和执行层之间：先由 `MarshalAgent` 产出并编译 `DirectiveEnvelope`，再由 Cabinet posture 根据外交摘要、前线压力和历史 directive 记录调整攻守姿态、预备队倾向和目标排序，最后仍交给 `WarCommandExecutor -> RuleEngine`。当前最小外交 AI 回应也由 `RulerAgent` 生成 `DiplomaticPlayStanceRecord`，但 `TurnManager` 必须把它转成 `Command.diplomacy(.respondToDiplomaticPlay)` 并经 `RuleEngine` 执行。
 
 边界：
 
 - Cabinet posture 不直接生成底层 `Command`，不得绕过 `MarshalAgent` / `ZoneDirective`。
 - Cabinet posture 不直接修改 `HexTile.controller`、`Division.coord`、`regionToTheater`、`hexToTheater` 或 `hexToFrontZone`。
-- Cabinet posture 不直接修改外交关系、战争支持或经济账本；`TurnManager` 仅把 `RulerDecisionRecord` 追加为 audit-only 记录，记录姿态与 rationale。
+- Cabinet posture 不直接修改外交关系、战争支持或经济账本；`TurnManager` 会把 `RulerDecisionRecord` 追加为 audit-only 记录，并把 AI 外交危机回应作为规则命令执行。支持/反对回应可进入 `backers` / `opposingBackers`，中立回应只写 `aiStanceRecords` 和外交日志。
 - AI 面板展示最近 Cabinet posture / focus / rationale；外交面板仍可读取 `DiplomacyState.latestRulerRecord`。
 
 ### 1.8 EconomyState / EconomyRules
@@ -1153,6 +1153,11 @@ Command.diplomacy(command: .supportDiplomaticPlay(playId, side))
   -> play 必须 active，activeFaction 不是 issuer / target、不是 neutral、有 country profile、尚未加入任一侧，双方尚未 atWar，且 activeFaction 未与所支持一侧 atWar
   -> DiplomacyState.supportDiplomaticPlay
 
+Command.diplomacy(command: .respondToDiplomaticPlay(playId, stance, agentId, rationale))
+  -> phaseAllowsCommands
+  -> play 必须 active，activeFaction 不是 issuer / target、不是 neutral、有 country profile、尚未加入任一侧，双方尚未 atWar
+  -> supportIssuer / supportTarget 复用 DiplomacyState.supportDiplomaticPlay；neutral 只记录 DiplomaticPlayStanceRecord
+
 Command.diplomacy(command: .offerConcession(playId))
   -> phaseAllowsCommands
   -> play 必须 active，activeFaction 必须是 issuer 或 target，双方尚未 atWar
@@ -1165,7 +1170,7 @@ Command.diplomacy(command: .declareWar(targetFaction))
 
 `phaseAllowsCommands` 在 v5.1 后不再硬编码 `.germanAI` / `.alliedPlayer`，而是要求 `state.phase.isActionPhase` 且 `activeFaction.participatesInTurnOrder`。
 
-当前外交命令实现四层最小入口：`createDiplomaticPlay` 创建 active play，记录 issuer、target、region、warGoal、escalation、backers、opposingBackers、deadline 和 outcome，创建时不改变外交关系、不刷新前线；`supportDiplomaticPlay` 允许未加入且非主当事方的 active faction 选择支持 issuer 或 target，只追加到 `backers` / `opposingBackers`、排序去重、更新 `lastUpdatedTurn` 并写 `.diplomacy` 日志，不允许从一侧静默切到另一侧，支持动作本身不立刻参战；`offerConcession` 允许 active play 的 issuer 或 target 在 action phase 让步，把 play outcome 标为 `negotiatedSettlement` 并写 `.diplomacy` 日志，不改变外交关系、不调整 `CountryProfile.warSupport`、不刷新前线；`Command.endTurn` 完成一整轮 turnOrder 后调用 `DiplomacyState.advanceDiplomaticPlays`，每个 active play 增加 escalation，到 deadline 时对 `backers × opposingBackers` 全部 faction pair 调用 `declareWar`，宣战成功或跨侧已交战后把 play outcome 标为 `escalatedToWar`。`declareWar` 通过 `DiplomacyState.declareWar` 把 active faction 与目标 faction 的全部 country pair 置为 `.atWar`，同步关闭双方已跨侧交战的 active play，写入 `.diplomacy` 日志，并调用 `StrategicStateBootstrapper.refreshRuntimeState` 让 `FrontLineState` 与 `WarDeploymentState` 立刻按新敌我关系重建。外交 play 命令不直接移动单位、不改变 hex / region controller、不改经济账本；当前仍不是完整 AI 支持解释、多方条件交换、停战或动态胜利条件系统。
+当前外交命令实现五层最小入口：`createDiplomaticPlay` 创建 active play，记录 issuer、target、region、warGoal、escalation、backers、opposingBackers、deadline 和 outcome，创建时不改变外交关系、不刷新前线；`supportDiplomaticPlay` 允许未加入且非主当事方的 active faction 选择支持 issuer 或 target，只追加到 `backers` / `opposingBackers`、排序去重、更新 `lastUpdatedTurn` 并写 `.diplomacy` 日志，不允许从一侧静默切到另一侧，支持动作本身不立刻参战；`respondToDiplomaticPlay` 给 AI 使用同一规则入口记录支持、反对或中立理由，支持/反对复用支持列表，中立只写 `DiplomaticPlayStanceRecord` 与 `.diplomacy` 日志；`offerConcession` 允许 active play 的 issuer 或 target 在 action phase 让步，把 play outcome 标为 `negotiatedSettlement` 并写 `.diplomacy` 日志，不改变外交关系、不调整 `CountryProfile.warSupport`、不刷新前线；`Command.endTurn` 完成一整轮 turnOrder 后调用 `DiplomacyState.advanceDiplomaticPlays`，每个 active play 增加 escalation，到 deadline 时对 `backers × opposingBackers` 全部 faction pair 调用 `declareWar`，宣战成功或跨侧已交战后把 play outcome 标为 `escalatedToWar`。`declareWar` 通过 `DiplomacyState.declareWar` 把 active faction 与目标 faction 的全部 country pair 置为 `.atWar`，同步关闭双方已跨侧交战的 active play，写入 `.diplomacy` 日志，并调用 `StrategicStateBootstrapper.refreshRuntimeState` 让 `FrontLineState` 与 `WarDeploymentState` 立刻按新敌我关系重建。外交 play 命令不直接移动单位、不改变 hex / region controller、不改经济账本；当前仍不是完整多方条件交换、停战或动态胜利条件系统。
 
 ### 5.3 移动与占领
 
@@ -1956,7 +1961,7 @@ MapEditorGameResourceBridge.loadDefaultDocument
 - 真 LLM 尚未接入；当前只用 `SimulatedMarshalLLMClient` 模拟 fenced JSON 输出和解码流程。
 - 默认 AI 上游已是 `MarshalAgent -> TheaterDirectiveEnvelope -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler -> Cabinet posture`，下游执行必须是 `ZoneDirective -> WarCommandExecutor -> RuleEngine`。
 - 元帅层不能直接输出底层 `Command`，不能直接修改地图、单位、hex controller 或动态战区权威。
-- Cabinet posture 只塑形 directive envelope；`RulerDecisionRecord` 是 TurnManager 追加的 audit-only 记录，不能直接修改地图、单位、hex controller、外交关系或经济账本。
+- Cabinet posture 只塑形 directive envelope；`RulerDecisionRecord` 是 TurnManager 追加的 audit-only 记录，不能直接修改地图、单位、hex controller、外交关系或经济账本。AI 外交危机回应必须额外转成 `Command.diplomacy(.respondToDiplomaticPlay)`，再经 `RuleEngine` 校验执行。
 - 当前工作树存在外交/经济/UI 等非 v0.5 方向残留，合并前需要单独审查文件归属和 public API 冲突。
 - `AttackIntensity.infiltration` 已在 `WarCommandExecutor` 中解释为默认低投入上限；`.limitedCounter` 和 `.allOut` 仍主要依赖 tactic profile 与显式 `maxCommittedUnits`。
 - `TacticConditionChecker` 当前总是允许现有战术。
@@ -1966,7 +1971,7 @@ MapEditorGameResourceBridge.loadDefaultDocument
 - `RegionCommand` / AgentOrder v2 仍可桥接到 hex command，但当前默认战争 AI 是 ZoneDirective。
 - 地图编辑器的 theater assignment 是初始战区划分，不是运行时动态战区脚本。
 - 历史回退的 Cabinet/Minister/StrategicDirective 污染管线仍不得恢复；当前只保留受限 Cabinet posture 记录层，不恢复部长状态机或内阁直接执行器。
-- v5.5-v5.6 当前实现战争目标可视化、战争支持压力桥、最小 `DiplomaticPlay` 创建记录、未加入第三方支持/反对列表加入、`Offer concession` 让步收束和 deadline 到期按支持阵营宣战；宣战成功、跨侧已交战或让步收束后关闭 play。尚未实现 AI 支持者解释、完整多方谈判、投降、议会、新闻报纸、战争厌倦或国家级财政。
+- v5.5-v5.6 当前实现战争目标可视化、战争支持压力桥、最小 `DiplomaticPlay` 创建记录、未加入第三方支持/反对列表加入、AI 支持/反对/中立解释记录、`Offer concession` 让步收束和 deadline 到期按支持阵营宣战；宣战成功、跨侧已交战或让步收束后关闭 play。尚未实现完整多方谈判、投降、议会、新闻报纸、战争厌倦或国家级财政。
 
 ---
 

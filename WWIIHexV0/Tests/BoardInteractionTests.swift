@@ -74,6 +74,14 @@ final class BoardInteractionTests: XCTestCase {
 
         container.executeDiplomacyCommand(.declareWar(targetFaction: .germany))
         container.executeDiplomacyCommand(.supportDiplomaticPlay(playId: "play_1", side: .issuer))
+        container.executeDiplomacyCommand(
+            .respondToDiplomaticPlay(
+                playId: "play_1",
+                stance: .neutral,
+                agentId: "foreign_minister_allies",
+                rationale: "Observe."
+            )
+        )
         container.executeDiplomacyCommand(.offerConcession(playId: "play_1"))
 
         XCTAssertEqual(
@@ -81,6 +89,14 @@ final class BoardInteractionTests: XCTestCase {
             [
                 .diplomacy(command: .declareWar(targetFaction: .germany)),
                 .diplomacy(command: .supportDiplomaticPlay(playId: "play_1", side: .issuer)),
+                .diplomacy(
+                    command: .respondToDiplomaticPlay(
+                        playId: "play_1",
+                        stance: .neutral,
+                        agentId: "foreign_minister_allies",
+                        rationale: "Observe."
+                    )
+                ),
                 .diplomacy(command: .offerConcession(playId: "play_1"))
             ]
         )
@@ -99,6 +115,14 @@ final class BoardInteractionTests: XCTestCase {
 
         container.executeDiplomacyCommand(.declareWar(targetFaction: .germany))
         container.executeDiplomacyCommand(.supportDiplomaticPlay(playId: "play_1", side: .issuer))
+        container.executeDiplomacyCommand(
+            .respondToDiplomaticPlay(
+                playId: "play_1",
+                stance: .neutral,
+                agentId: "foreign_minister_allies",
+                rationale: "Observe."
+            )
+        )
 
         XCTAssertTrue(handler.commands.isEmpty)
         XCTAssertTrue(

@@ -221,6 +221,14 @@ struct CommandExecutor {
                 category: .diplomacy,
                 relatedRecordId: play.id
             )
+        case .respondToDiplomaticPlay(let playId, let stance, let agentId, let rationale):
+            executeDiplomaticPlayResponse(
+                playId: playId,
+                stance: stance,
+                agentId: agentId,
+                rationale: rationale,
+                in: &state
+            )
         case .offerConcession(let playId):
             let actingFaction = state.activeFaction
             guard let play = state.diplomacyState.offerConcession(
@@ -236,6 +244,72 @@ struct CommandExecutor {
                 "\(actingFaction.displayName) offered concessions to \(otherFaction.displayName), settling the diplomatic play: \(play.warGoal.displayName).",
                 category: .diplomacy,
                 relatedRecordId: play.id
+            )
+        }
+    }
+
+    private func executeDiplomaticPlayResponse(
+        playId: String,
+        stance: DiplomaticPlayAIStance,
+        agentId: String,
+        rationale: String,
+        in state: inout GameState
+    ) {
+        let actingFaction = state.activeFaction
+        guard let activePlay = state.diplomacyState.diplomaticPlay(id: playId),
+              activePlay.outcome == .active else {
+            return
+        }
+
+        let trimmedAgentId = agentId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanAgentId = trimmedAgentId.isEmpty ? "ruler_\(actingFaction.rawValue)" : trimmedAgentId
+        let trimmedRationale = rationale.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanRationale = trimmedRationale.isEmpty ? "No cabinet rationale provided." : trimmedRationale
+        let countryId = state.diplomacyState.primaryCountry(for: actingFaction)?.id
+        let baseRecord = DiplomaticPlayStanceRecord(
+            playId: playId,
+            turn: state.turn,
+            faction: actingFaction,
+            countryId: countryId,
+            agentId: cleanAgentId,
+            stance: stance,
+            rationale: cleanRationale
+        )
+
+        if let side = stance.supportSide {
+            guard let play = state.diplomacyState.supportDiplomaticPlay(
+                playId: playId,
+                actingFaction: actingFaction,
+                side: side,
+                turn: state.turn
+            ) else {
+                let failedRecord = baseRecord.resolvingSupportCommand(
+                    succeeded: false,
+                    validationErrors: [CommandValidationError.diplomaticPlaySupportUnavailable.rawValue]
+                )
+                _ = state.diplomacyState.recordDiplomaticPlayStance(failedRecord)
+                state.appendEvent(
+                    "\(actingFaction.displayName) cabinet response failed in diplomatic play \(activePlay.warGoal.displayName): \(cleanRationale)",
+                    category: .diplomacy,
+                    relatedRecordId: playId
+                )
+                return
+            }
+
+            let supportedFaction = side == .issuer ? play.issuerFaction : play.targetFaction
+            let recorded = baseRecord.resolvingSupportCommand(succeeded: true, validationErrors: [])
+            _ = state.diplomacyState.recordDiplomaticPlayStance(recorded)
+            state.appendEvent(
+                "\(actingFaction.displayName) cabinet \(cleanAgentId) chose \(stance.displayName) for \(supportedFaction.displayName) in diplomatic play \(play.warGoal.displayName): \(cleanRationale)",
+                category: .diplomacy,
+                relatedRecordId: play.id
+            )
+        } else {
+            _ = state.diplomacyState.recordDiplomaticPlayStance(baseRecord)
+            state.appendEvent(
+                "\(actingFaction.displayName) cabinet \(cleanAgentId) remained neutral in diplomatic play \(activePlay.warGoal.displayName): \(cleanRationale)",
+                category: .diplomacy,
+                relatedRecordId: activePlay.id
             )
         }
     }

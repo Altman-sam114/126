@@ -202,7 +202,7 @@ flowchart TD
 
 ## 3. v5.5 经济、生产、预算、建设与战争支持链路
 
-这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)`、`.supportDiplomaticPlay`、`.offerConcession` 或 `.declareWar`：创建命令记录 active diplomatic play，支持命令只更新 backers / opposingBackers 且不立刻参战，让步命令关闭为 negotiated settlement，整轮完成后推进 escalation，deadline 到期时按 backers / opposingBackers 成组宣战，宣战成功后升级为战争；宣战命令直接把 active faction 与目标 faction 的关系写为 `atWar`、关闭相关 active play 并刷新前线/部署派生层。这不是完整谈判/AI 支持解释状态机或完整围城状态机。
+这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)`、`.supportDiplomaticPlay`、`.offerConcession` 或 `.declareWar`，AI 可通过 `Command.diplomacy(.respondToDiplomaticPlay)` 留下支持、反对或中立解释：创建命令记录 active diplomatic play，支持命令只更新 backers / opposingBackers 且不立刻参战，AI 中立只写 stance record，让步命令关闭为 negotiated settlement，整轮完成后推进 escalation，deadline 到期时按 backers / opposingBackers 成组宣战，宣战成功后升级为战争；宣战命令直接把 active faction 与目标 faction 的关系写为 `atWar`、关闭相关 active play 并刷新前线/部署派生层。这不是完整谈判状态机或完整围城状态机。
 
 ```mermaid
 flowchart TD
@@ -223,10 +223,11 @@ flowchart TD
     BLDVALID["建设校验<br/>CommandValidator.validateConstruction<br/>己控 hex / 港口需 coast / 围城需邻接敌方城市要塞 / 未有目标标签 / 资源足够"]:::rules
     BLDQUEUE["预付成本并入建设队列<br/>EconomyRules.queueConstruction<br/>constructionQueue"]:::economy
     DIP["外交状态<br/>DiplomacyState<br/>国家 warSupport / active plays<br/>escalation / deadline / outcome"]:::diplomacy
-    DIPCMD["外交命令<br/>Command.diplomacy<br/>createDiplomaticPlay / supportDiplomaticPlay / offerConcession / declareWar"]:::command
+    DIPCMD["外交命令<br/>Command.diplomacy<br/>createDiplomaticPlay / supportDiplomaticPlay / respondToDiplomaticPlay / offerConcession / declareWar"]:::command
     DIPVALID["外交校验<br/>CommandValidator.validateDiplomacyCommand<br/>action phase / active play / 有国家档案 / 未加入支持侧 / 非自身 neutral / 尚未 atWar"]:::rules
     DIPPLAY["创建外交危机<br/>DiplomacyState.createDiplomaticPlay<br/>issuer / target / warGoal / backers / deadline"]:::diplomacy
     DIPSUPPORT["加入支持/反对列表<br/>DiplomacyState.supportDiplomaticPlay<br/>只改 backers / opposingBackers"]:::diplomacy
+    DIPRESP["AI 危机回应<br/>DiplomacyState.recordDiplomaticPlayStance<br/>支持/反对复用支持列表，中立只留解释"]:::diplomacy
     DIPSETTLE["让步收束危机<br/>DiplomacyState.offerConcession<br/>active play -> negotiatedSettlement"]:::diplomacy
     DIPADV["整轮完成后推进外交危机<br/>DiplomacyState.advanceDiplomaticPlays<br/>escalation +25 / deadline -> backers x opposingBackers 宣战尝试"]:::diplomacy
     DIPAPPLY["执行宣战<br/>DiplomacyState.declareWar<br/>全部 country pair -> atWar<br/>关闭跨侧 active play"]:::diplomacy
@@ -258,6 +259,7 @@ flowchart TD
     DIPCMD --> DIPVALID
     DIPVALID --> DIPPLAY --> DIP
     DIPVALID --> DIPSUPPORT --> DIP
+    DIPVALID --> DIPRESP --> DIP
     DIPVALID --> DIPSETTLE --> DIP
     DIPVALID --> DIPAPPLY --> DIP
     DIPAPPLY --> NEXT
@@ -297,9 +299,9 @@ flowchart TD
 
 ## 4. AI / 元帅决策链：AI 怎么下命令
 
-这张图看当前默认 AI 主路径。AI 不直接控制单位，也不直接改地图；元帅读取降维战场摘要，模拟 LLM 输出 `TheaterDirectiveEnvelope` JSON，经 decoder 校验和 compiler 降级后形成战区级 `DirectiveEnvelope`。Cabinet posture 再记录姿态并塑形已编译的 envelope；`WarCommandExecutor` 把最终战术翻译成底层 `Command`，最后交给 `RuleEngine`。
+这张图看当前默认 AI 主路径。AI 不直接控制单位，也不直接改地图；元帅读取降维战场摘要，模拟 LLM 输出 `TheaterDirectiveEnvelope` JSON，经 decoder 校验和 compiler 降级后形成战区级 `DirectiveEnvelope`。Cabinet posture 再记录姿态并塑形已编译的 envelope；若存在 active diplomatic play，`RulerAgent` 可给出 AI 支持、反对或中立回应，但必须由 `TurnManager` 转成外交命令进入 `RuleEngine`；`WarCommandExecutor` 把最终战术翻译成底层 `Command`，最后也交给 `RuleEngine`。
 
-当前默认 AI 主线是 `MarshalAgent -> TheaterDirective JSON -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler -> Cabinet posture -> ZoneDirective -> WarCommandExecutor -> RuleEngine`。旧 v0.37 `TheaterCommanderPool -> ZoneCommanderAgent` 作为 fallback 和显式 `.zoneDirective` 路径保留。Cabinet posture 由 `RulerAgent` 兼容层承载，`TurnManager` 只把 `RulerDecisionRecord` 作为 audit-only 记录写入 `DiplomacyState`，并塑形 directive envelope，不直接改地图、单位、外交关系或经济账本。旧 Agent D 管线仍保留，但默认不走。
+当前默认 AI 主线是 `MarshalAgent -> TheaterDirective JSON -> TheaterDirectiveDecoder -> TheaterDirectiveCompiler -> Cabinet posture -> ZoneDirective -> WarCommandExecutor -> RuleEngine`，并在同一 AI action phase 内追加 `RulerAgent.diplomaticPlayResponses -> Command.diplomacy(.respondToDiplomaticPlay) -> RuleEngine` 的最小外交回应路径。旧 v0.37 `TheaterCommanderPool -> ZoneCommanderAgent` 作为 fallback 和显式 `.zoneDirective` 路径保留。Cabinet posture 由 `RulerAgent` 兼容层承载，`TurnManager` 把 `RulerDecisionRecord` 作为 audit-only 记录写入 `DiplomacyState`，并塑形 directive envelope；外交回应也必须经命令校验执行，不直接改地图、单位、外交关系或经济账本。旧 Agent D 管线仍保留，但默认不走。
 
 ```mermaid
 flowchart TD
@@ -313,6 +315,8 @@ flowchart TD
     DEC["元帅 JSON 解码器<br/>TheaterDirectiveDecoder<br/>提取 JSON、解码、校验 schema/zone/region/tactic"]:::command
     COMP["元帅意图编译器<br/>TheaterDirectiveCompiler<br/>TheaterDirective -> ZoneDirective<br/>传递 focus/convergence/coordinated 参数"]:::command
     CAB["Cabinet posture<br/>RulerAgent.adjust<br/>记录 posture/rationale，塑形已编译 envelope"]:::ai
+    DIPAI["外交危机回应<br/>RulerAgent.diplomaticPlayResponses<br/>支持 / 反对 / 中立 + rationale"]:::ai
+    DIPCMD2["外交回应命令<br/>Command.diplomacy(.respondToDiplomaticPlay)<br/>进入 RuleEngine 校验执行"]:::command
     ENV["指令信封<br/>DirectiveEnvelope<br/>收集编译后的 ZoneDirective"]:::command
     TACTIC["高级战术路由<br/>TacticName<br/>rapid advance / spearhead / breakthrough / pincer / fire / feint / irregular / elastic / depth / lastStand"]:::command
     WCE["指令执行器<br/>WarCommandExecutor.execute<br/>按战术 profile 选择单位、目标和 fallback"]:::command
@@ -324,6 +328,7 @@ flowchart TD
     START --> CHECK
     CHECK -->|否| STOP
     CHECK -->|是| REFRESH --> TM --> SUM --> LLM --> DEC --> COMP --> CAB --> ENV
+    CAB --> DIPAI --> DIPCMD2 --> RE
     ENV --> TACTIC --> WCE --> BOTTOM --> RE --> RECORD --> END
 
     FALLBACK["Fallback 将军池<br/>TheaterCommanderPool + ZoneCommanderAgent<br/>元帅 JSON 无效或某 zone 无指令时使用"]:::ai
