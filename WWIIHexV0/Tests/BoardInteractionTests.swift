@@ -84,6 +84,7 @@ final class BoardInteractionTests: XCTestCase {
         )
         container.executeDiplomacyCommand(.offerConcession(playId: "play_1"))
         container.executeDiplomacyCommand(.negotiateTruce(playId: "play_1"))
+        container.executeDiplomacyCommand(.imposeBlockade(targetFaction: .austria))
 
         XCTAssertEqual(
             handler.commands,
@@ -99,7 +100,8 @@ final class BoardInteractionTests: XCTestCase {
                     )
                 ),
                 .diplomacy(command: .offerConcession(playId: "play_1")),
-                .diplomacy(command: .negotiateTruce(playId: "play_1"))
+                .diplomacy(command: .negotiateTruce(playId: "play_1")),
+                .diplomacy(command: .imposeBlockade(targetFaction: .austria))
             ]
         )
         XCTAssertEqual(container.gameState, stateBeforeCommand)
@@ -126,6 +128,7 @@ final class BoardInteractionTests: XCTestCase {
             )
         )
         container.executeDiplomacyCommand(.negotiateTruce(playId: "play_1"))
+        container.executeDiplomacyCommand(.imposeBlockade(targetFaction: .austria))
 
         XCTAssertTrue(handler.commands.isEmpty)
         XCTAssertTrue(

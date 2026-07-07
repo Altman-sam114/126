@@ -231,6 +231,15 @@ struct DiplomacyPanelView: View {
                     .buttonStyle(.bordered)
                     .disabled(!canDeclareWar(on: targetFaction))
 
+                    Button {
+                        onDiplomacyCommand(.imposeBlockade(targetFaction: targetFaction))
+                    } label: {
+                        Label("Impose blockade on \(targetFaction.displayName)", systemImage: "lock.shield")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!canImposeBlockade(on: targetFaction))
+
                     Text(declarationSummary(for: targetFaction))
                         .font(.caption)
                         .foregroundStyle(declarationSummaryColor(for: targetFaction))
@@ -431,6 +440,17 @@ struct DiplomacyPanelView: View {
             )
     }
 
+    private func canImposeBlockade(on targetFaction: Faction) -> Bool {
+        !observerModeEnabled &&
+            activeFactionIsHumanControlled &&
+            gameState.phase.isActionPhase &&
+            diplomacyState.canImposeBlockade(
+                actingFaction: activeFaction,
+                targetFaction: targetFaction,
+                turn: gameState.turn
+            )
+    }
+
     private func canOfferConcession(in play: DiplomaticPlay) -> Bool {
         !observerModeEnabled &&
             activeFactionIsHumanControlled &&
@@ -481,6 +501,9 @@ struct DiplomacyPanelView: View {
         }
         if diplomacyState.relationStatus(between: activeFaction, and: targetFaction) == .atWar {
             return "Already at war | \(countries)"
+        }
+        if diplomacyState.relationStatus(between: activeFaction, and: targetFaction) == .blockaded {
+            return "Blockade active | \(countries)"
         }
         if let expiresTurn = diplomacyState.truceExpiresTurn(between: activeFaction, and: targetFaction),
            diplomacyState.truceIsActive(between: activeFaction, and: targetFaction, turn: gameState.turn) {

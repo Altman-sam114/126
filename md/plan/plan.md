@@ -353,9 +353,9 @@ Bottom Strip:
 | v5.0 | 迁移审计、产品合同和维多利亚术语层 | 已形成 `md/prompt/v5.0-维多利亚迁移/v5.0_audit_and_contract.md`：二战硬编码审计、术语表、首发剧本、版本边界、并发方案 | 不做大范围重命名，不实现完整维多利亚玩法 |
 | v5.1 | 多国家、通用回合、外交关系和敌我判断 | 已形成 `md/prompt/v5.0-维多利亚迁移/v5.1_powers_turns_diplomacy_prompt.md`；多国家 `Faction`、通用 action phase、turn order、人控势力集合、集中外交可攻击/可通行判断、neutral fallback 已通过 commit `2919c49` 云端验收 | 后续仍要清理测试、UI、胜利条件和 legacy 数据残留 |
 | v5.2 | 黑海危机地图、剧本数据和地图编辑器迁移 | 已接入 `black_sea_crisis_1853` 默认入口、维多利亚 regions、powers、unit templates、personas、terrain rules，并保留 legacy 阿登加载入口 | MapEditor 新字段编辑能力仍需后续补齐 |
-| v5.3 | 维多利亚军队、铁路补给、港口远征和围城规则 | 已开始接入 typed `logisticsTags`、铁路移动成本、己方/同盟港口与远征 depot 补给锚点、炮兵攻城修正、维多利亚 `ComponentType` case、黑海单位模板 schema 和单位/生产玩家可见显示 adapter | 完整围城状态、海权封锁、港口/铁路 UI 可视化和旧生产 kind raw value 仍未完成 |
+| v5.3 | 维多利亚军队、铁路补给、港口远征和围城规则 | 已开始接入 typed `logisticsTags`、铁路移动成本、己方/同盟港口与远征 depot 补给锚点、炮兵攻城修正、维多利亚 `ComponentType` case、黑海单位模板 schema 和单位/生产玩家可见显示 adapter | 完整围城状态、完整海权封锁效果、港口/铁路 UI 可视化和旧生产 kind raw value 仍未完成 |
 | v5.4 | 工业经济、预算、动员和建设命令 | 国库、工业、补给、铁路运输力、船运量、威望、战争支持，铁路/野战工事/港口/远征 depot/围城 depot 建设命令 | 不做完整全球市场 |
-| v5.5 | 外交危机、战争目标、列强干预和舆论压力 | 最小 `DiplomaticPlay` 创建、支持/反对列表加入、AI 支持/反对/中立解释记录、整轮 escalation 推进、deadline 宣战尝试、`Offer concession` 让步结算、已升级战争的最小 `Negotiate truce` 停战结算与 2 回合停战冷却、冷却期第三方支持站队约束、objective-backed dynamic warGoal 胜利桥、`weakenPrestige` warSupport 阈值胜利桥、战争支持压力桥和 warSupport 影响 AI 风险阈值已开始落地 | 外交不直接占领 hex；多方谈判、完整条件交换、完整威望/恶名系统和完整动态战争目标仍未完成 |
+| v5.5 | 外交危机、战争目标、列强干预和舆论压力 | 最小 `DiplomaticPlay` 创建、支持/反对列表加入、AI 支持/反对/中立解释记录、整轮 escalation 推进、deadline 宣战尝试、`Offer concession` 让步结算、已升级战争的最小 `Negotiate truce` 停战结算与 2 回合停战冷却、冷却期第三方支持站队约束、最小 `imposeBlockade` / `.blockaded` 外交关系命令、objective-backed dynamic warGoal 胜利桥、`weakenPrestige` warSupport 阈值胜利桥、战争支持压力桥和 warSupport 影响 AI 风险阈值已开始落地 | 外交不直接占领 hex；多方谈判、完整条件交换、完整海权封锁效果、完整威望/恶名系统和完整动态战争目标仍未完成 |
 | v5.6 | 维多利亚 Agent 指挥链和结构化 JSON 合同 | HeadOfState / Cabinet / Foreign / War / Treasury / Admiralty / GeneralStaff / Theater Agent | 真实 LLM 单独版本，不硬编码密钥 |
 | v5.7 | 发布级 UI、地图视觉、报纸战报和可访问性 | 维多利亚视觉系统、地图优先布局、内阁/外交/经济/军队/报纸信息架构 | 视觉验证需人工或授权运行 |
 | v5.8 | 内容扩展、事件、历史人物和多剧本框架 | 事件系统、多剧本选择、历史人物与报纸事件 | 事件不得绕过规则 |
@@ -365,9 +365,9 @@ Bottom Strip:
 
 - `Faction.germany/allies`、`Faction.opponent`、`GamePhase.germanAI/alliedPlayer`、`CommandValidator.phaseAllowsCommands` 和 `CommandExecutor.executeEndTurn` 的主路径已在本地 v5.1 切片中开始迁移；后续仍要清理测试、UI 和 legacy 数据残留。
 - `DataLoader` 默认资源已开始切到黑海危机；`DiplomacyState` 对 `black_sea_crisis_1853` 有场景化初始关系，英法奥斯曼撒丁对俄开战，奥地利保持武装中立压力；Guderian 专项校验只限 legacy 阿登数据，旧 `playerFaction` / `aiFaction` 字段仍保留作 schema 兼容。
-- `HexTile.logisticsTags` 已开始承载铁路、港口、电报、远征 depot 和围城 depot；`SupplyRules` 可把本方或 allied / coBelligerent 控制的港口和远征 depot 作为补给与安全撤退锚点，单纯 `militaryAccess` 不算共同补给。
+- `HexTile.logisticsTags` 已开始承载铁路、港口、电报、远征 depot 和围城 depot；`SupplyRules` 可把本方或 allied / coBelligerent 控制的港口和远征 depot 作为补给与安全撤退锚点，单纯 `militaryAccess` 不算共同补给，`.blockaded` 关系会禁用目标方港口/远征 depot 对封锁方的锚点资格。
 - `ComponentType.tank/motorizedInfantry` 仍作为 legacy 兼容 case 保留；黑海默认 `victorian_unit_templates.json` 已使用维多利亚组件，规则和 AI 新增 `isShockFormation` / `isMobileFormation` 作为兼容判断。`ProductionKind` 默认生产项已切到 `lineInfantryCorps`、`guardBrigade`、`cavalryBrigade`、`siegeArtilleryBattery`、`supplyConvoy`，legacy `panzerDivision` 等 case 继续保留兼容；`EconomyCommand` 已有 `raiseWarLoan` / `buySupplies` 起步预算动作；建设命令已有 `railway`、`fieldWorks`、`portWorks`、`expeditionaryDepotWorks` 与 `siegeDepotWorks`；`EconomyResources.manpower/industry/supplies` 仍是源码兼容名，完整经济资源 schema 仍是后续必修点。
-- `DiplomacyState` 已有 `CountryProfile` 基础，并开始支持 Black Sea Crisis 多国家默认关系；最小 `DiplomaticPlay` 创建、第三方支持/反对列表加入、AI 支持/反对/中立解释记录、warSupport 影响 AI 姿态/外交风险阈值、整轮升级、deadline 宣战尝试、`offerConcession` 让步结算记录、已升级战争的 `negotiateTruce` 停战结算、2 回合停战冷却和冷却期支持站队约束已迁入规则状态，后续仍需把完整条件交换、赔款/割地和多方和平谈判补齐。
+- `DiplomacyState` 已有 `CountryProfile` 基础，并开始支持 Black Sea Crisis 多国家默认关系；最小 `DiplomaticPlay` 创建、第三方支持/反对列表加入、AI 支持/反对/中立解释记录、warSupport 影响 AI 姿态/外交风险阈值、整轮升级、deadline 宣战尝试、`offerConcession` 让步结算记录、已升级战争的 `negotiateTruce` 停战结算、2 回合停战冷却、冷却期支持站队约束和最小 `canImposeBlockade` / `imposeBlockade` 关系命令已迁入规则状态。当前封锁只写外交关系与日志，不实现补给惩罚、港口吞吐下降、舰队战术或完整 off-map sea lane，后续仍需把完整条件交换、赔款/割地和多方和平谈判补齐。
 - `VictoryRules` 对黑海危机已改为读取 scenario `victoryConditions`，并新增已升级为战争的 objective-backed diplomatic warGoal 最小胜利桥；`weakenPrestige` 可在目标方主国家 warSupport 跌到 35 或以下时触发最小外交战争目标胜利。谈判结果和完整威望/恶名系统仍未接入完整战争目标系统，当前 warSupport 仍主要对 AI 姿态、外交回应和该最小威望压力目标形成反馈。
 
 ## 7. 多 Agent 分工大纲
@@ -469,13 +469,13 @@ Bottom Strip:
 2. 先拆二战硬编码，再做维多利亚内容。
 3. 先做多国家、外交关系和敌我判断，再做复杂 AI。
 4. 先做一个精制可玩的黑海危机剧本，不做全球无限沙盒。
-5. 先做工业/财政/铁路/港口/外交危机/围城的最小闭环，不做完整全球市场。
+5. 先做工业/财政/铁路/港口/外交危机/围城的最小闭环，不做完整全球市场；后续经济工业和科技变迁要优先形成可玩规则，而不是只堆叙事字段。
 6. 每轮只改当前版本范围，不顺手重构无关文件。
 7. 多 Agent 并发时，先约定接口，再分文件实现，最后必须做冲突审查。
 8. 轻量检查必须写具体命令和结果；重测试未授权必须明确说明未跑。
 
 下一轮推荐入口：
 
-- 先完成本地 v5.1 切片的 commit / push / GitHub Actions / Agent C artifact 验收。
-- 验收通过后进入 v5.2 黑海危机地图默认化；验收前不要把 `black_sea_crisis_1853` 切为默认剧本。
-- v5.2 若要新增 Swift 文件或资源，必须由唯一 Project / Integration Agent 处理 `project.pbxproj`。
+- 经济工业优先：把当前 faction 级 `EconomyResources` 继续向国库、工业产能、铁路运输力、船运量和建设能力拆分，形成受 region / logisticsTags / warDebt 影响的可玩预算取舍。
+- 科技变迁优先：先做 1850s 可控科技/改革状态，例如铁路扩张、膛线步枪、蒸汽运输、电报指挥和工业动员效率，全部通过规则修正或命令 gate 接入，不直接绕过 `RuleEngine`。
+- 外交与海权继续小步：封锁目前只是 `.blockaded` 关系和补给锚点门控，后续若扩展港口吞吐、船运量、战争支持或市场压力，必须仍以 hex/region/经济账本为证据来源。

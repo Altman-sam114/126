@@ -798,6 +798,44 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertFalse(SupplyRules().hasSupplyLine(for: austrian, in: accessDepotState))
     }
 
+    func testBlockadedPortsAndExpeditionaryDepotsCannotAnchorSupply() {
+        var blockadeMap = Self.basicMap(width: 3, height: 1, supplySources: [])
+        blockadeMap.setTile(
+            HexTile(
+                coord: HexCoord(q: 0, r: 0),
+                controller: .france,
+                logisticsTags: [.port, .expeditionaryDepot]
+            )
+        )
+        let british = Self.division(id: "british", faction: .britain, coord: HexCoord(q: 2, r: 0))
+        var diplomacyState = DiplomacyState.initial(
+            for: [.britain, .france, .russia, .ottoman, .austria, .sardinia],
+            scenarioId: "black_sea_crisis_1853",
+            turn: 1
+        )
+        diplomacyState.relations.append(
+            DiplomaticRelation(
+                firstCountryId: "britain",
+                secondCountryId: "france",
+                status: .blockaded,
+                tension: 85,
+                sinceTurn: 2
+            )
+        )
+        let blockadeState = Self.testState(
+            activeFaction: .britain,
+            map: blockadeMap,
+            diplomacyState: diplomacyState,
+            divisions: [british]
+        )
+
+        XCTAssertEqual(
+            blockadeState.diplomacyState.relationStatus(between: .britain, and: .france),
+            .blockaded
+        )
+        XCTAssertFalse(SupplyRules().hasSupplyLine(for: british, in: blockadeState))
+    }
+
     func testExpeditionaryDepotCanAnchorSafeRetreatTile() {
         var depotMap = Self.basicMap(width: 4, height: 1, supplySources: [])
         depotMap.setTile(
@@ -875,6 +913,7 @@ final class RuleEngineCoreTests: XCTestCase {
         )
         let concessionCommand = Command.diplomacy(command: .offerConcession(playId: "play_1"))
         let truceCommand = Command.diplomacy(command: .negotiateTruce(playId: "play_1"))
+        let blockadeCommand = Command.diplomacy(command: .imposeBlockade(targetFaction: .austria))
 
         let data = try JSONEncoder().encode(command)
         let decoded = try JSONDecoder().decode(Command.self, from: data)
@@ -888,6 +927,8 @@ final class RuleEngineCoreTests: XCTestCase {
         let decodedConcession = try JSONDecoder().decode(Command.self, from: concessionData)
         let truceData = try JSONEncoder().encode(truceCommand)
         let decodedTruce = try JSONDecoder().decode(Command.self, from: truceData)
+        let blockadeData = try JSONEncoder().encode(blockadeCommand)
+        let decodedBlockade = try JSONDecoder().decode(Command.self, from: blockadeData)
 
         XCTAssertEqual(decoded, command)
         XCTAssertEqual(decodedPlay, playCommand)
@@ -895,18 +936,21 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertEqual(decodedResponse, responseCommand)
         XCTAssertEqual(decodedConcession, concessionCommand)
         XCTAssertEqual(decodedTruce, truceCommand)
+        XCTAssertEqual(decodedBlockade, blockadeCommand)
         XCTAssertNil(command.actingDivisionId)
         XCTAssertNil(playCommand.actingDivisionId)
         XCTAssertNil(supportCommand.actingDivisionId)
         XCTAssertNil(responseCommand.actingDivisionId)
         XCTAssertNil(concessionCommand.actingDivisionId)
         XCTAssertNil(truceCommand.actingDivisionId)
+        XCTAssertNil(blockadeCommand.actingDivisionId)
         XCTAssertFalse(command.isRecoveryCommand)
         XCTAssertFalse(playCommand.isRecoveryCommand)
         XCTAssertFalse(supportCommand.isRecoveryCommand)
         XCTAssertFalse(responseCommand.isRecoveryCommand)
         XCTAssertFalse(concessionCommand.isRecoveryCommand)
         XCTAssertFalse(truceCommand.isRecoveryCommand)
+        XCTAssertFalse(blockadeCommand.isRecoveryCommand)
     }
 
     func testCreateDiplomaticPlayRecordsCrisisWithoutOpeningWar() {
@@ -2430,6 +2474,38 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertFalse(result.state.warDeploymentState.frontZones.isEmpty)
     }
 
+    func testImposeBlockadeCommandUpdatesDiplomacyWithoutOpeningWar() {
+        var state = DataLoader().loadInitialGameState()
+        state.activeFaction = .britain
+        state.phase = .humanAction
+        let originalMap = state.map
+        let originalDivisions = state.divisions
+        let originalEconomyState = state.economyState
+
+        XCTAssertEqual(state.diplomacyState.relationStatus(between: .britain, and: .austria), .neutral)
+
+        let result = RuleEngine().execute(
+            .diplomacy(command: .imposeBlockade(targetFaction: .austria)),
+            in: state
+        )
+
+        XCTAssertTrue(result.succeeded)
+        XCTAssertEqual(result.state.map, originalMap)
+        XCTAssertEqual(result.state.divisions, originalDivisions)
+        XCTAssertEqual(result.state.economyState, originalEconomyState)
+        XCTAssertEqual(result.state.diplomacyState.relationStatus(between: .britain, and: .austria), .blockaded)
+        XCTAssertEqual(result.state.diplomacyState.relation(between: "britain", and: "austria")?.tension, 75)
+        XCTAssertEqual(result.state.diplomacyState.relation(between: "britain", and: "austria")?.sinceTurn, state.turn)
+        XCTAssertFalse(result.state.diplomacyState.canAttack(attacker: .britain, target: .austria))
+        XCTAssertFalse(result.state.diplomacyState.canEnterTerritory(faction: .britain, controller: .austria))
+        XCTAssertEqual(result.state.diplomacyState.lastUpdatedTurn, state.turn)
+        XCTAssertTrue(
+            result.state.eventLog.contains {
+                $0.category == .diplomacy && $0.message == "Britain imposed a blockade on Austria."
+            }
+        )
+    }
+
     func testDeclareWarEnablesAttackWithoutDirectlyMovingUnits() {
         let british = Self.division(id: "british", faction: .britain, coord: HexCoord(q: 1, r: 1))
         let austrian = Self.division(id: "austrian", faction: .austria, coord: HexCoord(q: 2, r: 1))
@@ -2481,6 +2557,66 @@ final class RuleEngineCoreTests: XCTestCase {
         )
         XCTAssertFalse(neutralTarget.succeeded)
         XCTAssertEqual(neutralTarget.validation.errors, [.invalidTargetFaction])
+    }
+
+    func testImposeBlockadeRejectsInvalidRelationsAndActiveTruce() {
+        var state = DataLoader().loadInitialGameState()
+        state.activeFaction = .britain
+        state.phase = .humanAction
+
+        let atWar = RuleEngine().execute(
+            .diplomacy(command: .imposeBlockade(targetFaction: .russia)),
+            in: state
+        )
+        XCTAssertFalse(atWar.succeeded)
+        XCTAssertEqual(atWar.validation.errors, [.invalidTargetFaction])
+
+        let allied = RuleEngine().execute(
+            .diplomacy(command: .imposeBlockade(targetFaction: .france)),
+            in: state
+        )
+        XCTAssertFalse(allied.succeeded)
+        XCTAssertEqual(allied.validation.errors, [.invalidTargetFaction])
+
+        let firstBlockade = RuleEngine().execute(
+            .diplomacy(command: .imposeBlockade(targetFaction: .austria)),
+            in: state
+        )
+        XCTAssertTrue(firstBlockade.succeeded)
+        let duplicate = RuleEngine().execute(
+            .diplomacy(command: .imposeBlockade(targetFaction: .austria)),
+            in: firstBlockade.state
+        )
+        XCTAssertFalse(duplicate.succeeded)
+        XCTAssertEqual(duplicate.validation.errors, [.invalidTargetFaction])
+
+        var truceState = state
+        truceState.diplomacyState.relations.append(
+            DiplomaticRelation(
+                firstCountryId: "britain",
+                secondCountryId: "austria",
+                status: .truce,
+                tension: 20,
+                sinceTurn: state.turn
+            )
+        )
+        let activeTruce = RuleEngine().execute(
+            .diplomacy(command: .imposeBlockade(targetFaction: .austria)),
+            in: truceState
+        )
+        XCTAssertFalse(activeTruce.succeeded)
+        XCTAssertEqual(activeTruce.validation.errors, [.invalidTargetFaction])
+
+        truceState.turn += DiplomacyState.defaultTruceDuration + 1
+        let expiredTruce = RuleEngine().execute(
+            .diplomacy(command: .imposeBlockade(targetFaction: .austria)),
+            in: truceState
+        )
+        XCTAssertTrue(expiredTruce.succeeded)
+        XCTAssertEqual(
+            expiredTruce.state.diplomacyState.relationStatus(between: .britain, and: .austria),
+            .blockaded
+        )
     }
 
     func testDeclareWarRejectedOutsideActionPhaseDoesNotModifyDiplomacy() {

@@ -186,6 +186,22 @@ struct CommandValidator {
             ) else {
                 return .invalid(.invalidTargetFaction)
             }
+        case .imposeBlockade(let targetFaction):
+            guard targetFaction != state.activeFaction,
+                  targetFaction.participatesInTurnOrder,
+                  !targetFaction.isNeutral,
+                  !state.diplomacyState.countries(for: state.activeFaction).isEmpty,
+                  !state.diplomacyState.countries(for: targetFaction).isEmpty else {
+                return .invalid(.invalidTargetFaction)
+            }
+
+            guard state.diplomacyState.canImposeBlockade(
+                actingFaction: state.activeFaction,
+                targetFaction: targetFaction,
+                turn: state.turn
+            ) else {
+                return .invalid(.invalidTargetFaction)
+            }
         case .createDiplomaticPlay(let targetFaction, let regionId, _):
             guard targetFaction != state.activeFaction,
                   targetFaction.participatesInTurnOrder,

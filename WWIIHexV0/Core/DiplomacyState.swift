@@ -1106,6 +1106,48 @@ struct DiplomacyState: Codable, Equatable {
         return true
     }
 
+    func canImposeBlockade(actingFaction: Faction, targetFaction: Faction, turn: Int) -> Bool {
+        guard actingFaction != targetFaction,
+              actingFaction.participatesInTurnOrder,
+              targetFaction.participatesInTurnOrder,
+              !targetFaction.isNeutral else {
+            return false
+        }
+
+        guard !countries(for: actingFaction).isEmpty,
+              !countries(for: targetFaction).isEmpty else {
+            return false
+        }
+
+        let relation = relationStatus(between: actingFaction, and: targetFaction)
+        switch relation {
+        case .hostile, .neutral:
+            return true
+        case .truce:
+            return !truceIsActive(between: actingFaction, and: targetFaction, turn: turn)
+        case .allied, .coBelligerent, .militaryAccess, .atWar, .blockaded:
+            return false
+        }
+    }
+
+    @discardableResult
+    mutating func imposeBlockade(actingFaction: Faction, targetFaction: Faction, turn: Int) -> Bool {
+        guard canImposeBlockade(actingFaction: actingFaction, targetFaction: targetFaction, turn: turn) else {
+            return false
+        }
+
+        setRelationStatus(
+            between: actingFaction,
+            and: targetFaction,
+            status: .blockaded,
+            tension: Self.tension(for: .blockaded),
+            turn: turn
+        )
+        relations.sort { $0.id < $1.id }
+        lastUpdatedTurn = turn
+        return true
+    }
+
     func canNegotiateTruce(actingFaction: Faction, playId: String) -> Bool {
         guard actingFaction.participatesInTurnOrder,
               let play = diplomaticPlay(id: playId),

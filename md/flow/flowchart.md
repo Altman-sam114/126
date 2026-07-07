@@ -202,7 +202,7 @@ flowchart TD
 
 ## 3. v5.5 经济、生产、预算、建设与战争支持链路
 
-这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)`、`.supportDiplomaticPlay`、`.offerConcession`、`.negotiateTruce` 或 `.declareWar`，AI 可通过 `Command.diplomacy(.respondToDiplomaticPlay)` 留下支持、反对或中立解释：创建命令记录 active diplomatic play，支持命令只更新 backers / opposingBackers 且不立刻参战，AI 中立只写 stance record，让步命令关闭为 negotiated settlement，整轮完成后推进 escalation，deadline 到期时按 backers / opposingBackers 成组宣战，宣战成功后升级为战争；已升级战争的 play 可用最小停战命令把 cross-side `atWar` 关系写为 `truce` 并刷新前线/部署，默认 2 回合内阻断直接宣战、重开危机和第三方支持站队；objective-backed warGoal 和 `weakenPrestige` warSupport 阈值可进入 `VictoryRules`，但宣战、停战和战争目标都不直接改 hex controller；宣战命令直接把 active faction 与目标 faction 的关系写为 `atWar`、关闭相关 active play、刷新前线/部署派生层并补跑动态战争目标判定。这不是完整谈判状态机、和平会议或完整围城状态机。
+这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)`、`.supportDiplomaticPlay`、`.offerConcession`、`.negotiateTruce`、`.imposeBlockade` 或 `.declareWar`，AI 可通过 `Command.diplomacy(.respondToDiplomaticPlay)` 留下支持、反对或中立解释：创建命令记录 active diplomatic play，支持命令只更新 backers / opposingBackers 且不立刻参战，AI 中立只写 stance record，让步命令关闭为 negotiated settlement，整轮完成后推进 escalation，deadline 到期时按 backers / opposingBackers 成组宣战，宣战成功后升级为战争；已升级战争的 play 可用最小停战命令把 cross-side `atWar` 关系写为 `truce` 并刷新前线/部署，默认 2 回合内阻断直接宣战、重开危机和第三方支持站队；封锁命令当前只把合法目标关系写为 `.blockaded`、写日志并刷新派生层，不是完整海军战术或 off-map sea lane；objective-backed warGoal 和 `weakenPrestige` warSupport 阈值可进入 `VictoryRules`，但宣战、停战、封锁和战争目标都不直接改 hex controller；宣战命令直接把 active faction 与目标 faction 的关系写为 `atWar`、关闭相关 active play、刷新前线/部署派生层并补跑动态战争目标判定。这不是完整谈判状态机、和平会议、完整海军封锁或完整围城状态机。
 
 ```mermaid
 flowchart TD
@@ -223,12 +223,13 @@ flowchart TD
     BLDVALID["建设校验<br/>CommandValidator.validateConstruction<br/>己控 hex / 港口需 coast / 围城需邻接敌方城市要塞 / 未有目标标签 / 资源足够"]:::rules
     BLDQUEUE["预付成本并入建设队列<br/>EconomyRules.queueConstruction<br/>constructionQueue"]:::economy
     DIP["外交状态<br/>DiplomacyState<br/>国家 warSupport / active plays<br/>escalation / deadline / outcome"]:::diplomacy
-    DIPCMD["外交命令<br/>Command.diplomacy<br/>createDiplomaticPlay / supportDiplomaticPlay / respondToDiplomaticPlay / offerConcession / declareWar"]:::command
-    DIPVALID["外交校验<br/>CommandValidator.validateDiplomacyCommand<br/>action phase / active play / 有国家档案 / 未加入支持侧 / 非自身 neutral / 尚未 atWar"]:::rules
+    DIPCMD["外交命令<br/>Command.diplomacy<br/>createDiplomaticPlay / supportDiplomaticPlay / respondToDiplomaticPlay / offerConcession / negotiateTruce / imposeBlockade / declareWar"]:::command
+    DIPVALID["外交校验<br/>CommandValidator.validateDiplomacyCommand<br/>action phase / active play / 有国家档案 / 未加入支持侧 / 非自身 neutral / 非盟友或 active truce / 尚未 atWar"]:::rules
     DIPPLAY["创建外交危机<br/>DiplomacyState.createDiplomaticPlay<br/>issuer / target / warGoal / backers / deadline"]:::diplomacy
     DIPSUPPORT["加入支持/反对列表<br/>DiplomacyState.supportDiplomaticPlay<br/>只改 backers / opposingBackers"]:::diplomacy
     DIPRESP["AI 危机回应<br/>DiplomacyState.recordDiplomaticPlayStance<br/>低 warSupport 可使 AI 中立；支持/反对复用支持列表"]:::diplomacy
     DIPSETTLE["让步收束危机<br/>DiplomacyState.offerConcession<br/>settlementRecord + warSupport delta"]:::diplomacy
+    DIPBLOCK["执行封锁<br/>DiplomacyState.imposeBlockade<br/>合法目标关系 -> blockaded"]:::diplomacy
     DIPADV["整轮完成后推进外交危机<br/>DiplomacyState.advanceDiplomaticPlays<br/>escalation +25 / deadline -> backers x opposingBackers 宣战尝试"]:::diplomacy
     DIPAPPLY["执行宣战<br/>DiplomacyState.declareWar<br/>全部 country pair -> atWar<br/>关闭跨侧 active play"]:::diplomacy
     DIPVICTORY["动态战争目标判定<br/>VictoryRules<br/>objectives 或目标方 warSupport 阈值"]:::rules
@@ -262,6 +263,8 @@ flowchart TD
     DIPVALID --> DIPSUPPORT --> DIP
     DIPVALID --> DIPRESP --> DIP
     DIPVALID --> DIPSETTLE --> DIP
+    DIPVALID --> DIPBLOCK --> DIP
+    DIPBLOCK --> NEXT
     DIPVALID --> DIPAPPLY --> DIP
     DIPAPPLY --> NEXT
     DIPAPPLY --> DIPVICTORY

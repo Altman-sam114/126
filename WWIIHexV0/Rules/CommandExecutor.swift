@@ -187,6 +187,21 @@ struct CommandExecutor {
             )
             state = StrategicStateBootstrapper().refreshRuntimeState(state)
             VictoryRules().updateVictoryState(in: &state)
+        case .imposeBlockade(let targetFaction):
+            let actingFaction = state.activeFaction
+            guard state.diplomacyState.imposeBlockade(
+                actingFaction: actingFaction,
+                targetFaction: targetFaction,
+                turn: state.turn
+            ) else {
+                return
+            }
+
+            state.appendEvent(
+                "\(actingFaction.displayName) imposed a blockade on \(targetFaction.displayName).",
+                category: .diplomacy
+            )
+            state = StrategicStateBootstrapper().refreshRuntimeState(state)
         case .createDiplomaticPlay(let targetFaction, let regionId, let warGoal):
             let actingFaction = state.activeFaction
             guard let play = state.diplomacyState.createDiplomaticPlay(
