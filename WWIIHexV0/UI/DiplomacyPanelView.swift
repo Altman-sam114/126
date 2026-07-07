@@ -51,7 +51,7 @@ struct DiplomacyPanelView: View {
         let unresolvedEscalatedPlays = diplomacyState.diplomaticPlays
             .filter { play in
                 play.outcome == .escalatedToWar &&
-                    !play.warGoal.dynamicVictoryObjectiveGroups.isEmpty &&
+                    diplomaticPlayHasVisibleStake(play) &&
                     gameState.victoryState.resolvedConditionId != "diplomatic_\(play.id)" &&
                     dynamicWarGoalStakeDescription(for: play) != nil
             }
@@ -482,6 +482,11 @@ struct DiplomacyPanelView: View {
     }
 
     private func dynamicWarGoalStakeDescription(for play: DiplomaticPlay) -> String? {
+        if let threshold = play.warGoal.warSupportVictoryThreshold,
+           let country = diplomacyState.primaryCountry(for: play.targetFaction) {
+            return "\(country.name) war support <= \(threshold) (current \(country.warSupport))"
+        }
+
         let groupDescriptions = play.warGoal.dynamicVictoryObjectiveGroups.compactMap { objectiveIds -> String? in
             let objectiveNames = objectiveIds.compactMap {
                 gameState.map.objective(id: $0)?.name
@@ -495,6 +500,11 @@ struct DiplomacyPanelView: View {
             return nil
         }
         return groupDescriptions.joined(separator: " or ")
+    }
+
+    private func diplomaticPlayHasVisibleStake(_ play: DiplomaticPlay) -> Bool {
+        play.warGoal.warSupportVictoryThreshold != nil ||
+            !play.warGoal.dynamicVictoryObjectiveGroups.isEmpty
     }
 
     private func diplomaticPlayStatusText(for play: DiplomaticPlay) -> String {

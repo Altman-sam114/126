@@ -202,7 +202,7 @@ flowchart TD
 
 ## 3. v5.5 经济、生产、预算、建设与战争支持链路
 
-这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)`、`.supportDiplomaticPlay`、`.offerConcession` 或 `.declareWar`，AI 可通过 `Command.diplomacy(.respondToDiplomaticPlay)` 留下支持、反对或中立解释：创建命令记录 active diplomatic play，支持命令只更新 backers / opposingBackers 且不立刻参战，AI 中立只写 stance record，让步命令关闭为 negotiated settlement，整轮完成后推进 escalation，deadline 到期时按 backers / opposingBackers 成组宣战，宣战成功后升级为战争；objective-backed warGoal 可进入 `VictoryRules`，但宣战和战争目标都不直接改 hex controller；宣战命令直接把 active faction 与目标 faction 的关系写为 `atWar`、关闭相关 active play、刷新前线/部署派生层并补跑动态战争目标判定。这不是完整谈判状态机或完整围城状态机。
+这张图看当前初级经济与外交规则入口。经济总账是 faction 级资源池，但收入和部署资格仍回到真实 hex 控制和 region 聚合；生产、预算、建设和最小外交命令都走 `RuleEngine`，UI 不直接改 `GameState`。v5.5 起，债务服务和战略补给短缺会通过 `DiplomacyState.adjustWarSupport` 下调同 faction 国家战争支持；v5.6 起，外交面板可通过受限按钮提交 `Command.diplomacy(.createDiplomaticPlay)`、`.supportDiplomaticPlay`、`.offerConcession` 或 `.declareWar`，AI 可通过 `Command.diplomacy(.respondToDiplomaticPlay)` 留下支持、反对或中立解释：创建命令记录 active diplomatic play，支持命令只更新 backers / opposingBackers 且不立刻参战，AI 中立只写 stance record，让步命令关闭为 negotiated settlement，整轮完成后推进 escalation，deadline 到期时按 backers / opposingBackers 成组宣战，宣战成功后升级为战争；objective-backed warGoal 和 `weakenPrestige` warSupport 阈值可进入 `VictoryRules`，但宣战和战争目标都不直接改 hex controller；宣战命令直接把 active faction 与目标 faction 的关系写为 `atWar`、关闭相关 active play、刷新前线/部署派生层并补跑动态战争目标判定。这不是完整谈判状态机或完整围城状态机。
 
 ```mermaid
 flowchart TD
@@ -231,7 +231,7 @@ flowchart TD
     DIPSETTLE["让步收束危机<br/>DiplomacyState.offerConcession<br/>settlementRecord + warSupport delta"]:::diplomacy
     DIPADV["整轮完成后推进外交危机<br/>DiplomacyState.advanceDiplomaticPlays<br/>escalation +25 / deadline -> backers x opposingBackers 宣战尝试"]:::diplomacy
     DIPAPPLY["执行宣战<br/>DiplomacyState.declareWar<br/>全部 country pair -> atWar<br/>关闭跨侧 active play"]:::diplomacy
-    DIPVICTORY["动态战争目标判定<br/>VictoryRules<br/>escalated play warGoal -> objective controller"]:::rules
+    DIPVICTORY["动态战争目标判定<br/>VictoryRules<br/>objectives 或目标方 warSupport 阈值"]:::rules
 
     END["结束当前阵营回合<br/>Command.endTurn<br/>CommandExecutor.executeEndTurn"]:::command
     SUPPLY["补给状态刷新<br/>SupplyRules.updateSupplyStates"]:::rules

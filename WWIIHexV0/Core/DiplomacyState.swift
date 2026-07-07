@@ -336,6 +336,15 @@ enum DiplomaticPlayWarGoal: String, Codable, Equatable, CaseIterable {
         Array(Set(dynamicVictoryObjectiveGroups.flatMap { $0 })).sorted()
     }
 
+    var warSupportVictoryThreshold: Int? {
+        switch self {
+        case .weakenPrestige:
+            return 35
+        case .protectOttomanTerritory, .demandDanubianWithdrawal, .controlBlackSeaPort, .keepStraitsOpen:
+            return nil
+        }
+    }
+
     var dynamicVictoryObjectiveGroups: [[String]] {
         switch self {
         case .protectOttomanTerritory:

@@ -102,8 +102,16 @@ struct VictoryRules {
 
     @discardableResult
     private func updateDiplomaticWarGoalVictoryState(in state: inout GameState) -> Bool {
-        for play in state.diplomacyState.diplomaticPlays
-            where play.outcome == .escalatedToWar && !play.warGoal.dynamicVictoryObjectiveGroups.isEmpty {
+        for play in state.diplomacyState.diplomaticPlays where play.outcome == .escalatedToWar {
+            if prestigeWarGoalIsSatisfied(play, in: state) {
+                resolve(play, in: &state)
+                return true
+            }
+
+            guard !play.warGoal.dynamicVictoryObjectiveGroups.isEmpty else {
+                continue
+            }
+
             let issuerSideFactions = issuerSideFactions(for: play)
             guard play.warGoal.dynamicVictoryObjectiveGroups.contains(where: { objectiveIds in
                 objectiveIdsExist(objectiveIds, in: state) &&
@@ -117,12 +125,18 @@ struct VictoryRules {
                 continue
             }
 
-            state.victoryState.winner = play.issuerFaction
-            state.victoryState.reason = .diplomaticWarGoalAchieved
-            state.victoryState.resolvedConditionId = "diplomatic_\(play.id)"
+            resolve(play, in: &state)
             return true
         }
         return false
+    }
+
+    private func prestigeWarGoalIsSatisfied(_ play: DiplomaticPlay, in state: GameState) -> Bool {
+        guard let threshold = play.warGoal.warSupportVictoryThreshold,
+              let targetCountry = state.diplomacyState.primaryCountry(for: play.targetFaction) else {
+            return false
+        }
+        return targetCountry.warSupport <= threshold
     }
 
     private func isScenarioConditionSatisfied(_ condition: VictoryCondition, in state: GameState) -> Bool {
@@ -221,5 +235,11 @@ struct VictoryRules {
         state.victoryState.winner = condition.faction
         state.victoryState.reason = reason
         state.victoryState.resolvedConditionId = condition.id
+    }
+
+    private func resolve(_ play: DiplomaticPlay, in state: inout GameState) {
+        state.victoryState.winner = play.issuerFaction
+        state.victoryState.reason = .diplomaticWarGoalAchieved
+        state.victoryState.resolvedConditionId = "diplomatic_\(play.id)"
     }
 }

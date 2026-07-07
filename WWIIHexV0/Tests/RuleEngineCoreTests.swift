@@ -1580,6 +1580,70 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertEqual(advancedState.victoryState.resolvedConditionId, "diplomatic_\(playId)")
     }
 
+    func testEscalatedPrestigeWarGoalDoesNotResolveWhileWarSupportHolds() {
+        var state = Self.diplomaticPlayTestState()
+        for index in state.diplomacyState.countries.indices where state.diplomacyState.countries[index].faction == .austria {
+            state.diplomacyState.countries[index].warSupport = 36
+        }
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: state
+        )
+        XCTAssertTrue(created.succeeded)
+        let playId = created.state.diplomacyState.activeDiplomaticPlays[0].id
+
+        var advancedState = created.state
+        while advancedState.turn < 4 {
+            let result = RuleEngine().execute(.endTurn, in: advancedState)
+            XCTAssertTrue(result.succeeded)
+            advancedState = result.state
+        }
+
+        XCTAssertEqual(advancedState.diplomacyState.diplomaticPlay(id: playId)?.outcome, .escalatedToWar)
+        XCTAssertEqual(advancedState.diplomacyState.primaryCountry(for: .austria)?.warSupport, 36)
+        XCTAssertNil(advancedState.victoryState.winner)
+        XCTAssertNil(advancedState.victoryState.reason)
+        XCTAssertNil(advancedState.victoryState.resolvedConditionId)
+    }
+
+    func testEscalatedPrestigeWarGoalCanResolveWarSupportVictory() {
+        var state = Self.diplomaticPlayTestState()
+        for index in state.diplomacyState.countries.indices where state.diplomacyState.countries[index].faction == .austria {
+            state.diplomacyState.countries[index].warSupport = 35
+        }
+        let created = RuleEngine().execute(
+            .diplomacy(
+                command: .createDiplomaticPlay(
+                    targetFaction: .austria,
+                    regionId: nil,
+                    warGoal: .weakenPrestige
+                )
+            ),
+            in: state
+        )
+        XCTAssertTrue(created.succeeded)
+        let playId = created.state.diplomacyState.activeDiplomaticPlays[0].id
+
+        var advancedState = created.state
+        while advancedState.turn < 4 {
+            let result = RuleEngine().execute(.endTurn, in: advancedState)
+            XCTAssertTrue(result.succeeded)
+            advancedState = result.state
+        }
+
+        XCTAssertEqual(advancedState.diplomacyState.diplomaticPlay(id: playId)?.outcome, .escalatedToWar)
+        XCTAssertEqual(advancedState.diplomacyState.primaryCountry(for: .austria)?.warSupport, 35)
+        XCTAssertEqual(advancedState.victoryState.winner, .britain)
+        XCTAssertEqual(advancedState.victoryState.reason, .diplomaticWarGoalAchieved)
+        XCTAssertEqual(advancedState.victoryState.resolvedConditionId, "diplomatic_\(playId)")
+    }
+
     func testDeclareWarResolvesSatisfiedDynamicWarGoalImmediately() {
         let state = Self.diplomaticObjectiveTestState(
             map: Self.objectiveMap(
