@@ -298,6 +298,7 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
     case railway
     case fieldWorks
     case portWorks
+    case expeditionaryDepotWorks
     case siegeDepotWorks
 
     var id: String {
@@ -312,6 +313,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
             return "Field Works"
         case .portWorks:
             return "Port Works"
+        case .expeditionaryDepotWorks:
+            return "Expeditionary Depot Works"
         case .siegeDepotWorks:
             return "Siege Depot Works"
         }
@@ -325,6 +328,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
             return "shield.lefthalf.filled"
         case .portWorks:
             return "ferry.fill"
+        case .expeditionaryDepotWorks:
+            return "shippingbox.fill"
         case .siegeDepotWorks:
             return "scope"
         }
@@ -338,6 +343,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
             return EconomyResources(manpower: 14, industry: 35, supplies: 18)
         case .portWorks:
             return EconomyResources(manpower: 18, industry: 70, supplies: 26)
+        case .expeditionaryDepotWorks:
+            return EconomyResources(manpower: 16, industry: 55, supplies: 34)
         case .siegeDepotWorks:
             return EconomyResources(manpower: 16, industry: 45, supplies: 30)
         }
@@ -351,6 +358,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
             return 1
         case .portWorks:
             return 2
+        case .expeditionaryDepotWorks:
+            return 1
         case .siegeDepotWorks:
             return 1
         }
@@ -364,6 +373,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
             return .fieldWorks
         case .portWorks:
             return .port
+        case .expeditionaryDepotWorks:
+            return .expeditionaryDepot
         case .siegeDepotWorks:
             return .siegeDepot
         }
@@ -373,6 +384,8 @@ enum ConstructionKind: String, Codable, Equatable, CaseIterable, Identifiable {
         switch self {
         case .portWorks:
             return "Requires coastal hex"
+        case .expeditionaryDepotWorks:
+            return "Requires coastal or port hex"
         case .siegeDepotWorks:
             return "Requires adjacent enemy city or fortress"
         case .railway,

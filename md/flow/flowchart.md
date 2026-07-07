@@ -219,7 +219,7 @@ flowchart TD
     BUDGET["预算命令<br/>Command.economy<br/>Mobilize Reserves / Raise War Loan / Buy Stores"]:::command
     BVALID["预算校验<br/>CommandValidator.validateEconomyCommand<br/>检查 phase、资源和债务上限"]:::rules
     APPLYB["执行预算<br/>EconomyRules.applyEconomyCommand<br/>改 treasury / stores / warDebt"]:::economy
-    BUILD["建设命令<br/>Command.queueConstruction<br/>Railway / Field / Port / Siege Depot Works @ selected hex"]:::command
+    BUILD["建设命令<br/>Command.queueConstruction<br/>Railway / Field / Port / Expeditionary / Siege Depot Works @ selected hex"]:::command
     BLDVALID["建设校验<br/>CommandValidator.validateConstruction<br/>己控 hex / 港口需 coast / 围城需邻接敌方城市要塞 / 未有目标标签 / 资源足够"]:::rules
     BLDQUEUE["预付成本并入建设队列<br/>EconomyRules.queueConstruction<br/>constructionQueue"]:::economy
     DIP["外交状态<br/>DiplomacyState<br/>国家 warSupport / active plays<br/>escalation / deadline / outcome"]:::diplomacy
@@ -245,7 +245,7 @@ flowchart TD
     DEPLOY{"有合格后方部署点吗?"}:::decision
     SPAWN["部署新单位<br/>首都/城镇/工厂/高基建/高补给或 supply source<br/>必须己控、空置、非敌邻"]:::rules
     WAIT["保留订单<br/>本回合无安全 hex，等待后续回合"]:::economy
-    RAIL["完成工程<br/>MapState.setTile<br/>target.logisticsTags.insert(.rail / .fieldWorks / .port / .siegeDepot)"]:::authority
+    RAIL["完成工程<br/>MapState.setTile<br/>target.logisticsTags.insert(.rail / .fieldWorks / .port / .expeditionaryDepot / .siegeDepot)"]:::authority
     SIEGE["攻城准备修正<br/>CombatRules.effectiveAttack<br/>炮兵从 siegeDepot 攻击城市/要塞 + 轻量加成"]:::rules
     NEXT["切换阵营或外交变化后刷新运行时层<br/>StrategicStateBootstrapper.refreshRuntimeState"]:::rules
     DIPUI["外交面板<br/>DiplomacyPanelView<br/>war goals / active plays / support + 受限外交动作"]:::ui

@@ -144,8 +144,8 @@ struct SupplyRules {
             return false
         }
 
-        return state.map.supplySources(for: faction).contains { source in
-            supplyPathCost(from: coord, to: source.coord, for: faction, in: state) <= maxSupplyPathCost
+        return supplyAnchorCoords(for: faction, in: state).contains { anchor in
+            supplyPathCost(from: coord, to: anchor, for: faction, in: state) <= maxSupplyPathCost
         }
     }
 
@@ -260,7 +260,12 @@ struct SupplyRules {
     private func supplyAnchorCoords(for faction: Faction, in state: GameState) -> [HexCoord] {
         stableUniqueCoords(
             state.map.supplySources(for: faction).map(\.coord) +
-                state.map.logisticsAnchorCoords(with: .port, for: faction, diplomacyState: state.diplomacyState)
+                state.map.logisticsAnchorCoords(with: .port, for: faction, diplomacyState: state.diplomacyState) +
+                state.map.logisticsAnchorCoords(
+                    with: .expeditionaryDepot,
+                    for: faction,
+                    diplomacyState: state.diplomacyState
+                )
         )
     }
 

@@ -665,6 +665,39 @@ final class RuleEngineCoreTests: XCTestCase {
         XCTAssertTrue(state.map.hasLogisticsTag(.siegeDepot, at: HexCoord(q: 7, r: 3)))
     }
 
+    func testExpeditionaryDepotWorksCompleteOnCoastalHex() {
+        let depotCoord = HexCoord(q: 1, r: 0)
+        var map = Self.basicMap(width: 3, height: 1, supplySources: [])
+        map.setTile(
+            HexTile(
+                coord: depotCoord,
+                controller: .britain,
+                logisticsTags: [.coast]
+            )
+        )
+        var state = Self.testState(activeFaction: .britain, map: map, divisions: [])
+        state.phase = .humanAction
+        state.economyState.updateLedger(
+            FactionEconomyLedger(
+                faction: .britain,
+                stockpile: EconomyResources(manpower: 100, industry: 100, supplies: 100)
+            )
+        )
+
+        XCTAssertTrue(
+            EconomyRules().queueConstruction(
+                kind: .expeditionaryDepotWorks,
+                target: depotCoord,
+                faction: .britain,
+                in: &state
+            )
+        )
+
+        EconomyRules().resolveFactionTurn(for: .britain, in: &state)
+
+        XCTAssertTrue(state.map.hasLogisticsTag(.expeditionaryDepot, at: depotCoord))
+    }
+
     func testCoalitionPortCanAnchorSupplyButMilitaryAccessDoesNot() {
         var coalitionMap = Self.basicMap(width: 3, height: 1, supplySources: [])
         coalitionMap.setTile(
@@ -708,7 +741,95 @@ final class RuleEngineCoreTests: XCTestCase {
             divisions: [austrian]
         )
 
+        XCTAssertEqual(
+            accessState.diplomacyState.relationStatus(between: .austria, and: .ottoman),
+            .militaryAccess
+        )
         XCTAssertFalse(SupplyRules().hasSupplyLine(for: austrian, in: accessState))
+    }
+
+    func testExpeditionaryDepotCanAnchorSupplyButMilitaryAccessDoesNot() {
+        var alliedDepotMap = Self.basicMap(width: 3, height: 1, supplySources: [])
+        alliedDepotMap.setTile(
+            HexTile(
+                coord: HexCoord(q: 0, r: 0),
+                controller: .france,
+                logisticsTags: [.expeditionaryDepot]
+            )
+        )
+        let british = Self.division(id: "british", faction: .britain, coord: HexCoord(q: 2, r: 0))
+        let alliedDepotState = Self.testState(
+            activeFaction: .britain,
+            map: alliedDepotMap,
+            diplomacyState: DiplomacyState.initial(
+                for: [.britain, .france, .russia, .ottoman, .austria, .sardinia],
+                scenarioId: "black_sea_crisis_1853",
+                turn: 1
+            ),
+            divisions: [british]
+        )
+
+        XCTAssertTrue(SupplyRules().hasSupplyLine(for: british, in: alliedDepotState))
+
+        var accessDepotMap = Self.basicMap(width: 3, height: 1, supplySources: [])
+        accessDepotMap.setTile(
+            HexTile(
+                coord: HexCoord(q: 0, r: 0),
+                controller: .ottoman,
+                logisticsTags: [.expeditionaryDepot]
+            )
+        )
+        let austrian = Self.division(id: "austrian", faction: .austria, coord: HexCoord(q: 2, r: 0))
+        let accessDepotState = Self.testState(
+            activeFaction: .austria,
+            map: accessDepotMap,
+            diplomacyState: DiplomacyState.initial(
+                for: [.britain, .france, .russia, .ottoman, .austria, .sardinia],
+                scenarioId: "black_sea_crisis_1853",
+                turn: 1
+            ),
+            divisions: [austrian]
+        )
+
+        XCTAssertEqual(
+            accessDepotState.diplomacyState.relationStatus(between: .austria, and: .ottoman),
+            .militaryAccess
+        )
+        XCTAssertFalse(SupplyRules().hasSupplyLine(for: austrian, in: accessDepotState))
+    }
+
+    func testExpeditionaryDepotCanAnchorSafeRetreatTile() {
+        var depotMap = Self.basicMap(width: 4, height: 1, supplySources: [])
+        depotMap.setTile(
+            HexTile(
+                coord: HexCoord(q: 0, r: 0),
+                controller: .britain,
+                logisticsTags: [.expeditionaryDepot]
+            )
+        )
+        let british = Self.division(id: "british", faction: .britain, coord: HexCoord(q: 2, r: 0))
+        let state = Self.testState(
+            activeFaction: .britain,
+            map: depotMap,
+            diplomacyState: DiplomacyState.initial(
+                for: [.britain, .france, .russia, .ottoman, .austria, .sardinia],
+                scenarioId: "black_sea_crisis_1853",
+                turn: 1
+            ),
+            divisions: [british]
+        )
+
+        XCTAssertTrue(
+            SupplyRules().isSafeRetreatTile(
+                HexCoord(q: 1, r: 0),
+                for: .britain,
+                in: state
+            )
+        )
+        XCTAssertEqual(
+            SupplyRules().retreatDestination(for: british, in: state),
+            HexCoord(q: 1, r: 0)
+        )
     }
 
     func testBlackSeaCoalitionControlCanSatisfyScenarioVictory() throws {

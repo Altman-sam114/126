@@ -573,6 +573,8 @@ struct EconomyRules {
         switch kind {
         case .portWorks:
             return tile.logisticsTags.contains(.coast)
+        case .expeditionaryDepotWorks:
+            return tile.logisticsTags.contains(.coast) || tile.logisticsTags.contains(.port)
         case .siegeDepotWorks:
             return hasAdjacentEnemyObjective(to: target, faction: faction, in: state)
         case .railway,
